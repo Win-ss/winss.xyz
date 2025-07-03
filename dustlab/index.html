@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dust Lab - Minecraft Particle Generator</title>
+    <style>
+        @font-face {
+            font-family: 'Monocraft';
+            src: url('../assets/Monocraft.woff2') format('woff2'),
+                 url('../assets/Monocraft.woff') format('woff'),
+                 url('../assets/Monocraft.ttc') format('truetype-collection');
+            font-display: swap;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: #ffffff;
+            font-family: 'Monocraft', sans-serif;
+            line-height: 1.6;
+            overflow: hidden;
+        }
+
+        .page-wrapper {
+            height: 100vh;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            scroll-behavior: smooth;
+        }
+
+        .page-wrapper::-webkit-scrollbar {
+            display: none;
+        }
+
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 0 2rem;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4rem;
+            max-width: 1200px;
+            width: 100%;
+            position: relative;
+            z-index: 3;
+        }
+
+        .hero-text {
+            flex: 1;
+            z-index: 3;
+            text-align: center;
+        }
+
+        .hero-title {
+            font-size: clamp(3rem, 8vw, 8rem);
+            font-weight: 800;
+            line-height: 0.9;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff 0%, #4f46e5 50%, #382a4e 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+
+        @keyframes magicalShimmer {
+            0%, 100% {
+                background-color: #ffffff;
+                box-shadow: 0 0 10px #ffffff, 0 0 20px #ffffff;
+            }
+            33% {
+                background-color: #4f46e5;
+                box-shadow: 0 0 12px #4f46e5, 0 0 24px #4f46e5;
+            }
+            66% {
+                background-color: #382a4e;
+                box-shadow: 0 0 12px #382a4e, 0 0 24px #382a4e;
+            }
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            font-weight: 300;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 2rem;
+            line-height: 1.4;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-description {
+            max-width: 600px;
+            margin: 1.5rem auto 0;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.1rem;
+            line-height: 1.7;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 0.9rem 2.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            font-size: 1.1rem;
+            z-index: 1;
+            will-change: transform, border-color, box-shadow;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-5px);
+            border-color: rgba(248, 240, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 239, 252, 0.2);
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .cta-button:hover::before {
+            left: 100%;
+        }
+
+        .cta-text-gradient {
+            background: linear-gradient(135deg, #ffffff 0%, #4f46e5 50%, #382a4e 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease-in-out infinite alternate;
+        }        
+        .hero-animation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        #dots-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .gradient-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(0,0,0,0) 0%, #000 100%);
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .features {
+            padding: 8rem 2rem;
+            background: #000;
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .features-title {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff, #4f46e5);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .features-subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 4rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2.5rem;
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            will-change: transform, border-color;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #4f46e5, transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+
+        .feature-card::after {
+            content: "";
+            position: absolute;
+            left: var(--x, 50%);
+            top: var(--y, 50%);
+            width: 300px;
+            height: 300px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.2) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s ease-out;
+            pointer-events: none;
+        }
+
+        .feature-card:hover::after {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #4f46e5, #382a4e);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #ffffff;
+        }
+
+        .feature-description {
+            color: rgba(255, 255, 255, 0.7);
+            line-height: 1.6;
+        }
+
+        .feature-highlight {
+            color: #4f46e5;
+            font-weight: 500;
+        }        
+        .stats {
+            padding: 6rem 2rem;
+            background: #000;
+        }
+
+        .stats-container {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 3rem;
+        }
+
+        .stat-item {
+            padding: 1.5rem;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #4f46e5, #ffffff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+        }
+
+        
+        .footer {
+            padding: 4rem 2rem 2rem;
+            background: #000;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .footer-brand {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #4f46e5, #382a4e);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .footer-description {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 2rem;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .footer-link:hover {
+            color: #4f46e5;
+        }
+
+        .footer-bottom {
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+        }        
+        @media (max-width: 1024px) {
+            .hero-content {
+                flex-direction: column;
+                text-align: center;
+                gap: 3rem;
+            }
+
+            .dots-container {
+                font-size: 1.2vw;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero {
+                padding: 0 1rem;
+            }
+
+            .dots-container {
+                font-size: 1.5vw;
+            }
+
+            .features, .stats, .footer {
+                padding: 4rem 1rem 2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .feature-card {
+                padding: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 2rem;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .cta-button, .info-button {
+                width: 100%;
+                max-width: 280px;
+                text-align: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .dots-container {
+                font-size: 2vw;
+            }
+
+            .hero-content {
+                gap: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            align-items: center;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .info-button {
+            display: inline-block;
+            padding: 0.9rem 2.5rem;
+            background: rgba(79, 70, 229, 0.05);
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(79, 70, 229, 0.2);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            font-size: 1.1rem;
+            z-index: 1;
+            will-change: transform, border-color, box-shadow;
+            color: #4f46e5;
+        }
+
+        .info-button:hover {
+            transform: translateY(-5px);
+            border-color: rgba(79, 70, 229, 0.4);
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.3);
+            color: #ffffff;
+        }
+
+        .info-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .info-button:hover::before {
+            left: 100%;
+        }
+
+
+    </style>
+</head>
+<body>
+    <main class="page-wrapper">
+    <section class="hero">
+        <div class="hero-animation">
+            <canvas id="dots-canvas"></canvas>
+        </div>
+        <div class="gradient-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">Dust Lab</h1>
+                <p class="hero-subtitle">The Ultimate Minecraft Particle Generator</p>
+                <p class="hero-description"> Dust Lab converts images and 3D models to particles!</p>
+                </p>
+                <div class="cta-buttons">
+                    <a href="documentation.html" class="info-button">
+                        <span class="info-text-gradient">
+                            <span>ℹ</span>
+                            Info
+                        </span>
+                    </a>
+                    <a href="app.html" class="cta-button">
+                        <span class="cta-text-gradient">
+                            Launch Dust Lab
+                            <span>→</span>
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="features-container">
+            <h2 class="features-title">Features</h2>
+            <p class="features-subtitle">
+                Everything you need to create breathtaking particles in Minecraft
+            </p>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🖼</div>
+                    <h3 class="feature-title">Image to Particles</h3>
+                    <p class="feature-description">
+                        Upload any <span class="feature-highlight">image</span> and convert it into precise particle coordinates. 
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">◭</div>
+                    <h3 class="feature-title">3D Model Support</h3>
+                    <p class="feature-description">
+                        Import <span class="feature-highlight">OBJ and GLB</span> models 
+                        and render them in particles.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title">Real-time Preview</h3>
+                    <p class="feature-description">
+                        See your particle effects in a <span class="feature-highlight">live 3D preview</span> 
+                        before generating commands. Adjust settings and see instant results.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🎛️</div>
+                    <h3 class="feature-title">Customize everything!</h3>
+                    <p class="feature-description">
+                        Fine-tune particle density, scale, orientation, output res. with 
+                        Support for <span class="feature-highlight">multiple Minecraft versions!</span>.
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3 class="feature-title">Optimized Output</h3>
+                    <p class="feature-description">
+                        Generate <span class="feature-highlight">.mcfunction files</span> 
+                        ready for use!
+                    </p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🕵</div>
+                    <h3 class="feature-title">All local!</h3>
+                    <p class="feature-description">Everything runs in <span class="feature-highlight">Your</span>  browser.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats">
+        <div class="stats-container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number" id="stat-user-particles">0</div>
+                    <div class="stat-label">Your Particles Generated</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="stat-user-downloads">0</div>
+                    <div class="stat-label">Your Downloads</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-brand">Dust Lab</div>
+            <p class="footer-description">
+               approaching problems with overcomplicated solutions.
+            </p>
+            
+            <div class="footer-links">
+                <a href="../index.html" class="footer-link">Back to Winss.xyz</a>
+                <a href="credit.html" class="footer-link">Credits</a>
+                <a href="https://winss.studio" class="footer-link">Go to the studio</a>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>2025 Winss.xyz - Dust labs</p>
+            </div>
+        </div>
+    </footer> 
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></script>
+
+    <script>
+        (function() {
+            function initDotsCanvas() {
+                const canvas = document.getElementById('dots-canvas');
+                if (!canvas) {
+                    console.error("Canvas element with id 'dots-canvas' not found.");
+                    return;
+                }
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    console.error("Could not get 2D context from canvas.");
+                    return;
+                }
+                let dots = [];
+                const shimmerColors = [
+                    { r: 255, g: 255, b: 255 }, 
+                    { r: 79, g: 70, b: 229 },  
+                    { r: 56, g: 42, b: 78 }    
+                ];
+
+                function buildGrid() {
+                    const dpr = window.devicePixelRatio || 1;
+                    const rect = canvas.getBoundingClientRect();
+                    canvas.width = rect.width * dpr;
+                    canvas.height = rect.height * dpr;
+                    ctx.scale(dpr, dpr);
+
+                    dots = [];
+                    
+                    const dotSize = 0.012 * canvas.clientWidth; 
+                    const gap = 2 * dotSize;
+                    const containerWidth = canvas.clientWidth;
+                    const containerHeight = canvas.clientHeight;
+
+                    const cols = Math.floor((containerWidth + gap) / (dotSize + gap));
+                    const rows = Math.floor((containerHeight + gap) / (dotSize + gap));
+                    
+                    const xOffset = (containerWidth - (cols * (dotSize + gap) - gap)) / 2;
+                    const yOffset = (containerHeight - (rows * (dotSize + gap) - gap)) / 2;
+
+                    for (let i = 0; i < rows; i++) {
+                        for (let j = 0; j < cols; j++) {
+                            dots.push({
+                                x: xOffset + j * (dotSize + gap),
+                                y: yOffset + i * (dotSize + gap),
+                                size: dotSize / 2,
+                                shimmerProgress: Math.random(),
+                                shimmerDuration: 5 + Math.random() * 3, 
+                            });
+                        }
+                    }
+                }
+
+                let lastTimestamp = 0;
+                function animate(timestamp) {
+                    if (!lastTimestamp) lastTimestamp = timestamp;
+                    const deltaTime = (timestamp - lastTimestamp) / 1000; 
+                    lastTimestamp = timestamp;
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    dots.forEach(dot => {
+                        dot.shimmerProgress = (dot.shimmerProgress + deltaTime / dot.shimmerDuration) % 1;
+                        
+                        const progress = dot.shimmerProgress;
+                        let c1, c2, localProgress;
+
+                        if (progress < 1/3) {
+                            c1 = shimmerColors[0]; c2 = shimmerColors[1];
+                            localProgress = progress * 3;
+                        } else if (progress < 2/3) {
+                            c1 = shimmerColors[1]; c2 = shimmerColors[2];
+                            localProgress = (progress - 1/3) * 3;
+                        } else {
+                            c1 = shimmerColors[2]; c2 = shimmerColors[0];
+                            localProgress = (progress - 2/3) * 3;
+                        }
+
+                        const r = c1.r + (c2.r - c1.r) * localProgress;
+                        const g = c1.g + (c2.g - c1.g) * localProgress;
+                        const b = c1.b + (c2.b - c1.b) * localProgress;
+                        const color = `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
+
+                        ctx.beginPath();
+                        ctx.arc(dot.x, dot.y, dot.size, 0, Math.PI * 2);
+                        ctx.fillStyle = color;
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 10;
+                        ctx.fill();
+                    });
+
+                    requestAnimationFrame(animate);
+                }
+
+                let resizeTimeout;
+                window.addEventListener("resize", () => {
+                    clearTimeout(resizeTimeout);
+                    resizeTimeout = setTimeout(buildGrid, 250);
+                });
+
+                buildGrid();
+                requestAnimationFrame(animate);
+            }
+
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+
+            window.addEventListener("load", initDotsCanvas);
+
+            document.querySelectorAll('.feature-card').forEach(card => {
+                card.addEventListener('mousemove', e => {
+                    const rect = card.getBoundingClientRect();
+                    card.style.setProperty('--x', (e.clientX - rect.left) + 'px');
+                    card.style.setProperty('--y', (e.clientY - rect.top) + 'px');
+                });
+            });
+
+            const statsSection = document.querySelector('.stats');
+            if (statsSection) {
+                const observer = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            startCounters();
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.5 });
+                observer.observe(statsSection);
+            }
+
+            function startCounters() {
+                const userParticles = parseInt(localStorage.getItem('dustlab_userParticles') || '0', 10);
+                const userDownloads = parseInt(localStorage.getItem('dustlab_userDownloads') || '0', 10);
+
+                animateCounter(document.getElementById('stat-user-particles'), userParticles);
+                animateCounter(document.getElementById('stat-user-downloads'), userDownloads);
+            }
+
+            function animateCounter(counterElement, targetNum) {
+                if (!counterElement) return;
+
+                let count = { value: 0 };
+
+                gsap.to(count, {
+                    value: targetNum,
+                    duration: 2.5,
+                    ease: 'power1.out',
+                    onUpdate: () => {
+                        counterElement.innerText = Math.floor(count.value).toLocaleString();
+                    },
+                    onComplete: () => {
+                        counterElement.innerText = targetNum.toLocaleString();
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>
