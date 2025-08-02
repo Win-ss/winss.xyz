@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dust Lab v1.0 - App</title>
+    <link rel="icon" type="image/png" href="DUSTLAB.png">
+    <link rel="shortcut icon" type="image/png" href="DUSTLAB.png">
+    
+    <meta name="description" content="Dust Lab App">
+    <meta property="og:title" content="Dust Lab v1.0 - Minecraft Particle Generator App">
+    <meta property="og:description" content="Create stunning Minecraft particle effects from images and 3D models. Generate .mcfunction files instantly.">
+    <meta property="og:image" content="https://winss.xyz/dustlab/DUSTLAB.png">
+    <meta property="og:url" content="https://winss.xyz/dustlab/app.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#9e59d6">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/OrbitControls.js"></script>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body class="p-4 lg:p-8">
+    <div class="mobile-warning">
+        <div class="mobile-warning-content">
+            <div class="mobile-warning-icon">💻</div>
+            <h2 class="mobile-warning-title">Desktop Required</h2>
+            <p class="mobile-warning-text">
+                Dust Lab requires a desktop browser for optimal performance.
+            </p>
+            <p class="mobile-warning-text">
+                Please open Dust Lab on a desktop or laptop.
+            </p>
+            <a href="index.html" class="mobile-warning-button">← Back to Home</a>
+        </div>
+    </div>
+
+    <!-- Main App Content -->
+    <div class="main-content">
+    <div class="container mx-auto max-w-7xl">
+        <header class="text-center mb-8">
+            <div class="header-content">
+                <canvas id="silver-spiral-canvas"></canvas>
+                <h1 class="dust-effect-title">Dust Lab <span style="font-size: 0.5em; opacity: 0.7;">v1.0</span></h1>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            <!-- Left Column: Controls Panel -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="grid grid-cols-1 gap-4">
+                    <div id="upload-panel">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <label for="file-upload" class="block text-sm font-medium" data-tooltip="Supports .png .jpg .webp .gif .obj .glb">Upload File</label>
+                        </div>
+                        <input id="file-upload" type="file" class="block w-full text-sm" accept=".png,.jpg,.jpeg,.webp,.gif,.obj,.glb,.gltf"/>
+                    </div>
+                </div>
+
+                <!-- Left Controls Panel -->
+                <div class="control-panel space-y-6">
+                    <!-- Sizing Mode -->
+                    <div class="sizing-mode-container p-3 rounded-lg">
+                        <label class="block text-sm font-medium mb-2">Sizing Mode</label>
+                        <div class="flex space-x-4">
+                            <label class="flex items-center"><input type="radio" name="sizing-mode" value="density" checked class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Density & Res</span></label>
+                            <label class="flex items-center"><input type="radio" name="sizing-mode" value="size" class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Size & Res</span></label>
+                        </div>
+
+                        <div id="density-res-controls" class="mt-4 space-y-4">
+                            <div class="slider-label">
+                                <label for="density" class="block text-sm font-medium">Particle Density</label>
+                                <input type="number" id="density-value" class="editable-value" step="0.01" min="0.01" max="1">
+                            </div>
+                            <input id="density" type="range" min="0.01" max="1" value="0.5" step="0.01" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+                            <div class="slider-label">
+                                <label for="master-resolution" class="block text-sm font-medium">Master Resolution</label>
+                                <input type="number" id="master-resolution-value" class="editable-value" step="1" min="16" max="256">
+                            </div>
+                            <input id="master-resolution" type="range" min="16" max="256" value="128" step="1" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <div id="size-res-controls" class="mt-4 space-y-4 hidden">
+                             <label class="block text-sm font-medium -mb-2">Resolution Type</label>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center"><input type="radio" name="size-res-type" value="perBlock" checked class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Per Block</span></label>
+                                <label class="flex items-center"><input type="radio" name="size-res-type" value="pixel" class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Pixel</span></label>
+                            </div>
+
+                            <div id="per-block-controls">
+                                <label for="particles-per-block" class="block text-sm font-medium">Particles per Block</label>
+                                <input type="number" id="particles-per-block" value="2" min="1" class="mt-1 block w-full p-2">
+                            </div>
+                            <div id="pixel-controls" class="hidden">
+                                <label for="resolution-width-px" class="block text-sm font-medium">Resolution Width (px)</label>
+                                <input type="number" id="resolution-width-px" value="64" min="1" class="mt-1 block w-full p-2">
+                                 <label for="resolution-height-px" class="block text-sm font-medium mt-2">Resolution Height (px)</label>
+                                <input type="number" id="resolution-height-px" value="64" min="1" class="mt-1 block w-full p-2">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4"> 
+                        <div>
+                            <label for="width-blocks" class="block text-sm font-medium">Output Width (blocks)</label>
+                            <input type="number" id="width-blocks" value="16" class="mt-1 block w-full p-2">
+                        </div>
+                        <div>
+                            <label for="height-blocks" class="block text-sm font-medium">Output Height (blocks)</label>
+                            <input type="number" id="height-blocks" value="16" class="mt-1 block w-full p-2">
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <button id="generate-btn" class="w-full btn font-bold py-2 px-4 rounded-lg">Download .mcfunction</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="lg:col-span-2 preview-panel">
+                <canvas id="preview-canvas"></canvas>
+                <div id="particle-info" class="text-center"> 
+                    <p style="color: var(--color-text-muted);">Particle Count: <span id="particle-count" class="font-bold" style="color: var(--color-text-main);">0</span></p>
+                </div>
+            </div>
+
+            <!-- Right Column: Controls Panel -->
+            <div class="lg:col-span-1 space-y-6">
+                <div id="version-panel" class="p-4 rounded-lg">
+                    <label for="version-selector" class="block text-sm font-medium">Minecraft Version</label>
+                    <select id="version-selector" class="mt-1 block w-full sm:text-sm p-2">
+                        <option value="1.21+" selected>1.21+</option>
+                        <option value="legacy">Legacy (pre-1.21)</option>
+                    </select>
+                </div>
+                <div class="control-panel space-y-6">
+                    <div class="grid grid-cols-1 gap-4"> 
+                        <div class="toggle-label">
+                            <span class="text-sm font-medium">Live Preview</span>
+                            <label class="switch"><input type="checkbox" id="live-preview-toggle" checked><span class="slider"></span></label>
+                        </div>
+                        <div class="toggle-label">
+                            <div class="flex items-center">
+                                <span class="text-sm font-medium">Experimental Mode</span>
+                                <span class="info-icon" data-tooltip="When on, allows particle counts over 40k. WILL CAUSE LAG.">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </span>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="experimental-toggle"><span class="slider"></span></label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 items-start">
+                        <div>
+                            <label for="coord-mode" class="block text-sm font-medium">Coordinate Mode</label>
+                            <select id="coord-mode" class="mt-1 block w-full sm:text-sm p-2">
+                                <option value="local" selected>Local (^ ^ ^)</option>
+                                <option value="relative">Relative (~ ~ ~)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="coord-axis-selector" class="block text-sm font-medium">Output Coordinate Axis & Rotation</label>
+                            <div class="flex mt-1 space-x-2">
+                                <select id="coord-axis-selector" class="block w-2/3 sm:text-sm p-2">
+                                    <option value="X-Y" selected>X-Y (View from Z)</option>
+                                    <option value="Y-Z">Y-Z (View from X)</option>
+                                    <option value="Z-X">Z-X (View from Y)</option>
+                                </select>
+                                <select id="rotation-selector" class="block w-1/3 sm:text-sm p-2">
+                                    <option value="0" selected>0°</option>
+                                    <option value="90">90°</option>
+                                    <option value="180">180°</option>
+                                    <option value="270">270°</option>
+                                    <option value="360">360°</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-4">
+                        <div class="slider-label">
+                            <label for="particle-scale" class="block text-sm font-medium">Particle Scale</label>
+                            <input type="number" id="particle-scale-value" class="editable-value" step="0.1" min="0.1" max="4">
+                        </div>
+                        <input id="particle-scale" type="range" min="0.1" max="4" value="1" step="0.1" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div class="border-t pt-4" style="border-color: var(--color-panel-border);">
+                        <div class="toggle-label">
+                            <span class="text-sm font-medium">Color Fixer</span>
+                            <label class="switch"><input type="checkbox" id="color-fixer-toggle"><span class="slider"></span></label>
+                        </div>
+                        <div id="color-fixer-controls" class="hidden mt-2 flex items-center justify-between">
+                            <label for="color-fixer-input" class="block text-sm font-medium">Color</label>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="color-fixer-hex" value="#FFFFFF" class="p-1 w-24 text-center">
+                                <input type="color" id="color-fixer-picker" value="#FFFFFF">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-2"> 
+                        <button id="clear-btn" class="w-full btn font-bold py-2 px-4 rounded-lg">Clear All</button> 
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div class="mt-8 output-display-container p-4">
+            <div class="flex justify-between items-center mb-2">
+                 <h2 class="text-xl font-semibold" style="color: var(--color-text-main);">Generated .mcfunction</h2>
+                 <button id="copy-btn" class="btn font-bold py-1 px-3 rounded-lg text-sm">Copy</button>
+            </div>
+            <pre id="output-code" class="text-sm p-4 rounded-md overflow-x-auto h-96">Awaiting file...</pre> <!-- Height changed to h-96 -->
+        </div>
+
+        <div class="mobile-warning">
+            <div class="mobile-warning-content">
+                <div class="mobile-warning-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div class="mobile-warning-title">Mobile Version Warning</div>
+                <div class="mobile-warning-text">
+                    This app is not optimized for mobile devices. For the best experience, please use a desktop or laptop computer.
+                </div>
+                <a href="#" class="mobile-warning-button" id="close-warning">Got it, continue</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    </div>
+</body>
+</html>

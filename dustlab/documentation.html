@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dust Lab v1.0 Documentation - Complete Guide</title>
+    <link rel="icon" type="image/png" href="DUSTLAB.png">
+    <link rel="shortcut icon" type="image/png" href="DUSTLAB.png">
+    
+    <meta name="description" content="docs!!!">
+    <meta property="og:title" content="Dust Lab v1.0 Documentation - Complete Guide">
+    <meta property="og:description" content="docs">
+    <meta property="og:image" content="https://winss.xyz/dustlab/DUSTLAB.png">
+    <meta property="og:url" content="https://winss.xyz/dustlab/documentation.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#9e59d6">
+    
+    <style>
+        @font-face {
+            font-family: 'Monocraft';
+            src: url('../assets/Monocraft.woff2') format('woff2'),
+                 url('../assets/Monocraft.woff') format('woff'),
+                 url('../assets/Monocraft.ttc') format('truetype-collection');
+            font-display: swap;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000;
+            color: #ffffff;
+            font-family: 'Monocraft', sans-serif;
+            line-height: 1.6;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: #ffffff;
+            margin: 2rem;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+
+        .documentation-header {
+            text-align: center;
+            padding: 2rem 2rem 4rem;
+        }
+
+        .documentation-title {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #ffffff, #4f46e5);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .documentation-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .documentation-layout {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            gap: 4rem;
+            padding: 0 1rem 4rem;
+            justify-content: center;
+        }
+
+        .sidebar {
+            flex: 0 0 220px;
+            position: sticky;
+            top: 2rem;
+            height: fit-content;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            margin-right: -12rem;
+        }
+
+        .sidebar-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #ffffff;
+            background: linear-gradient(135deg, #ffffff, #4f46e5);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+        }
+
+        .sidebar-nav li {
+            margin-bottom: 0.8rem;
+        }
+
+        .sidebar-nav a {
+            display: block;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            padding: 0.5rem 0.8rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-nav a:hover {
+            color: #ffffff;
+            background: rgba(79, 70, 229, 0.1);
+            border-left-color: #4f46e5;
+            transform: translateX(5px);
+        }
+
+        .sidebar-nav a.active {
+            color: #4f46e5;
+            background: rgba(79, 70, 229, 0.1);
+            border-left-color: #4f46e5;
+        }
+
+        .content-area {
+            flex: 1;
+            min-width: 0;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .step {
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #4f46e5, #382a4e);
+            border-radius: 50%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .step-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #ffffff;
+        }
+
+        .step-description {
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 1rem;
+        }
+
+        .highlight {
+            color: #4f46e5;
+            font-weight: 600;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: 'Monocraft', monospace;
+            font-size: 0.9rem;
+            color: #4f46e5;
+            overflow-x: auto;
+        }
+
+        .download-button {
+            transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+        }
+
+        .download-button:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4) !important;
+        }
+
+        @media (max-width: 768px) {
+            .documentation-layout {
+                flex-direction: column;
+                gap: 2rem;
+                padding: 0 1rem 4rem;
+            }
+
+            .sidebar {
+                flex: none;
+                position: static;
+                order: -1;
+                max-height: 150px;
+                overflow-y: auto;
+            }
+
+            .sidebar-nav {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+
+            .sidebar-nav li {
+                margin-bottom: 0;
+            }
+
+            .sidebar-nav a {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+                border-left: none;
+                border-bottom: 2px solid transparent;
+                white-space: nowrap;
+            }
+
+            .sidebar-nav a:hover,
+            .sidebar-nav a.active {
+                transform: none;
+                border-left: none;
+                border-bottom-color: #4f46e5;
+            }
+
+            .documentation-title {
+                font-size: 2rem;
+            }
+
+            .step {
+                padding: 1.5rem;
+            }
+
+            .back-button {
+                margin: 1rem;
+                padding: 0.6rem 1.5rem;
+                font-size: 0.9rem;
+            }
+
+            .documentation-header {
+                padding: 1rem 1rem 2rem;
+            }
+
+            .code-block {
+                font-size: 0.8rem;
+                padding: 0.8rem;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="back-button">← Back to Dust Lab</a>
+    
+    <div class="documentation-header">
+        <h1 class="documentation-title">Dust Lab Documentation</h1>
+        <p class="documentation-subtitle">Complete guide to creating Minecraft particle effects</p>
+    </div>
+
+    <div class="documentation-layout">
+        <aside class="sidebar">
+            <h3 class="sidebar-title">Quick Nav</h3>
+            <ul class="sidebar-nav">
+                <li><a href="#getting-started">1. Getting Started</a></li>
+                <li><a href="#config">2. Config</a></li>
+                <li><a href="#datapack">3. Creating Datapacks</a></li>
+                <li><a href="#misc">4. Misc</a></li>
+                <li><a href="#credits">5. Credits</a></li>
+            </ul>
+        </aside>
+
+        <main class="content-area">
+            <div class="step" id="getting-started">
+                <div class="step-number">1</div>
+                <h2 class="step-title">Getting Started</h2>
+                <p class="step-description">
+                    Dust Lab is a web-based tool that converts images and 3D models into Minecraft particles that resemble them. 
+                </p>
+                <p class="step-description">
+                    <strong>Supported File Formats:</strong>
+                </p>
+                <ul style="margin-left: 2rem; color: rgba(255, 255, 255, 0.8);">
+                    <li><span class="highlight">Images:</span> PNG, JPG/JPEG, GIF, WebP</li>
+                    <li><span class="highlight">3D Models:</span> OBJ, GLB, GLTF</li>
+                </ul>
+            </div>
+
+            <div class="step" id="config">
+                <div class="step-number">2</div>
+                <h2 class="step-title">Config</h2>
+                <p class="step-description">
+                    <strong>File Upload:</strong> Drag and drop your file or click the upload area, shrimple as that!
+                </p>
+                <p class="step-description">
+                    <strong>Configuration Options:</strong>
+                </p>
+                <ul style="margin-left: 2rem; color: rgba(255, 255, 255, 0.8);">
+                    all options are configerable. a bit overkill sure, but why not!
+                </ul>
+            <div class="step" id="datapack">
+                <div class="step-number">3</div>
+                <h2 class="step-title">Creating Datapacks</h2>
+                <p class="step-description">
+                    To use your generated .mcfunction file, you need to put it in a datapack. to make it easier,
+                    below you'll find a template that you can use to just drop your mcfunctions inside! then drop the datapack in your world's datapack folder!  
+                </p>
+
+                <div style="background: rgba(79, 70, 229, 0.1); border: 1px solid rgba(79, 70, 229, 0.3); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; text-align: center;">
+                    <h3 style="color: #4f46e5; margin-bottom: 1rem;">Download Template Datapack (For 1.21)</h3>
+                    <p style="margin-bottom: 1rem; color: rgba(255, 255, 255, 0.8);">Get started quickly with a blank datapack template for you</p>
+                    <a href="../assets/dustlab.zip" download="dustlab_template.zip" class="download-button" style="display: inline-block; padding: 0.8rem 2rem; background: linear-gradient(135deg, #4f46e5, #382a4e); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                        ⬇ Download Template
+                    </a>
+                </div>
+                
+                <p class="step-description"><strong>Enable and Disable Datapacks</strong> use the following command to enable/disable the datapack:</p>
+                <div class="code-block">/datapack [enable/disable] "file/dustlab"</div>
+
+                <p class="step-description">
+                    <strong>Installation:</strong>
+                </p>
+                <ol style="margin-left: 2rem; color: rgba(255, 255, 255, 0.8);">
+                    <li>Place your datapack folder in your world's datapacks directory</li>
+                    <li>Add your generated .mcfunction files to the functions folder</li>
+                    <li>Execute with <span class="highlight">/function dustlab:your_effect_name</span></li>
+                </ol>
+            </div>
+
+            <div class="step" id="misc">
+                <div class="step-number">4</div>
+                <h2 class="step-title">Misc</h2>
+                <p class="step-description">
+                    Additional information and tips will be added here in future updates.
+                </p>
+            </div>
+
+            <div class="step" id="credits">
+                <div class="step-number">5</div>
+                <h2 class="step-title">Credits</h2>
+                
+                <p class="step-description">
+                placeholder
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // smooth scroll for nav links
+        document.querySelectorAll('.sidebar-nav a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Highlight
+        function updateActiveLink() {
+            const sections = document.querySelectorAll('.step[id]');
+            const navLinks = document.querySelectorAll('.sidebar-nav a[href^="#"]');
+            
+            let current = '';
+            const scrollPosition = window.scrollY + 150;
+            
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+                
+                if (scrollPosition >= sectionTop && scrollPosition < sectionTop + sectionHeight) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        }
+        // updates
+        let ticking = false;
+        function requestTick() {
+            if (!ticking) {
+                requestAnimationFrame(updateActiveLink);
+                ticking = true;
+                setTimeout(() => ticking = false, 50);
+            }
+        }
+
+        window.addEventListener('scroll', requestTick);
+        
+        updateActiveLink();
+    </script>
+</body>
+</html>

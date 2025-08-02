@@ -1,0 +1,367 @@
+        @font-face {
+            font-family: 'Monocraft';
+            src: url('../assets/Monocraft.woff2') format('woff2'),
+                 url('../assets/Monocraft.woff') format('woff'),
+                 url('../assets/Monocraft.ttc') format('truetype-collection');
+            font-display: swap;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+        :root {
+            --color-bg-main: #000000; 
+            --color-text-main: #e0e0e0; 
+            --color-text-muted: #a0a0a0;
+            --color-text-label: var(--color-text-main);
+            --color-text-info: var(--color-text-muted);
+
+            --color-panel-bg: #181818; 
+            --color-panel-border: #2a2a2a; 
+            --color-panel-bg-transparent: rgba(24, 24, 24, 0.85); 
+            
+            --color-input-bg: #2a2a2a; 
+            --color-input-border: #3c3c3c; 
+            --color-input-text: var(--color-text-main);
+            --color-input-placeholder: var(--color-text-muted);
+            --color-input-focus-ring: var(--color-button-primary-bg); 
+            --color-input-thumb-bg: #3c3c3c; 
+
+            --color-button-primary-bg: #4f46e5; 
+            --color-button-primary-hover-bg: #4338ca; 
+            --color-button-primary-text: white;
+
+            --color-button-danger-bg: #991b1b; 
+            --color-button-danger-hover-bg: #7f1d1d; 
+            --color-button-danger-text: white;
+
+            --color-button-secondary-bg: #3c3c3c; 
+            --color-button-secondary-hover-bg: #2a2a2a;
+            --color-button-secondary-text: var(--color-text-main);
+
+            --color-switch-bg: var(--color-input-bg);
+            --color-switch-bg-checked: var(--color-button-primary-bg);
+            --color-switch-slider: white;
+
+            --color-tooltip-bg: #2a2a2a; 
+            --color-tooltip-text: var(--color-text-main);
+
+            --color-title-default: var(--color-text-main);
+
+            --color-title-hover-shadow-1: rgba(18, 220, 238, 0.6); 
+            --color-title-hover-shadow-2: rgba(48, 117, 207, 0.5);
+            --color-title-hover-shadow-3: rgba(113, 128, 150, 0.5);
+            --color-title-hover-shadow-4: rgba(53, 144, 255, 0.6);
+            --color-title-hover-shadow-5: rgba(88, 230, 255, 0.7);
+            --color-title-hover-shadow-6: rgba(128, 179, 255, 0.4);
+
+            --color-editable-value-focus-bg: #3c3c3c; 
+            --color-code-bg: #0d0d0d; 
+            --color-code-text: var(--color-text-muted);
+
+            --color-preview-bg-threejs: 0x181818; 
+            --color-grid-helper-center: 0xa0a0a0; 
+            --color-grid-helper-grid: 0x3c3c3c; 
+        }
+
+        body {
+            font-family: 'Monocraft', sans-serif;
+            background-color: var(--color-bg-main);
+            color: var(--color-text-main);
+        }
+        .control-panel, #version-panel, #upload-panel, .sizing-mode-container, .output-display-container { 
+            background-color: var(--color-panel-bg);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+        #version-panel, #upload-panel { 
+            padding: 1rem 1.5rem;
+        }
+        .preview-panel {
+            background-color: var(--color-panel-bg); 
+            border-radius: 0.5rem;
+            overflow: hidden;
+            min-height: 400px; 
+            position: relative;
+        }
+        #preview-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .btn {
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--color-input-thumb-bg);
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid var(--color-input-border);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--color-input-thumb-bg);
+            cursor: pointer;
+            border-radius: 50%;
+            border: 2px solid var(--color-input-border);
+        }
+        .slider-label, .toggle-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        label, .toggle-label span, .slider-label label {
+            color: var(--color-text-label);
+            font-weight: 500;
+        }
+        p.text-xs { 
+            color: var(--color-text-info);
+        }
+
+        .info-icon {
+            cursor: help;
+            margin-left: 8px;
+            color: var(--color-text-info);
+            position: relative;
+        }
+        .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--color-switch-bg); transition: .4s; border-radius: 28px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: var(--color-switch-slider); transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--color-switch-bg-checked); }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        [data-tooltip] { position: relative; }
+        [data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--color-tooltip-bg);
+            color: var(--color-tooltip-text);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .dust-effect-title {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--color-title-default);
+            transition: all 0.5s ease-out;
+            cursor: default;
+        }
+
+
+        .editable-value {
+            background-color: transparent;
+            border: none;
+            color: var(--color-text-main);
+            font-weight: bold;
+            text-align: right;
+            width: 60px; 
+            padding: 2px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }        .editable-value:focus {
+            outline: none;
+            background-color: var(--color-editable-value-focus-bg);
+        }
+        
+        #silver-spiral-canvas {
+            display: block;
+            width: 60px;
+            height: 60px;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+        
+        input[type="color"] {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 44px;
+            height: 28px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        input[type="color"]::-webkit-color-swatch {
+            border-radius: 8px;
+            border: 2px solid var(--color-input-border);
+        }
+        input[type="color"]::-moz-color-swatch {
+            border-radius: 8px;
+            border: 2px solid var(--color-input-border);
+        }
+
+        #particle-info { 
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--color-panel-bg-transparent);
+            padding: 5px 10px;
+            border-radius: 6px;
+            z-index: 10;
+            font-size: 0.875rem;
+        }
+
+        select, input[type="number"], input[type="text"] {
+            background-color: var(--color-input-bg);
+            border: 1px solid var(--color-input-border);
+            color: var(--color-input-text);
+            border-radius: 0.375rem; 
+            padding: 0.5rem 0.75rem; 
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+        select:focus, input[type="number"]:focus, input[type="text"]:focus {
+            outline: 2px solid transparent;
+            outline-offset: 2px;
+            border-color: var(--color-input-focus-ring);
+            box-shadow: 0 0 0 3px var(--color-input-focus-ring); 
+        }
+        input[type="file"] {
+            color: var(--color-text-muted); 
+        }
+        input[type="file"]::file-selector-button {
+            margin-right: 1rem; 
+            padding: 0.5rem 1rem; 
+            border-radius: 9999px; 
+            border-width: 0px; 
+            font-size: 0.875rem; 
+            font-weight: 600;
+            background-color: var(--color-input-bg); 
+            color: var(--color-text-main);
+            cursor: pointer;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background-color: var(--color-button-secondary-hover-bg);
+        }
+        input[type="radio"].form-radio {
+            background-color: var(--color-input-bg);
+            border-color: var(--color-button-primary-bg);
+        }
+        input[type="radio"].form-radio:checked {
+            background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e");
+            border-color: var(--color-button-primary-bg);
+            background-color: var(--color-button-primary-bg);
+        }
+        
+        input[type="range"].w-full {
+            background-color: var(--color-input-bg); 
+        }
+        #generate-btn {
+            background-color: var(--color-button-primary-bg);
+            color: var(--color-button-primary-text);
+        }
+        #generate-btn:hover {
+            background-color: var(--color-button-primary-hover-bg);
+        }
+        #clear-btn {
+            background-color: var(--color-button-danger-bg);
+            color: var(--color-button-danger-text);
+        }
+        #clear-btn:hover {
+            background-color: var(--color-button-danger-hover-bg);
+        }
+        #copy-btn {
+            background-color: var(--color-button-secondary-bg);
+            color: var(--color-button-secondary-text);
+        }
+        #copy-btn:hover {
+            background-color: var(--color-button-secondary-hover-bg);
+        }
+        #output-code {
+            background-color: var(--color-code-bg);
+            color: var(--color-code-text);
+        }
+
+        /*no more phones! atleast i hope so */
+        .mobile-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .mobile-warning-content {
+            background-color: var(--color-panel-bg);
+            border: 1px solid var(--color-panel-border);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .mobile-warning-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .mobile-warning-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: var(--color-text-main);
+        }
+
+        .mobile-warning-text {
+            color: var(--color-text-muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .mobile-warning-button {
+            background-color: var(--color-button-primary-bg);
+            color: var(--color-button-primary-text);
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .mobile-warning-button:hover {
+            background-color: var(--color-button-primary-hover-bg);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .mobile-warning {
+                display: flex;
+            }
+            
+            .main-content {
+                display: none;
+            }
+        }
+        
