@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wink v1.0 - Creative Image Effects</title>
+    <link rel="stylesheet" href="wink.css">
+    <link rel="icon" type="image/png" href="assets/wink/winkwhite.png" id="favicon-light">
+    <link rel="icon" type="image/png" href="assets/wink/winkblack.png" id="favicon-dark" media="(prefers-color-scheme: light)">
+    
+    <meta name="description" content="Wink">
+    <meta property="og:title" content="Wink v1.0 ">
+    <meta property="og:description" content="Wink">
+    <meta property="og:image" content="https://winss.xyz/assets/wink/winkwhite.png">
+    <meta property="og:url" content="https://winss.xyz/wink/">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#9e59d6">
+    
+    <style>
+        body {
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        
+        .landing-container {
+            min-height: 100vh;
+            background: #0a0a0a;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .background-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.6;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+            animation-direction: alternate;
+            will-change: transform;
+        }
+
+        .circle-1 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1), transparent);
+            top: 20%;
+            left: 10%;
+            animation: float-1 8s infinite;
+        }
+
+        .circle-2 {
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(240, 240, 240, 0.35), rgba(240, 240, 240, 0.1), transparent);
+            top: 60%;
+            right: 15%;
+            animation: float-2 10s infinite;
+        }
+
+        .circle-3 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.05), transparent);
+            bottom: 10%;
+            left: 20%;
+            animation: float-3 12s infinite;
+        }
+
+        .circle-4 {
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(250, 250, 250, 0.4), rgba(250, 250, 250, 0.1), transparent);
+            top: 10%;
+            right: 30%;
+            animation: float-4 6s infinite;
+        }
+
+        @keyframes float-1 {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(50px, 30px) scale(1.2); }
+            100% { transform: translate(0, 0) scale(0.9); }
+        }
+
+        @keyframes float-2 {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-40px, -50px) scale(1.1); }
+            100% { transform: translate(0, 0) scale(0.8); }
+        }
+
+        @keyframes float-3 {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(60px, -40px) scale(0.9); }
+            100% { transform: translate(0, 0) scale(1.3); }
+        }
+
+        @keyframes float-4 {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-30px, 40px) scale(1.4); }
+            100% { transform: translate(0, 0) scale(0.7); }
+        }
+
+        .hero-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .hero-logo {
+            margin-bottom: 2rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .hero-logo svg {
+            width: 120px;
+            height: 48px;
+            filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+        }
+
+        .left-eye-pupil, .right-eye-pupil {
+            transition: transform 0.1s ease-out;
+            transform-origin: center;
+        }
+
+        .hero-title {
+            font-family: 'Kalam', cursive;
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ffffff, #666666);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        .hero-subtitle {
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 0.9rem 2.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            font-size: 1.1rem;
+            z-index: 1;
+            will-change: transform, border-color, box-shadow;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.15);
+        }
+
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .cta-button:hover::before {
+            left: 100%;
+        }
+
+        .features-section {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        .features-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .feature-card:hover::before {
+            left: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .feature-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .demo-section {
+            background: rgba(255, 255, 255, 0.02);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 5rem 2rem;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .demo-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            color: var(--text-primary);
+        }
+
+        .demo-description {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 3rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+
+        .demo-preview {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .footer {
+            padding: 3rem 2rem;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(10px);
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-text {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .social-link {
+            color: var(--text-secondary);
+            font-size: 1.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .social-link:hover {
+            color: #ffffff;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes glow {
+            0% { text-shadow: 0 0 20px rgba(255, 255, 255, 0.4); }
+            100% { text-shadow: 0 0 30px rgba(255, 255, 255, 0.6); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+            
+            .hero-subtitle {
+                font-size: 1.2rem;
+            }
+            
+            .features-title,
+            .demo-title {
+                font-size: 2rem;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            animation: particleFloat 6s linear infinite;
+        }
+
+        @keyframes particleFloat {
+            0% {
+                transform: translateY(100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-10vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="landing-container">
+        <div class="particles"></div>
+        
+        <section class="hero-section">
+            <div class="background-container">
+                <div class="circle circle-1"></div>
+                <div class="circle circle-2"></div>
+                <div class="circle circle-3"></div>
+                <div class="circle circle-4"></div>
+            </div>
+            
+            <div class="hero-logo">
+                <svg width="120" height="48" viewBox="0 0 50 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="left-eye-open" d="M2 10 C2 10, 6 4, 12 4 C18 4, 22 10, 22 10 C22 10, 18 16, 12 16 C6 16, 2 10, 2 10 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path class="left-eye-pupil" d="M12 7 L14 10 L12 13 L10 10 Z" fill="currentColor"/>
+                    
+                    <path class="right-eye-open" d="M28 10 C28 10, 32 4, 38 4 C44 4, 48 10, 48 10 C48 10, 44 16, 38 16 C32 16, 28 10, 28 10 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <path class="right-eye-pupil" d="M38 7 L40 10 L38 13 L36 10 Z" fill="currentColor"/>
+                </svg>
+            </div>
+            
+            <h1 class="hero-title">Wink <span style="font-size: 0.5em; opacity: 1.7;">v1.0</span></h1>
+            <p class="hero-subtitle">
+                <strong>Blink and you will miss it.</strong> <br> Transform your images with a simple yet powerful image editor.
+            </p>
+            
+            <a href="app.html" class="cta-button">
+               ✧ Wink ✧</span>
+            </a>
+        </section>
+
+        <section class="features-section">
+            <h2 class="features-title">"Powerful" Features</h2>
+            
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon" style="filter: grayscale(0.8) brightness(); color: #fff;">🎨</div>
+                    <h3 class="feature-title">Creative Effects</h3>
+                    <p class="feature-description">
+                        Unique effects for your images, with live preview!
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="filter: grayscale(0.6) brightness(); color: #fff;">💾</div>
+                    <h3 class="feature-title">epic feature name!</h3>
+                    <p class="feature-description">
+                    you have cool feature like exporting in various formats, and effects like blink and snapshot
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="filter: grayscale(0.8) brightness(); color: #fff;">🕵️‍♂️</div>
+                    <h3 class="feature-title">Open Source and locally run.</h3>
+                    <p class="feature-description">
+                        Everything runs in the browser. No data is sent.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="demo-section">
+            <h2 class="demo-title">Ready to Get Started?</h2>
+            <p class="demo-description">
+                Join the 2 or more people who use Wink to make edits to their images! 
+            </p>
+            
+            <div class="demo-preview">
+                <p style="color: var(--text-secondary); font-style: italic; margin-bottom: 2rem;">
+                    "Wink makes quick image edits simple. The real-time previews and the not so intuitive interface 
+                    makes it easier for me to create cooler images!" - totally not a quote made up from me.
+                </p>
+                
+                <a href="app.html" class="cta-button">
+                    Unblink and start editing!
+                </a>
+            </div>
+        </section>
+
+        <footer class="footer">
+            <p class="footer-text">
+                <a href="https://winss.xyz" target="_blank" style="color: inherit; text-decoration: underline; cursor: pointer;">
+                    Made by <span style="color: #fff; text-shadow: 0 0 1px #fff, 0 0 2px #fff; font-weight: bold;">Winss</span> ^^
+                </a>
+            </p>
+        </footer>
+    </div>
+    <script>
+        function updateFavicon() {
+            const isDark = document.documentElement.classList.contains('dark') || 
+                          window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            const favicon = document.querySelector('link[rel="icon"]');
+            if (favicon) {
+                favicon.href = isDark ? 'assets/wink/winkwhite.png' : 'assets/wink/winkblack.png';
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', updateFavicon);
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateFavicon);
+
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    updateFavicon();
+                }
+            });
+        });
+        observer.observe(document.documentElement, { attributes: true });
+
+        function createParticles() {
+            const particlesContainer = document.querySelector('.particles');
+            if (!particlesContainer) return;
+
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 3) + 's';
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', createParticles);
+
+        function initEyeTracking() {
+            const leftPupil = document.querySelector('.left-eye-pupil');
+            const rightPupil = document.querySelector('.right-eye-pupil');
+            const logo = document.querySelector('.hero-logo svg');
+            
+            if (!leftPupil || !rightPupil || !logo) return;
+
+            function updatePupilPosition(event) {
+                const logoRect = logo.getBoundingClientRect();
+                const logoCenterX = logoRect.left + logoRect.width / 2;
+                const logoCenterY = logoRect.top + logoRect.height / 2;
+                
+                const mouseX = event.clientX;
+                const mouseY = event.clientY;
+                
+                const deltaX = mouseX - logoCenterX;
+                const deltaY = mouseY - logoCenterY;
+                const angle = Math.atan2(deltaY, deltaX);
+                
+                const maxDistance = 2;
+                
+                const offsetX = Math.cos(angle) * maxDistance;
+                const offsetY = Math.sin(angle) * maxDistance;
+                
+            
+                leftPupil.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+                rightPupil.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+            }
+
+            document.addEventListener('mousemove', updatePupilPosition);
+            
+            // reset pupils
+            document.addEventListener('mouseleave', () => {
+                leftPupil.style.transform = 'translate(0px, 0px)';
+                rightPupil.style.transform = 'translate(0px, 0px)';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initEyeTracking);
+    </script>
+</body>
+</html>
