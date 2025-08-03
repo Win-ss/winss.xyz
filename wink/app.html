@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wink v1.0 - Image Effects</title>
+    <link rel="stylesheet" href="wink.css">
+    
+    <meta name="description" content="Wink - Image Effects">
+    <meta property="og:title" content="Wink v1.0 - Image Effects App">
+    <meta property="og:description" content="image effects!!! wowww">
+    <meta property="og:image" content="https://winss.xyz/assets/wink/winkwhite.png">
+    <meta property="og:url" content="https://winss.xyz/wink/app.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#9e59d6">
+    
+    <link rel="icon" type="image/png" href="../assets/wink/winkwhite.png" id="favicon-light">
+    <link rel="icon" type="image/png" href="../assets/wink/winkblack.png" id="favicon-dark" media="(prefers-color-scheme: light)">
+</head>
+<body>    <div class="main-container">
+        <div id="notification-container" class="notification-container"></div>
+        
+        <div class="sidebar">            <div class="sidebar-header">
+                <div class="logo-container">                    <div class="logo-wrapper">
+                        <div class="logo-eyes-container">
+                            <svg class="logo-icon" width="70" height="28" viewBox="0 0 50 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path class="left-eye-open" d="M2 10 C2 10, 6 4, 12 4 C18 4, 22 10, 22 10 C22 10, 18 16, 12 16 C6 16, 2 10, 2 10 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <path class="left-eye-pupil" d="M12 7 L14 10 L12 13 L10 10 Z" fill="currentColor"/>
+                                <path class="left-eye-closed" d="M2 10 C2 10, 6 8, 12 8 C18 8, 22 10, 22 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none" style="opacity: 0;"/>
+                                
+                                <path d="M28 10 C28 10, 32 4, 38 4 C44 4, 48 10, 48 10 C48 10, 44 16, 38 16 C32 16, 28 10, 28 10 Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <path d="M38 7 L40 10 L38 13 L36 10 Z" fill="currentColor"/>
+                            </svg>
+                            <h1 class="logo-text">Wink <span style="font-size: 0.5em; opacity: 0.7;">v1.0</span></h1>
+                        </div>
+                    </div>
+                </div>
+                <input type="file" id="upload" class="input-file w-full text-sm"/>
+            </div>
+
+            <div id="effects-container" class="effects-list">
+            </div>            <div class="sidebar-footer">
+                <button id="reset-btn" class="btn btn-secondary w-full">Reset All</button>
+                
+                <div class="snapshot-controls">
+                    <label class="block text-sm font-medium">Snapshot</label>
+                    <div class="snapshot-buttons">
+                        <button id="take-snapshot-btn" class="btn btn-secondary">Take Snapshot</button>
+                        <button id="import-snapshot-btn" class="btn btn-secondary">Import Snapshot</button>
+                    </div>
+                    <textarea id="snapshot-input" class="snapshot-textarea" placeholder="Paste snapshot string here to import..."></textarea>
+                </div>
+                
+                <div class="export-format">
+                    <label for="format-select" class="block text-sm font-medium">Export Format</label>
+                    <select id="format-select" class="select w-full">
+                        <option>PNG</option>
+                        <option>JPEG</option>
+                        <option>WEBP</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Image Canvas -->
+        <div class="canvas-area">            <div class="canvas-controls">
+                <button id="blink-btn" class="btn btn-blink">BLINK</button>
+                <button id="download-btn" class="btn btn-primary">Download</button>
+            </div><div id="canvas-container" class="canvas-container">
+            <canvas id="canvas" willReadFrequently="true"></canvas>
+        </div>
+        </div>
+    </div>    
+<script src="wink.js"></script>
+</body>
+</html>
