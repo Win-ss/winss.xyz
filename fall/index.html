@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fall v1.0</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
+    
+    <meta name="description" content="Fall - Transform your images and gifs into ASCII text art!">
+    <meta property="og:title" content="Fall v1.0 - Image to ASCII Converter">
+    <meta property="og:description" content="Transform your images and gifs into ASCII text art!">
+    <meta property="og:image" content="https://winss.xyz/assets/favicon.png">
+    <meta property="og:url" content="https://winss.xyz/fall/">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#9e59d6">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+        });
+    </script>
+    <style>
+        @font-face {
+            font-family: 'Monocraft';
+            src: url('../assets/Monocraft.woff2') format('woff2'),
+                 url('../assets/Monocraft.ttc') format('truetype-collection');
+            font-display: swap;
+        }
+
+        :root {
+            --color-bg-main: #0a0a0a;
+            --color-text-main: #e0e0e0;
+            --color-text-muted: #a0a0a0;
+            --color-panel-bg: rgba(255, 255, 255, 0.05);
+            --color-panel-border: rgba(255, 255, 255, 0.1);
+            --color-button-primary-bg: #9e59d6;
+            --color-button-primary-hover-bg: #b767f8;
+            --color-button-primary-text: white;
+            --color-input-bg: rgba(255, 255, 255, 0.1);
+            --color-input-border: rgba(255, 255, 255, 0.2);
+            --color-input-text: var(--color-text-main);
+        }
+
+        body {
+            font-family: 'Monocraft', monospace;
+            background: var(--color-bg-main);
+            color: var(--color-text-main);
+            overflow-x: hidden;
+        }
+
+        .title {
+            background: linear-gradient(135deg, #9e59d6, #b767f8, #ffffff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .control-panel {
+            background-color: var(--color-panel-bg);
+            border: 1px solid var(--color-panel-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .preview-panel {
+            background-color: var(--color-panel-bg);
+            border: 1px solid var(--color-panel-border);
+            backdrop-filter: blur(10px);
+            min-height: 400px;
+            overflow: auto;
+            white-space: pre;
+        }
+
+        input[type="file"], textarea {
+            background-color: var(--color-input-bg);
+            border: 1px solid var(--color-input-border);
+            color: var(--color-input-text);
+            border-radius: 0.375rem;
+        }
+
+        input[type="file"]::file-selector-button {
+            background-color: var(--color-button-primary-bg);
+            color: var(--color-button-primary-text);
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background-color: var(--color-button-primary-hover-bg);
+        }
+
+        .btn {
+            background-color: var(--color-button-primary-bg);
+            color: var(--color-button-primary-text);
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--color-button-primary-hover-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(158, 89, 214, 0.4);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--color-input-bg);
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.7;
+            transition: opacity .2s;
+        }
+
+        input[type="range"]:hover {
+            opacity: 1;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--color-button-primary-bg);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: var(--color-button-primary-bg);
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        input[type="color"] {
+            background-color: var(--color-input-bg);
+            border: 1px solid var(--color-input-border);
+            border-radius: 0.375rem;
+            cursor: pointer;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 0.25rem;
+        }
+        /* Copy button glassmorphic green styling */
+        #copy-btn {
+            background: rgba(16, 185, 129, 0.25);
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            border-radius: 0.75rem;
+            min-width: 12rem;  /* ensure button is wider */
+            min-height: 3rem;  /* ensure button is taller */
+            padding: 1rem 1.5rem; /* increase vertical padding for height */
+        }
+        #copy-btn:hover {
+            background: rgba(16, 185, 129, 0.4);
+            box-shadow: none;
+            transform: none;
+        }
+        /* Copy notification popup */
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(16, 185, 129, 0.85);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .notification.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="p-4 lg:p-8">
+    <div class="main-content">
+        <div class="container mx-auto max-w-7xl">
+            <header class="text-center mb-8">
+                <h1 class="text-5xl font-bold title">Fall</h1>
+                <p class="text-xl subtitle">Insert good acronym for a buggy project here</p>
+            </header>
+
+            <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left Column: Controls Panel -->
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="control-panel space-y-6 p-6 rounded-lg">
+                        <div>
+                            <label for="file-upload" class="block text-sm font-medium mb-2">Upload Image/GIF</label>
+                            <input id="file-upload" type="file" class="block w-full text-sm" accept="image/*"/>
+                        </div>
+                        <div>
+                            <label for="char-set" class="block text-sm font-medium mb-2">Character Set</label>
+                            <textarea id="char-set" class="block w-full text-sm p-2 rounded-md" rows="3">@W!</textarea>
+                            <p class="text-xs text-gray-400 mt-1">Characters are mapped from brightest to darkest.</p>
+                        </div>
+                        <div>
+                            <label for="font-size" class="block text-sm font-medium mb-2">Font Size: <span id="font-size-value">10</span>px</label>
+                            <input id="font-size" type="range" min="2" max="20" value="10" class="w-full">
+                        </div>
+                        <div>
+                            <label for="output-width" class="block text-sm font-medium mb-2">Output Width (characters): <span id="output-width-value">100</span></label>
+                            <input id="output-width" type="range" min="40" max="400" value="100" class="w-full">
+                        </div>
+                        
+                        <!-- GIF Frame Controls -->
+                        <div id="gif-controls" class="hidden space-y-4">
+                            <div>
+                                <label for="bg-color" class="block text-sm font-medium mb-2">Background Color (for transparent pixels)</label>
+                                <input id="bg-color" type="color" value="#000000" class="w-full h-10 rounded-md border border-gray-600">
+                                <p class="text-xs text-gray-400 mt-1">Color used for transparent areas in GIFs</p>
+                            </div>
+                            <div>
+                                <label for="frame-slider" class="block text-sm font-medium mb-2">Frame: <span id="frame-counter">1</span> / <span id="total-frames">1</span></label>
+                                <input id="frame-slider" type="range" min="0" max="0" value="0" class="w-full">
+                                <p class="text-xs text-gray-400 mt-1">Scrub through GIF frames</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button id="play-pause-btn" class="flex-1 btn font-bold py-2 px-4 rounded-lg">Play</button>
+                                <button id="reset-btn" class="flex-1 btn font-bold py-2 px-4 rounded-lg">Reset</button>
+                            </div>
+                            <div>
+                                <label for="frame-delay" class="block text-sm font-medium mb-2">Animation Speed: <span id="frame-delay-value">100</span>ms</label>
+                                <input id="frame-delay" type="range" min="50" max="1000" value="100" class="w-full">
+                                <p class="text-xs text-gray-400 mt-1">Delay between frames during auto-play</p>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-4 space-y-2 flex justify-center">
+                            <button id="copy-btn" class="btn">Copy As HTML</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Preview Panel -->
+                <div class="lg:col-span-2 preview-panel p-4 rounded-lg">
+                    <div id="output" class="font-mono leading-tight" style="font-size: 10px;">Select an image to begin.</div>
+                </div>
+            </main>
+        </div>
+    </div>
+    <canvas id="canvas" class="hidden"></canvas>
+    <div id="copy-notification" class="notification">Copied to clipboard!</div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileUpload = document.getElementById('file-upload');
+            const charSetInput = document.getElementById('char-set');
+            const fontSizeSlider = document.getElementById('font-size');
+            const fontSizeValue = document.getElementById('font-size-value');
+            const outputWidthSlider = document.getElementById('output-width');
+            const outputWidthValue = document.getElementById('output-width-value');
+            const outputDiv = document.getElementById('output');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const bgColorInput = document.getElementById('bg-color');
+            
+            let currentMedia = null;
+            let gifFrames = [];
+            let currentGifData = null;
+            let currentFrameIndex = 0;
+            let isPlaying = false;
+            let animationInterval = null;
+            let isGif = false;
+            
+            let settings = {
+                charSet: charSetInput.value,
+                fontSize: parseInt(fontSizeSlider.value),
+                outputWidth: parseInt(outputWidthSlider.value),
+                backgroundColor: '#000000'
+            };
+
+            function updateUI() {
+                fontSizeValue.textContent = settings.fontSize;
+                outputWidthValue.textContent = settings.outputWidth;
+                outputDiv.style.fontSize = `${settings.fontSize}px`;
+                
+                if (currentMedia) {
+                    generateAscii();
+                }
+            }
+
+            fileUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const arrayBuffer = event.target.result;
+                    
+                    if (file.type === 'image/gif') {
+                        isGif = true;
+                        parseGif(arrayBuffer);
+                    } else {
+                        isGif = false;
+                        currentGifData = null; // Clear stored GIF data
+                        hideGifControls();
+                        const blob = new Blob([arrayBuffer]);
+                        const imageUrl = URL.createObjectURL(blob);
+                        currentMedia = new Image();
+                        currentMedia.onload = () => {
+                            generateAscii();
+                            URL.revokeObjectURL(imageUrl);
+                        };
+                        currentMedia.src = imageUrl;
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+
+            charSetInput.addEventListener('input', () => {
+                settings.charSet = charSetInput.value;
+                if (currentMedia) {
+                    generateAscii();
+                }
+            });
+
+            fontSizeSlider.addEventListener('input', () => {
+                settings.fontSize = parseInt(fontSizeSlider.value);
+                updateUI();
+            });
+
+            outputWidthSlider.addEventListener('input', () => {
+                settings.outputWidth = parseInt(outputWidthSlider.value);
+                updateUI();
+            });
+
+            bgColorInput.addEventListener('input', () => {
+                settings.backgroundColor = bgColorInput.value;
+                if (isGif && currentGifData) {
+                    // Re-render frames with new background color without re-parsing
+                    renderGifFrames(currentGifData);
+                }
+            });
+
+            const gifControls = document.getElementById('gif-controls');
+            const frameSlider = document.getElementById('frame-slider');
+            const frameCounter = document.getElementById('frame-counter');
+            const totalFrames = document.getElementById('total-frames');
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const resetBtn = document.getElementById('reset-btn');
+            const frameDelaySlider = document.getElementById('frame-delay');
+            const frameDelayValue = document.getElementById('frame-delay-value');
+
+            frameSlider.addEventListener('input', () => {
+                if (gifFrames.length > 0) {
+                    currentFrameIndex = parseInt(frameSlider.value);
+                    updateFrameDisplay();
+                    generateAscii();
+                }
+            });
+
+            playPauseBtn.addEventListener('click', () => {
+                if (isPlaying) {
+                    pauseAnimation();
+                } else {
+                    playAnimation();
+                }
+            });
+
+            resetBtn.addEventListener('click', () => {
+                pauseAnimation();
+                currentFrameIndex = 0;
+                frameSlider.value = 0;
+                updateFrameDisplay();
+                generateAscii();
+            });
+
+            frameDelaySlider.addEventListener('input', () => {
+                frameDelayValue.textContent = frameDelaySlider.value;
+                if (isPlaying) {
+                    pauseAnimation();
+                    playAnimation();
+                }
+            });
+
+            function getGrayScale(r, g, b) {
+                return 0.21 * r + 0.72 * g + 0.07 * b;
+            }
+
+            function getCharacterForGrayScale(grayScale) {
+                const charSet = settings.charSet;
+                const grayScaleRange = 255;
+                const charIndex = Math.floor((grayScale / grayScaleRange) * (charSet.length - 1));
+                return charSet.charAt(charIndex);
+            }
+
+            function generateAscii() {
+                if (!currentMedia && (!isGif || gifFrames.length === 0)) return;
+                
+                let ascii;
+                if (isGif && gifFrames.length > 0) {
+                    ascii = generateAsciiForImage(gifFrames[currentFrameIndex].image);
+                } else {
+                    ascii = generateAsciiForImage(currentMedia);
+                }
+                outputDiv.innerHTML = ascii;
+            }
+
+            function generateAsciiForImage(image) {
+                if (!image) return '';
+
+                const sourceCanvas = document.createElement('canvas');
+                const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+                sourceCanvas.width = image.naturalWidth || image.width;
+                sourceCanvas.height = image.naturalHeight || image.height;
+                sourceCtx.drawImage(image, 0, 0);
+
+                const aspectRatio = sourceCanvas.height / sourceCanvas.width;
+                const height = Math.floor(settings.outputWidth * aspectRatio * 0.5);
+
+                canvas.width = settings.outputWidth;
+                canvas.height = height;
+                ctx.drawImage(sourceCanvas, 0, 0, canvas.width, canvas.height);
+
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                let html = '';
+
+                for (let y = 0; y < canvas.height; y++) {
+                    for (let x = 0; x < canvas.width; x++) {
+                        const i = (y * canvas.width + x) * 4;
+                        const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
+                        
+                        const grayScale = getGrayScale(r, g, b);
+                        const char = getCharacterForGrayScale(grayScale);
+                        
+                        const hexColor = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+                        
+                        html += `<span style="color: ${hexColor}">${char}</span>`;
+                    }
+                    html += '\n';
+                }
+
+                return html;
+            }
+
+            function parseGif(arrayBuffer) {
+                const data = new Uint8Array(arrayBuffer);
+                
+                const header = String.fromCharCode(...data.slice(0, 6));
+                if (!header.startsWith('GIF')) {
+                    console.error('Not a valid GIF file');
+                    return;
+                }
+
+                console.log(`Parsing GIF file: ${header}`);
+
+                try {
+                    const gif = parseGifBinary(data);
+                    if (gif && gif.frames && gif.frames.length > 0) {
+                        console.log(`Found ${gif.frames.length} frames in GIF (${gif.width}x${gif.height})`);
+                        console.log(`Background color: rgb(${gif.backgroundColor.join(', ')})`);
+                        currentGifData = gif; // Store the parsed GIF data
+                        renderGifFrames(gif);
+                    } else {
+                        console.log('No frames found with custom parser, falling back to browser parsing');
+                        currentGifData = null; // Clear stored data for fallback
+                        createSingleFrame(arrayBuffer);
+                    }
+                } catch (error) {
+                    console.error('Error parsing GIF with custom parser:', error);
+                    console.log('Falling back to browser-based parsing');
+                    currentGifData = null; // Clear stored data for fallback
+                    createSingleFrame(arrayBuffer);
+                }
+            }
+
+            function parseGifBinary(data) {
+                let pos = 6;
+                
+                const screenWidth = data[pos] | (data[pos + 1] << 8);
+                const screenHeight = data[pos + 2] | (data[pos + 3] << 8);
+                const packed = data[pos + 4];
+                const backgroundColorIndex = data[pos + 5];
+                pos += 7;
+
+                const globalColorTableFlag = !!(packed & 0x80);
+                const globalColorTableSize = 2 << (packed & 0x07);
+
+                let globalColorTable = null;
+                let backgroundColor = [0, 0, 0];
+                if (globalColorTableFlag) {
+                    globalColorTable = [];
+                    for (let i = 0; i < globalColorTableSize; i++) {
+                        globalColorTable.push([data[pos], data[pos + 1], data[pos + 2]]);
+                        pos += 3;
+                    }
+                    if (backgroundColorIndex < globalColorTable.length) {
+                        backgroundColor = globalColorTable[backgroundColorIndex];
+                    }
+                }
+
+                const frames = [];
+                let delay = 100;
+                let transparentIndex = -1;
+                let disposalMethod = 0;
+
+                while (pos < data.length) {
+                    const separator = data[pos++];
+                    
+                    if (separator === 0x21) {
+                        const label = data[pos++];
+                        if (label === 0xF9) {
+                            const blockSize = data[pos++];
+                            const packed = data[pos++];
+                            disposalMethod = (packed >> 2) & 0x07;
+                            const transparentFlag = !!(packed & 0x01);
+                            delay = (data[pos] | (data[pos + 1] << 8)) * 10;
+                            pos += 2;
+                            transparentIndex = transparentFlag ? data[pos++] : -1;
+                            pos++;
+                        } else {
+                            let blockSize;
+                            do {
+                                blockSize = data[pos++];
+                                pos += blockSize;
+                            } while (blockSize !== 0);
+                        }
+                    } else if (separator === 0x2C) {
+                        const left = data[pos] | (data[pos + 1] << 8);
+                        const top = data[pos + 2] | (data[pos + 3] << 8);
+                        const width = data[pos + 4] | (data[pos + 5] << 8);
+                        const height = data[pos + 6] | (data[pos + 7] << 8);
+                        const packed = data[pos + 8];
+                        pos += 9;
+
+                        const localColorTableFlag = !!(packed & 0x80);
+                        const interlaceFlag = !!(packed & 0x40);
+                        const localColorTableSize = localColorTableFlag ? 2 << (packed & 0x07) : 0;
+
+                        let colorTable = globalColorTable;
+                        if (localColorTableFlag) {
+                            colorTable = [];
+                            for (let i = 0; i < localColorTableSize; i++) {
+                                colorTable.push([data[pos], data[pos + 1], data[pos + 2]]);
+                                pos += 3;
+                            }
+                        }
+
+                        const lzwMinimumCodeSize = data[pos++];
+                        const imageData = [];
+                        
+                        let blockSize;
+                        do {
+                            blockSize = data[pos++];
+                            for (let i = 0; i < blockSize; i++) {
+                                imageData.push(data[pos++]);
+                            }
+                        } while (blockSize !== 0);
+
+                        const pixels = decodeLZW(imageData, lzwMinimumCodeSize, width * height);
+                        
+                        frames.push({
+                            left,
+                            top,
+                            width,
+                            height,
+                            pixels,
+                            colorTable,
+                            delay: delay || 100,
+                            interlaced: interlaceFlag,
+                            transparentIndex,
+                            disposalMethod
+                        });
+                        
+                        delay = 100;
+                        transparentIndex = -1;
+                        disposalMethod = 0;
+                    } else if (separator === 0x3B) {
+                        break;
+                    }
+                }
+
+                return {
+                    width: screenWidth,
+                    height: screenHeight,
+                    frames,
+                    globalColorTable,
+                    backgroundColor
+                };
+            }
+
+            function decodeLZW(data, minCodeSize, pixelCount) {
+                const pixels = [];
+                const clearCode = 1 << minCodeSize;
+                const endCode = clearCode + 1;
+                let codeSize = minCodeSize + 1;
+                let codeMask = (1 << codeSize) - 1;
+                let nextCode = endCode + 1;
+                
+                const table = [];
+                for (let i = 0; i < clearCode; i++) {
+                    table[i] = [i];
+                }
+                
+                let bitPos = 0;
+                let oldCode = null;
+                
+                function getBits(count) {
+                    let result = 0;
+                    for (let i = 0; i < count; i++) {
+                        if (bitPos >= data.length * 8) return -1;
+                        const bytePos = Math.floor(bitPos / 8);
+                        const bitInByte = bitPos % 8;
+                        result |= ((data[bytePos] >> bitInByte) & 1) << i;
+                        bitPos++;
+                    }
+                    return result;
+                }
+                
+                while (pixels.length < pixelCount) {
+                    const code = getBits(codeSize);
+                    if (code === -1) break;
+                    
+                    if (code === clearCode) {
+                        table.length = clearCode + 2;
+                        for (let i = 0; i < clearCode; i++) {
+                            table[i] = [i];
+                        }
+                        codeSize = minCodeSize + 1;
+                        codeMask = (1 << codeSize) - 1;
+                        nextCode = endCode + 1;
+                        oldCode = null;
+                        continue;
+                    }
+                    
+                    if (code === endCode) break;
+                    
+                    if (oldCode === null) {
+                        if (code < table.length && table[code]) {
+                            pixels.push(...table[code]);
+                            oldCode = code;
+                        }
+                        continue;
+                    }
+                    
+                    let sequence;
+                    if (code < table.length && table[code]) {
+                        sequence = table[code];
+                    } else if (code === nextCode) {
+                        sequence = [...table[oldCode], table[oldCode][0]];
+                    } else {
+                        continue;
+                    }
+                    
+                    pixels.push(...sequence);
+                    
+                    if (nextCode < 4096 && table[oldCode]) {
+                        table[nextCode++] = [...table[oldCode], sequence[0]];
+                        
+                        if (nextCode > codeMask && codeSize < 12) {
+                            codeSize++;
+                            codeMask = (1 << codeSize) - 1;
+                        }
+                    }
+                    
+                    oldCode = code;
+                }
+                
+                return pixels.slice(0, pixelCount);
+            }
+
+            function hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? [
+                    parseInt(result[1], 16),
+                    parseInt(result[2], 16),
+                    parseInt(result[3], 16)
+                ] : [0, 0, 0];
+            }
+
+            function renderGifFrames(gif) {
+                // Clear existing frames to prevent accumulation
+                gifFrames = [];
+                let processedFrames = 0;
+                
+                const compositeCanvas = document.createElement('canvas');
+                const compositeCtx = compositeCanvas.getContext('2d', { willReadFrequently: true });
+                compositeCanvas.width = gif.width;
+                compositeCanvas.height = gif.height;
+                
+                // Use user-selected background color instead of GIF's background color
+                const userBgColor = hexToRgb(settings.backgroundColor);
+                compositeCtx.fillStyle = `rgb(${userBgColor[0]}, ${userBgColor[1]}, ${userBgColor[2]})`;
+                compositeCtx.fillRect(0, 0, gif.width, gif.height);
+                
+                let previousImageData = compositeCtx.getImageData(0, 0, gif.width, gif.height);
+                
+                gif.frames.forEach((frame, index) => {
+                    if (index > 0) {
+                        const prevFrame = gif.frames[index - 1];
+                        switch (prevFrame.disposalMethod) {
+                            case 1:
+                                break;
+                            case 2:
+                                // Use user-selected background color for disposal method 2
+                                const userBgColor = hexToRgb(settings.backgroundColor);
+                                compositeCtx.fillStyle = `rgb(${userBgColor[0]}, ${userBgColor[1]}, ${userBgColor[2]})`;
+                                compositeCtx.fillRect(prevFrame.left, prevFrame.top, prevFrame.width, prevFrame.height);
+                                break;
+                            case 3:
+                                compositeCtx.putImageData(previousImageData, 0, 0);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    
+                    if (frame.disposalMethod === 3) {
+                        previousImageData = compositeCtx.getImageData(0, 0, gif.width, gif.height);
+                    }
+                    
+                    const frameImageData = compositeCtx.getImageData(0, 0, gif.width, gif.height);
+                    const frameData = frameImageData.data;
+                    
+                    const colorTable = frame.colorTable || gif.globalColorTable;
+                    if (colorTable && frame.pixels) {
+                        for (let y = 0; y < frame.height; y++) {
+                            for (let x = 0; x < frame.width; x++) {
+                                const pixelIndex = y * frame.width + x;
+                                if (pixelIndex < frame.pixels.length) {
+                                    const colorIndex = frame.pixels[pixelIndex];
+                                    
+                                    if (colorIndex === frame.transparentIndex) {
+                                        continue;
+                                    }
+                                    
+                                    if (colorIndex >= 0 && colorIndex < colorTable.length) {
+                                        const color = colorTable[colorIndex];
+                                        const imgX = frame.left + x;
+                                        const imgY = frame.top + y;
+                                        
+                                        if (imgX >= 0 && imgX < gif.width && imgY >= 0 && imgY < gif.height) {
+                                            const dataIndex = (imgY * gif.width + imgX) * 4;
+                                            frameData[dataIndex] = color[0];
+                                            frameData[dataIndex + 1] = color[1];
+                                            frameData[dataIndex + 2] = color[2];
+                                            frameData[dataIndex + 3] = 255;
+                                        }
+                                    } else if (colorIndex !== frame.transparentIndex) {
+                                        console.warn(`Invalid color index ${colorIndex} in frame ${index}, color table size: ${colorTable.length}`);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    compositeCtx.putImageData(frameImageData, 0, 0);
+                    
+                    const frameImg = new Image();
+                    frameImg.onload = () => {
+                        gifFrames.push({
+                            image: frameImg,
+                            delay: frame.delay
+                        });
+                        
+                        processedFrames++;
+                        if (processedFrames === gif.frames.length) {
+                            console.log(`Extracted ${gifFrames.length} real GIF frames with proper color handling`);
+                            finishFrameExtraction();
+                        }
+                    };
+                    frameImg.src = compositeCanvas.toDataURL();
+                });
+            }
+
+            function createSingleFrame(arrayBuffer) {
+                const blob = new Blob([arrayBuffer], { type: 'image/gif' });
+                const url = URL.createObjectURL(blob);
+                
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    
+                    // Fill with user's background color first
+                    const userBgColor = hexToRgb(settings.backgroundColor);
+                    ctx.fillStyle = `rgb(${userBgColor[0]}, ${userBgColor[1]}, ${userBgColor[2]})`;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    const frameImg = new Image();
+                    frameImg.onload = () => {
+                        gifFrames = [{ image: frameImg, delay: 100 }];
+                        console.log('Created single frame from GIF with preserved colors');
+                        finishFrameExtraction();
+                        URL.revokeObjectURL(url);
+                    };
+                    frameImg.src = canvas.toDataURL('image/png');
+                };
+                img.onerror = () => {
+                    console.error('Failed to load GIF');
+                    URL.revokeObjectURL(url);
+                };
+                img.src = url;
+            }
+
+            function generateAnimatedAsciiJs() {
+                if (!isGif || gifFrames.length === 0) return '';
+                
+                const frames = gifFrames.map(frame => generateAsciiForImage(frame.image));
+                const delay = parseInt(frameDelaySlider.value);
+                
+                return `
+const frames = ${JSON.stringify(frames)};
+const frameDelay = ${delay};
+
+let currentFrame = 0;
+const outputElement = document.getElementById('ascii-output');
+
+function playAsciiAnimation() {
+    if (!outputElement) return;
+    
+    outputElement.innerHTML = frames[currentFrame];
+    currentFrame = (currentFrame + 1) % frames.length;
+    
+    setTimeout(playAsciiAnimation, frameDelay);
+}
+
+playAsciiAnimation();
+
+                `.trim();
+            }
+
+            function finishFrameExtraction() {
+                if (gifFrames.length > 0) {
+                    showGifControls();
+                    frameSlider.max = gifFrames.length - 1;
+                    totalFrames.textContent = gifFrames.length;
+                    
+                    // Reset frame index if it's out of bounds
+                    if (currentFrameIndex >= gifFrames.length) {
+                        currentFrameIndex = 0;
+                        frameSlider.value = 0;
+                    }
+                    
+                    updateFrameDisplay();
+                    generateAscii();
+                } else {
+                    console.error('No frames extracted from GIF');
+                }
+            }
+
+            function showGifControls() {
+                gifControls.classList.remove('hidden');
+            }
+
+            function hideGifControls() {
+                gifControls.classList.add('hidden');
+                pauseAnimation();
+            }
+
+            function updateFrameDisplay() {
+                frameCounter.textContent = currentFrameIndex + 1;
+            }
+
+            function playAnimation() {
+                if (gifFrames.length === 0) return;
+                
+                isPlaying = true;
+                playPauseBtn.textContent = 'Pause';
+                
+                const delay = parseInt(frameDelaySlider.value);
+                animationInterval = setInterval(() => {
+                    currentFrameIndex = (currentFrameIndex + 1) % gifFrames.length;
+                    frameSlider.value = currentFrameIndex;
+                    updateFrameDisplay();
+                    generateAscii();
+                }, delay);
+            }
+
+            function pauseAnimation() {
+                isPlaying = false;
+                playPauseBtn.textContent = 'Play';
+                if (animationInterval) {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                }
+            }
+
+            updateUI();
+
+            function showNotification() {
+                const note = document.getElementById('copy-notification');
+                note.classList.add('show');
+                setTimeout(() => note.classList.remove('show'), 2000);
+            }
+
+            // Copy ASCII art as HTML or animated snippet
+            const copyBtn = document.getElementById('copy-btn');
+            copyBtn.addEventListener('click', () => {
+                let htmlContent;
+                if (isGif && gifFrames.length > 0) {
+                    const jsCode = generateAnimatedAsciiJs();
+                    htmlContent = `<div id=\"ascii-output\" style=\"font-family: monospace; white-space: pre; font-size: ${settings.fontSize}px; background-color: ${settings.backgroundColor};\"></div>\n<script>\n${jsCode}\n<\/script>`;
+                } else {
+                    htmlContent = `<div style=\"font-family: monospace; white-space: pre; font-size: ${settings.fontSize}px; background-color: ${settings.backgroundColor};\">${outputDiv.innerHTML}</div>`;
+                }
+                navigator.clipboard.writeText(htmlContent)
+                    .then(() => showNotification())  // replaced alert
+                    .catch(err => console.error('Copy failed', err));
+            });
+        });
+    </script>
+</body>
+</html>
