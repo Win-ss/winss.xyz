@@ -11,7 +11,8 @@
             const initialWidth = canvas.parentElement.clientWidth || 1;
             const initialHeight = canvas.parentElement.clientHeight || 1;
             camera = new THREE.PerspectiveCamera(75, initialWidth / initialHeight, 0.1, 1000);
-            camera.position.z = 100;
+            // Position camera at an angle to hint at 3D nature
+            camera.position.set(60, 40, 80);
             renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
@@ -148,6 +149,8 @@
         const coordModeSelect = document.getElementById('coord-mode');
         const versionSelector = document.getElementById('version-selector');
         const copyBtn = document.getElementById('copy-btn');
+        const copyJsonBtn = document.getElementById('copy-json-btn');
+        const downloadJsonBtn = document.getElementById('download-json-btn');
         const clearBtn = document.getElementById('clear-btn');
         const coordAxisSelect = document.getElementById('coord-axis-selector'); 
         const rotationSelector = document.getElementById('rotation-selector'); 
@@ -171,7 +174,12 @@
         const colorFixerToggle = document.getElementById('color-fixer-toggle');
         const colorFixerControls = document.getElementById('color-fixer-controls');
         const colorFixerHexInput = document.getElementById('color-fixer-hex');
-        const colorFixerPicker = document.getElementById('color-fixer-picker');
+        const colorModeSelect = document.getElementById('color-mode');
+        const solidColorControls = document.getElementById('solid-color-controls');
+        const gradientControls = document.getElementById('gradient-controls');
+        const gradientStartHex = document.getElementById('gradient-start-hex');
+        const gradientEndHex = document.getElementById('gradient-end-hex');
+        const gradientDirection = document.getElementById('gradient-direction');
         
         let particleData = [];
         let currentFileName = 'N/A'; 
@@ -194,6 +202,8 @@
         fileInput.addEventListener('change', triggerGeneration);
         generateBtn.addEventListener('click', downloadMcfunction);
         copyBtn.addEventListener('click', copyCommands);
+        copyJsonBtn.addEventListener('click', copyJson);
+        downloadJsonBtn.addEventListener('click', downloadJson);
         clearBtn.addEventListener('click', resetApp);
         
         [coordModeSelect, widthInput, heightInput, versionSelector].forEach(el => el.addEventListener('input', generateMcfunctionContent));
@@ -237,15 +247,23 @@
         setupEditableSlider(masterResolutionSlider, masterResolutionValueEl);
         setupEditableSlider(scaleSlider, particleScaleValueEl, true);
         
-        [densitySlider, masterResolutionSlider, particlesPerBlockInput, resolutionWidthPxInput, resolutionHeightPxInput, colorFixerToggle, colorFixerPicker, colorFixerHexInput].forEach(el => el.addEventListener('input', debouncedTriggerGeneration));
+        [densitySlider, masterResolutionSlider, particlesPerBlockInput, resolutionWidthPxInput, resolutionHeightPxInput, colorFixerToggle, colorFixerHexInput, gradientStartHex, gradientEndHex, gradientDirection].forEach(el => el.addEventListener('input', debouncedTriggerGeneration));
         scaleSlider.addEventListener('input', () => { updatePreviewAppearance(); generateMcfunctionContent(); });
 
         sizingModeRadios.forEach(radio => radio.addEventListener('change', updateSizingModeUI));
         sizeResTypeRadios.forEach(radio => radio.addEventListener('change', updateSizeResModeUI));
 
         colorFixerToggle.addEventListener('change', (e) => colorFixerControls.classList.toggle('hidden', !e.target.checked));
-        colorFixerPicker.addEventListener('input', (e) => colorFixerHexInput.value = e.target.value.toUpperCase());
-        colorFixerHexInput.addEventListener('change', (e) => colorFixerPicker.value = e.target.value);
+        colorModeSelect.addEventListener('change', updateColorModeUI);
+        [colorFixerHexInput, gradientStartHex, gradientEndHex].forEach(input => {
+            input.addEventListener('change', (e) => {
+                // Validate hex color
+                let value = e.target.value;
+                if (!value.startsWith('#')) value = '#' + value;
+                if (!/^#[0-9A-F]{6}$/i.test(value)) value = '#FFFFFF';
+                e.target.value = value.toUpperCase();
+            });
+        });
 
         function updateSizingModeUI() {
             const isDensity = document.querySelector('input[name="sizing-mode"]:checked').value === 'density';
@@ -260,6 +278,13 @@
             pixelControls.classList.toggle('hidden', isPerBlock);
         }
 
+        function updateColorModeUI() {
+            const isSolid = colorModeSelect.value === 'solid';
+            solidColorControls.classList.toggle('hidden', !isSolid);
+            gradientControls.classList.toggle('hidden', isSolid);
+        }
+
+        // Custom Color Picker Implementation
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -284,7 +309,6 @@
             const canvas2d = document.createElement('canvas');
             let newParticles = [];
             const isColorFixed = colorFixerToggle.checked;
-            const fixedColor = isColorFixed ? hexToRgb(colorFixerPicker.value) : null;
 
             if (sizingMode === 'density') {
                 const resolution = parseInt(masterResolutionSlider.value);
@@ -299,11 +323,15 @@
                         if (Math.random() > density) continue;
                         const i = (y * canvas2d.width + x) * 4;
                         if (imageData[i+3] > 25) {
+                            const normalizedX = x / (canvas2d.width - 1);
+                            const normalizedY = y / (canvas2d.height - 1);
+                            const color = getFixedColor(normalizedX, normalizedY, imageData[i]/255, imageData[i+1]/255, imageData[i+2]/255);
+                            
                             newParticles.push({
                                 x, y, z: 0,
-                                r: fixedColor ? fixedColor.r : imageData[i]/255,
-                                g: fixedColor ? fixedColor.g : imageData[i+1]/255,
-                                b: fixedColor ? fixedColor.b : imageData[i+2]/255
+                                r: color.r,
+                                g: color.g,
+                                b: color.b
                             });
                         }
                     }
@@ -330,11 +358,15 @@
                     for (let gx = 0; gx < gridW; gx++) {
                         const i = (gy * gridW + gx) * 4;
                          if (imageData[i+3] > 25) {
+                            const normalizedX = gx / (gridW - 1);
+                            const normalizedY = gy / (gridH - 1);
+                            const color = getFixedColor(normalizedX, normalizedY, imageData[i]/255, imageData[i+1]/255, imageData[i+2]/255);
+                            
                             newParticles.push({
                                 x: gx, y: gy, z: 0,
-                                r: fixedColor ? fixedColor.r : imageData[i]/255,
-                                g: fixedColor ? fixedColor.g : imageData[i+1]/255,
-                                b: fixedColor ? fixedColor.b : imageData[i+2]/255
+                                r: color.r,
+                                g: color.g,
+                                b: color.b
                             });
                         }
                     }
@@ -443,6 +475,51 @@
             } : {r:1, g:1, b:1}; 
         }
 
+        function getFixedColor(x, y, originalR, originalG, originalB) {
+            if (!colorFixerToggle.checked) {
+                return { r: originalR, g: originalG, b: originalB };
+            }
+
+            if (colorModeSelect.value === 'solid') {
+                const fixedColor = hexToRgb(colorFixerHexInput.value);
+                return { r: fixedColor.r, g: fixedColor.g, b: fixedColor.b };
+            } else {
+                // Gradient mode
+                const startColor = hexToRgb(gradientStartHex.value);
+                const endColor = hexToRgb(gradientEndHex.value);
+                const direction = gradientDirection.value;
+                
+                let factor = 0;
+                
+                // Calculate interpolation factor based on direction
+                switch (direction) {
+                    case 'horizontal':
+                        factor = x; // Assuming x is normalized 0-1
+                        break;
+                    case 'vertical':
+                        factor = y; // Assuming y is normalized 0-1
+                        break;
+                    case 'diagonal':
+                        factor = (x + y) / 2;
+                        break;
+                    case 'radial':
+                        const centerX = 0.5;
+                        const centerY = 0.5;
+                        const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
+                        factor = Math.min(distance * Math.sqrt(2), 1); // Normalize to max distance
+                        break;
+                }
+                
+                factor = Math.max(0, Math.min(1, factor)); // Clamp to 0-1
+                
+                return {
+                    r: startColor.r + (endColor.r - startColor.r) * factor,
+                    g: startColor.g + (endColor.g - startColor.g) * factor,
+                    b: startColor.b + (endColor.b - startColor.b) * factor
+                };
+            }
+        }
+
         function finalizeParticles(newParticles) {
             if (!experimentalToggle.checked && newParticles.length > 40000) {
                 newParticles = newParticles.slice(0, 40000);
@@ -544,8 +621,9 @@
                 camera.position.set(center.x, center.y, cameraZ);
                 controls.target.copy(center);
             } else { 
-                 camera.position.set(0,0,100);
-                 controls.target.set(0,0,0);
+                 // Position camera at an angle to hint at 3D nature
+                 camera.position.set(60, 40, 80);
+                 controls.target.set(0, 0, 0);
             }
             controls.update();
             particleCountEl.textContent = particleData.length.toLocaleString();
@@ -688,9 +766,13 @@
             livePreviewToggle.checked = true;
             experimentalToggle.checked = false;
             colorFixerToggle.checked = false;
-            colorFixerPicker.value = '#FFFFFF';
+            colorModeSelect.value = 'solid';
             colorFixerHexInput.value = '#FFFFFF';
+            gradientStartHex.value = '#FF0000';
+            gradientEndHex.value = '#0000FF';
+            gradientDirection.value = 'horizontal';
             colorFixerControls.classList.add('hidden');
+            updateColorModeUI();
 
             densitySlider.dispatchEvent(new Event('input', {bubbles:true}));
             masterResolutionSlider.dispatchEvent(new Event('input', {bubbles:true}));
@@ -719,6 +801,161 @@
             }, (err) => {
                 console.error('Failed to copy text: ', err);
                 alert('Failed to copy commands. Please try again.');
+            });
+        }
+
+        function generateJsonData() {
+            if (particleData.length === 0) return null;
+
+            const coordAxis = coordAxisSelect.value;
+            const selectedRotationDeg = parseInt(rotationSelector.value);
+            const particleScale = parseFloat(scaleSlider.value);
+
+            // Apply coordinate transformation and rotation (same logic as mcfunction generation)
+            let tempParticles = JSON.parse(JSON.stringify(particleData)).map(p_orig => {
+                const p = {...p_orig}; 
+                switch (coordAxis) {
+                    case 'Y-Z': 
+                        return { x: p.y, y: p.z, z: p.x, r: p.r, g: p.g, b: p.b };
+                    case 'Z-X': 
+                        return { x: p.z, y: p.x, z: p.y, r: p.r, g: p.g, b: p.b };
+                    case 'X-Y': 
+                    default:
+                        return { x: p.x, y: p.y, z: p.z, r: p.r, g: p.g, b: p.b };
+                }
+            });
+
+            // Apply rotation if selected
+            if (selectedRotationDeg !== 0 && selectedRotationDeg !== 360) {
+                const rotationAngleRad = selectedRotationDeg * (Math.PI / 180);
+                
+                let minX_unrotated = Infinity, maxX_unrotated = -Infinity;
+                let minY_unrotated = Infinity, maxY_unrotated = -Infinity;
+                tempParticles.forEach(p => {
+                    minX_unrotated = Math.min(minX_unrotated, p.x);
+                    maxX_unrotated = Math.max(maxX_unrotated, p.x);
+                    minY_unrotated = Math.min(minY_unrotated, p.y);
+                    maxY_unrotated = Math.max(maxY_unrotated, p.y);
+                });
+
+                const centerX_unrotated = (minX_unrotated === Infinity || maxX_unrotated === -Infinity) ? 0 : (minX_unrotated + maxX_unrotated) / 2;
+                const centerY_unrotated = (minY_unrotated === Infinity || maxY_unrotated === -Infinity) ? 0 : (minY_unrotated + maxY_unrotated) / 2;
+                
+                const cosA = Math.cos(rotationAngleRad);
+                const sinA = Math.sin(rotationAngleRad);
+
+                tempParticles.forEach(p => {
+                    const translatedX = p.x - centerX_unrotated;
+                    const translatedY = p.y - centerY_unrotated;
+                    p.x = translatedX * cosA - translatedY * sinA + centerX_unrotated;
+                    p.y = translatedX * sinA + translatedY * cosA + centerY_unrotated;
+                });
+            }
+
+            // Apply scaling (same logic as mcfunction generation)
+            let minX_src = Infinity, maxX_src = -Infinity, minY_src = Infinity, maxY_src = -Infinity, minZ_src = Infinity, maxZ_src = -Infinity;
+            tempParticles.forEach(p => {
+                minX_src = Math.min(minX_src, p.x); maxX_src = Math.max(maxX_src, p.x);
+                minY_src = Math.min(minY_src, p.y); maxY_src = Math.max(maxY_src, p.y);
+                minZ_src = Math.min(minZ_src, p.z); maxZ_src = Math.max(maxZ_src, p.z);
+            });
+
+            const pWidth_src = (maxX_src === -Infinity || minX_src === Infinity) ? 0 : maxX_src - minX_src; 
+            const pHeight_src = (maxY_src === -Infinity || minY_src === Infinity) ? 0 : maxY_src - minY_src; 
+            const pDepth_src = (maxZ_src === -Infinity || minZ_src === Infinity) ? 0 : maxZ_src - minZ_src;
+
+            const outWidth_target = parseFloat(widthInput.value) || 16;
+            const outHeight_target = parseFloat(heightInput.value) || 16;
+
+            let scaleFactor;
+            if (pWidth_src === 0 && pHeight_src === 0) {
+                scaleFactor = 1; 
+            } else if (pHeight_src === 0) { 
+                scaleFactor = pWidth_src > 0 ? outWidth_target / pWidth_src : 1;
+            } else if (pWidth_src === 0) { 
+                scaleFactor = pHeight_src > 0 ? outHeight_target / pHeight_src : 1;
+            } else {
+                const aspect_src = pWidth_src / pHeight_src;
+                const aspect_out_target = outWidth_target / outHeight_target;
+                if (aspect_src > aspect_out_target) {
+                    scaleFactor = outWidth_target / pWidth_src; 
+                } else {
+                    scaleFactor = outHeight_target / pHeight_src; 
+                }
+            }
+            if (!isFinite(scaleFactor) || scaleFactor === 0) scaleFactor = 1; 
+
+            const finalParticles = tempParticles.map(p => {
+                const x_norm = pWidth_src > 0 ? (p.x - minX_src) / pWidth_src - 0.5 : 0;
+                const y_norm = pHeight_src > 0 ? (p.y - minY_src) / pHeight_src - 0.5 : 0;
+                const z_norm = pDepth_src > 0 ? (p.z - minZ_src) / pDepth_src - 0.5 : 0;
+
+                const x = x_norm * (pWidth_src * scaleFactor);
+                const y = y_norm * (pHeight_src * scaleFactor);
+                const z = z_norm * (pDepth_src * scaleFactor); 
+                
+                return {
+                    x: parseFloat(x.toFixed(3)),
+                    y: parseFloat((-y).toFixed(3)), 
+                    z: parseFloat(z.toFixed(3)),
+                    r: parseFloat(p.r.toFixed(4)), 
+                    g: parseFloat(p.g.toFixed(4)), 
+                    b: parseFloat(p.b.toFixed(4)),
+                    scale: particleScale
+                }
+            });
+
+            return {
+                metadata: {
+                    generatedBy: "Dust Lab v1.0",
+                    website: "https://winss.xyz/dustlab",
+                    generatedOn: new Date().toISOString(),
+                    sourceFile: currentFileName,
+                    particleCount: finalParticles.length,
+                    settings: {
+                        outputWidth: parseFloat(widthInput.value),
+                        outputHeight: parseFloat(heightInput.value),
+                        particleScale: particleScale,
+                        coordinateMode: coordModeSelect.value,
+                        coordinateAxis: coordAxis,
+                        rotation: selectedRotationDeg,
+                        version: versionSelector.value,
+                        colorFixed: colorFixerToggle.checked,
+                        colorMode: colorFixerToggle.checked ? colorModeSelect.value : null,
+                        fixedColor: colorFixerToggle.checked && colorModeSelect.value === 'solid' ? colorFixerHexInput.value : null,
+                        gradientStart: colorFixerToggle.checked && colorModeSelect.value === 'gradient' ? gradientStartHex.value : null,
+                        gradientEnd: colorFixerToggle.checked && colorModeSelect.value === 'gradient' ? gradientEndHex.value : null,
+                        gradientDirection: colorFixerToggle.checked && colorModeSelect.value === 'gradient' ? gradientDirection.value : null
+                    }
+                },
+                particles: finalParticles
+            };
+        }
+
+        function copyJson() {
+            const jsonData = generateJsonData();
+            if (!jsonData) {
+                alert("Please generate some particles first!");
+                return;
+            }
+
+            if (!particlesHaveBeenCounted && particleData.length > 0) {
+                try {
+                    const currentParticles = parseInt(localStorage.getItem('dustlab_userParticles') || '0', 10);
+                    localStorage.setItem('dustlab_userParticles', currentParticles + particleData.length);
+                    particlesHaveBeenCounted = true;
+                } catch (e) {
+                    console.error("Failed to update localStorage:", e);
+                }
+            }
+
+            const jsonString = JSON.stringify(jsonData, null, 2);
+            navigator.clipboard.writeText(jsonString).then(() => {
+                copyJsonBtn.textContent = 'Copied!';
+                setTimeout(() => { copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
+            }, (err) => {
+                console.error('Failed to copy JSON: ', err);
+                alert('Failed to copy JSON. Please try again.');
             });
         }
 
@@ -767,8 +1004,83 @@
             document.body.removeChild(a); URL.revokeObjectURL(url);
         }
 
+        function downloadJson() {
+            const jsonData = generateJsonData();
+            if (!jsonData) {
+                alert("Please generate some particles first!");
+                return;
+            }
+
+            if (!particlesHaveBeenCounted && particleData.length > 0) {
+                try {
+                    const currentParticles = parseInt(localStorage.getItem('dustlab_userParticles') || '0', 10);
+                    localStorage.setItem('dustlab_userParticles', currentParticles + particleData.length);
+                    particlesHaveBeenCounted = true;
+                } catch (e) {
+                    console.error("Failed to update localStorage:", e);
+                }
+            }
+
+            try {
+                const currentDownloads = parseInt(localStorage.getItem('dustlab_userDownloads') || '0', 10);
+                localStorage.setItem('dustlab_userDownloads', currentDownloads + 1);
+            } catch (e) {
+                console.error("Failed to update localStorage:", e);
+            }
+
+            const jsonString = JSON.stringify(jsonData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dustlab-particles-${crypto.randomUUID().slice(0,8)}.json`;
+            document.body.appendChild(a); a.click();
+            document.body.removeChild(a); URL.revokeObjectURL(url);
+        }
+
         // UI setup
         updateSizingModeUI();
+        updateColorModeUI();
+        
+        // Initialize native color pickers
+        const colorFixerPicker = document.getElementById('color-fixer-picker');
+        const gradientStartPicker = document.getElementById('gradient-start-picker');
+        const gradientEndPicker = document.getElementById('gradient-end-picker');
+        
+        // Sync color picker with hex input
+        colorFixerPicker.addEventListener('input', (e) => {
+            colorFixerHexInput.value = e.target.value.toUpperCase();
+            colorFixerHexInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        
+        colorFixerHexInput.addEventListener('input', (e) => {
+            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                colorFixerPicker.value = e.target.value;
+            }
+        });
+        
+        gradientStartPicker.addEventListener('input', (e) => {
+            gradientStartHex.value = e.target.value.toUpperCase();
+            gradientStartHex.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        
+        gradientStartHex.addEventListener('input', (e) => {
+            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                gradientStartPicker.value = e.target.value;
+            }
+        });
+        
+        gradientEndPicker.addEventListener('input', (e) => {
+            gradientEndHex.value = e.target.value.toUpperCase();
+            gradientEndHex.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        
+        gradientEndHex.addEventListener('input', (e) => {
+            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
+                gradientEndPicker.value = e.target.value;
+            }
+        });
+        
         if (gridHelper) {
              const livePreviewToggle = document.getElementById('live-preview-toggle');
              gridHelper.visible = livePreviewToggle.checked;
