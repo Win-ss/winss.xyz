@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dust Lab v1.0 - App</title>
+    <title>Dust Lab v1.1 - App</title>
     <link rel="icon" type="image/png" href="DUSTLAB.png">
     <link rel="shortcut icon" type="image/png" href="DUSTLAB.png">
     
     <meta name="description" content="Dust Lab App">
-    <meta property="og:title" content="Dust Lab v1.0 - Minecraft Particle Generator App">
+    <meta property="og:title" content="Dust Lab v1.1 - Minecraft Particle Generator App">
     <meta property="og:description" content="Create stunning Minecraft particle effects from images and 3D models. Generate .mcfunction files instantly.">
     <meta property="og:image" content="https://winss.xyz/dustlab/DUSTLAB.png">
     <meta property="og:url" content="https://winss.xyz/dustlab/app.html">
@@ -43,7 +43,7 @@
         <header class="text-center mb-8">
             <div class="header-content">
                 <canvas id="silver-spiral-canvas"></canvas>
-                <h1 class="dust-effect-title">Dust Lab <span style="font-size: 0.5em; opacity: 0.7;">v1.0</span></h1>
+                <h1 class="dust-effect-title">Dust Lab <span style="font-size: 0.5em; opacity: 0.7;">v1.1</span></h1>
             </div>
         </header>
 
@@ -112,8 +112,9 @@
                         </div>
                     </div>
                     
-                    <div class="pt-4">
+                    <div class="pt-4 space-y-2">
                         <button id="generate-btn" class="w-full btn font-bold py-2 px-4 rounded-lg">Download .mcfunction</button>
+                        <button id="download-json-btn" class="w-full btn-secondary font-bold py-2 px-4 rounded-lg">Download JSON</button>
                     </div>
                 </div>
             </div>
@@ -192,11 +193,45 @@
                             <span class="text-sm font-medium">Color Fixer</span>
                             <label class="switch"><input type="checkbox" id="color-fixer-toggle"><span class="slider"></span></label>
                         </div>
-                        <div id="color-fixer-controls" class="hidden mt-2 flex items-center justify-between">
-                            <label for="color-fixer-input" class="block text-sm font-medium">Color</label>
-                            <div class="flex items-center gap-2">
-                                <input type="text" id="color-fixer-hex" value="#FFFFFF" class="p-1 w-24 text-center">
-                                <input type="color" id="color-fixer-picker" value="#FFFFFF">
+                        <div id="color-fixer-controls" class="hidden mt-2 space-y-3">
+                            <div>
+                                <label for="color-mode" class="block text-sm font-medium">Color Mode</label>
+                                <select id="color-mode" class="mt-1 block w-full sm:text-sm p-2">
+                                    <option value="solid" selected>Solid Color</option>
+                                    <option value="gradient">Gradient</option>
+                                </select>
+                            </div>
+                            <div id="solid-color-controls">
+                                <label class="block text-sm font-medium mb-2">Color</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="text" id="color-fixer-hex" value="#FFFFFF" class="p-1 w-24 text-center">
+                                    <input type="color" id="color-fixer-picker" value="#FFFFFF" class="w-10 h-8 rounded cursor-pointer">
+                                </div>
+                            </div>
+                            <div id="gradient-controls" class="hidden">
+                                <div class="mb-3">
+                                    <label class="block text-sm font-medium mb-2">Start Color</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" id="gradient-start-hex" value="#FF0000" class="p-1 w-24 text-center">
+                                        <input type="color" id="gradient-start-picker" value="#FF0000" class="w-10 h-8 rounded cursor-pointer">
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="block text-sm font-medium mb-2">End Color</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" id="gradient-end-hex" value="#0000FF" class="p-1 w-24 text-center">
+                                        <input type="color" id="gradient-end-picker" value="#0000FF" class="w-10 h-8 rounded cursor-pointer">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label for="gradient-direction" class="block text-sm font-medium">Direction</label>
+                                    <select id="gradient-direction" class="mt-1 block w-full sm:text-sm p-2">
+                                        <option value="horizontal" selected>Horizontal (Left to Right)</option>
+                                        <option value="vertical">Vertical (Top to Bottom)</option>
+                                        <option value="diagonal">Diagonal (Top-Left to Bottom-Right)</option>
+                                        <option value="radial">Radial (Center to Edge)</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -211,7 +246,10 @@
         <div class="mt-8 output-display-container p-4">
             <div class="flex justify-between items-center mb-2">
                  <h2 class="text-xl font-semibold" style="color: var(--color-text-main);">Generated .mcfunction</h2>
-                 <button id="copy-btn" class="btn font-bold py-1 px-3 rounded-lg text-sm">Copy</button>
+                 <div class="flex space-x-2">
+                     <button id="copy-btn" class="btn font-bold py-1 px-3 rounded-lg text-sm">Copy</button>
+                     <button id="copy-json-btn" class="btn-secondary font-bold py-1 px-3 rounded-lg text-sm">Copy JSON</button>
+                 </div>
             </div>
             <pre id="output-code" class="text-sm p-4 rounded-md overflow-x-auto h-96">Awaiting file...</pre> <!-- Height changed to h-96 -->
         </div>
