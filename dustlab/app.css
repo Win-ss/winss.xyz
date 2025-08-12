@@ -95,6 +95,17 @@
             transform: translateY(-2px);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+        .btn-secondary {
+            background-color: var(--color-input-bg);
+            color: var(--color-text-main);
+            border: 1px solid var(--color-border);
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background-color: var(--color-border);
+        }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
@@ -363,5 +374,81 @@
             .main-content {
                 display: none;
             }
+        }
+
+        /* Custom Color Picker Styles */
+        .custom-color-picker {
+            position: relative;
+            display: inline-block;
+        }
+
+        .color-preview {
+            width: 40px;
+            height: 32px;
+            border: 2px solid var(--color-input-border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .color-preview:hover {
+            border-color: var(--color-button-primary-bg);
+            transform: scale(1.05);
+        }
+
+        .color-picker-popup {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            z-index: 1000;
+            background: var(--color-panel-bg);
+            border: 1px solid var(--color-panel-border);
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            margin-top: 4px;
+        }
+
+        .color-picker-popup.hidden {
+            display: none;
+        }
+
+        .color-canvas {
+            border: 1px solid var(--color-input-border);
+            border-radius: 4px;
+            cursor: crosshair;
+            display: block;
+        }
+
+        .hue-slider-container {
+            margin: 8px 0;
+        }
+
+        .hue-slider {
+            border: 1px solid var(--color-input-border);
+            border-radius: 4px;
+            cursor: pointer;
+            display: block;
+        }
+
+        .color-inputs {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .hex-input {
+            background: var(--color-input-bg);
+            border: 1px solid var(--color-input-border);
+            border-radius: 4px;
+            padding: 4px 8px;
+            color: var(--color-text-main);
+            font-size: 12px;
+            width: 80px;
+        }
+
+        .hex-input:focus {
+            outline: none;
+            border-color: var(--color-button-primary-bg);
         }
         
