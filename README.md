@@ -1,9 +1,13 @@
-Hi! so real quick this is a website for my projects
+Winss.xyz
+A site that has some of the projects that I'm working on! 
+If you want to check out more of them or just talk, [**join my Discord server**](https://discord.gg/gx32kxa8nN)
 
-Dustlab: A webapp that turns images and 3d models to particles using mcfunctions, with json support for soon to be released plugin.
+Currently There are 3 projects, 
 
-Wink: A simple image editor with a unique twist. Features like snapshot and blink that lets you save your edits and "animate" your image with them (pretty good for making animated profiles ig 👀)
+Dustlab: an elegant particle generator for Minecraft, with support for images, gifs (plugin) 3d models. and a plugin for it releasing soon. 
 
-transparency: made with the help of ai, about 40% ish.
+Wink: A simply Wonderful Image Nchancement Kit.
 
-join my server https://discord.gg/gx32kxa8nN
+Fall: Insert good acronym for a buggy project here (Turns gifs and images into ascii)
+
+Rand: Random Arcade n Delights, a simple collection of arcade minigames. (Experimental!)
