@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rand - Random Minigames</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
+    
+    <meta name="description" content="Rand - Random Minigames Collection">
+    <meta property="og:title" content="Rand - Random Minigames">
+    <meta property="og:description" content="8 random minigames for 1 or 2 players">
+    <meta property="og:image" content="https://winss.xyz/assets/favicon.png">
+    <meta property="og:url" content="https://winss.xyz/rand">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#9e59d6">
+    
+    <link rel="stylesheet" href="rand.css">
+</head>
+<body>
+    <div class="background-container">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+        <div class="circle circle-3"></div>
+        <div class="circle circle-4"></div>
+    </div>
+    
+    <div class="content">
+        <header class="game-header" id="gameHeader">
+            <h1 class="title">Rand!</h1>
+            <p class="subtitle" id="gameSubtitle">Random Minigame Collection</p>
+        </header>
+        
+        <div class="game-container" id="gameContainer">
+            <!-- Player Selection Screen -->
+            <div class="screen" id="playerSelectScreen">
+                <h2>How many players?</h2>
+                <div class="player-buttons">
+                    <button class="player-btn" onclick="selectPlayers(1)">1 Player</button>
+                    <button class="player-btn" onclick="selectPlayers(2)">2 Players</button>
+                </div>
+            </div>
+            
+            <!-- Game Screen -->
+            <div class="screen hidden" id="gameScreen">
+                <div class="game-header-bar">
+                </div>
+                <div class="game-area" id="gameArea">
+                    <!-- Game content will be inserted here -->
+                </div>
+                <div class="game-controls" id="gameControls">
+                    <!-- Game-specific controls will be inserted here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="back-to-main">
+            <a href="../index.html" class="main-link">← Back to Main</a>
+        </div>
+        
+        <div class="back-to-rand">
+            <button class="back-btn" onclick="showPlayerSelect()">Back to Rand</button>
+        </div>
+    </div>
+
+    <div class="version-text">Rand v1.0</div>
+
+    <script src="rand.js"></script>
+</body>
+</html>
