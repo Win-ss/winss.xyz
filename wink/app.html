@@ -2,12 +2,12 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wink v1.0 - Image Effects</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Wink v1.1 - Image Effects</title>
     <link rel="stylesheet" href="wink.css">
     
     <meta name="description" content="Wink - Image Effects">
-    <meta property="og:title" content="Wink v1.0 - Image Effects App">
+    <meta property="og:title" content="Wink v1.1 - Image Effects App">
     <meta property="og:description" content="image effects!!! wowww">
     <meta property="og:image" content="https://winss.xyz/assets/wink/winkwhite.png">
     <meta property="og:url" content="https://winss.xyz/wink/app.html">
@@ -17,11 +17,24 @@
     <link rel="icon" type="image/png" href="../assets/wink/winkwhite.png" id="favicon-light">
     <link rel="icon" type="image/png" href="../assets/wink/winkblack.png" id="favicon-dark" media="(prefers-color-scheme: light)">
 </head>
-<body>    <div class="main-container">
+<body>    
+    <!-- Mobile Toggle Button -->
+    <button id="mobile-toggle" class="mobile-toggle" aria-label="Toggle effects panel">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+    </button>
+
+    <div class="main-container">
         <div id="notification-container" class="notification-container"></div>
         
-        <div class="sidebar">            <div class="sidebar-header">
-                <div class="logo-container">                    <div class="logo-wrapper">
+        <div class="sidebar" id="sidebar">            
+            <div class="sidebar-header">
+                <div class="mobile-close-btn" id="mobile-close">
+                    <span>&times;</span>
+                </div>
+                <div class="logo-container">                    
+                    <div class="logo-wrapper">
                         <div class="logo-eyes-container">
                             <svg class="logo-icon" width="70" height="28" viewBox="0 0 50 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path class="left-eye-open" d="M2 10 C2 10, 6 4, 12 4 C18 4, 22 10, 22 10 C22 10, 18 16, 12 16 C6 16, 2 10, 2 10 Z" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -31,22 +44,25 @@
                                 <path d="M28 10 C28 10, 32 4, 38 4 C44 4, 48 10, 48 10 C48 10, 44 16, 38 16 C32 16, 28 10, 28 10 Z" fill="none" stroke="currentColor" stroke-width="2"/>
                                 <path d="M38 7 L40 10 L38 13 L36 10 Z" fill="currentColor"/>
                             </svg>
-                            <h1 class="logo-text">Wink <span style="font-size: 0.5em; opacity: 0.7;">v1.0</span></h1>
+                            <h1 class="logo-text">Wink <span style="font-size: 0.5em; opacity: 0.7;">v1.1</span></h1>
                         </div>
                     </div>
                 </div>
                 <input type="file" id="upload" class="input-file w-full text-sm"/>
+                <p class="paste-hint">Or paste an image!</p>
             </div>
 
             <div id="effects-container" class="effects-list">
-            </div>            <div class="sidebar-footer">
+            </div>            
+            
+            <div class="sidebar-footer">
                 <button id="reset-btn" class="btn btn-secondary w-full">Reset All</button>
                 
                 <div class="snapshot-controls">
                     <label class="block text-sm font-medium">Snapshot</label>
                     <div class="snapshot-buttons">
-                        <button id="take-snapshot-btn" class="btn btn-secondary">Take Snapshot</button>
-                        <button id="import-snapshot-btn" class="btn btn-secondary">Import Snapshot</button>
+                        <button id="take-snapshot-btn" class="btn btn-secondary">Take</button>
+                        <button id="import-snapshot-btn" class="btn btn-secondary">Import</button>
                     </div>
                     <textarea id="snapshot-input" class="snapshot-textarea" placeholder="Paste snapshot string here to import..."></textarea>
                 </div>
@@ -62,13 +78,31 @@
             </div>
         </div>
 
-        <!-- Image Canvas -->
-        <div class="canvas-area">            <div class="canvas-controls">
-                <button id="blink-btn" class="btn btn-blink">BLINK</button>
+        <div class="canvas-area">            
+            <div class="canvas-controls">
+                <button id="blink-btn" class="btn btn-blink">
+                    BLINK
+                    <span class="context-icon-wrapper">
+                        <span class="context-icon">ⓘ</span>
+                        <div class="custom-tooltip">Takes a 5s timelapse of the image (go wild! change the effects while recording!)</div>
+                    </span>
+                </button>
                 <button id="download-btn" class="btn btn-primary">Download</button>
-            </div><div id="canvas-container" class="canvas-container">
-            <canvas id="canvas" willReadFrequently="true"></canvas>
+            </div>
+            
+            <div id="canvas-container" class="canvas-container">
+                <canvas id="canvas" willReadFrequently="true"></canvas>
+            </div>
         </div>
+
+        <!-- Layers Panel -->
+        <div id="layers-panel" class="layers-panel">
+            <div class="layers-header">
+                <h3>Effect Layers</h3>
+            </div>
+            <div id="layers-list" class="layers-list">
+                <!-- Layers will be populated -->
+            </div>
         </div>
     </div>    
 <script src="wink.js"></script>
