@@ -15,7 +15,6 @@
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#9e59d6">
     
-    </script>
     <style>
         @font-face {
             font-family: 'Monocraft';
@@ -59,6 +58,7 @@
             position: relative;
             padding: 0 2rem;
             overflow: hidden;
+            isolation: isolate; 
         }
 
         .hero-content {
@@ -188,16 +188,16 @@
             z-index: 1;
             opacity: 0.8;
             pointer-events: none;
+            overflow: hidden;
         }
 
         #dots-canvas {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: -1;
         }
 
         .gradient-overlay {
@@ -615,7 +615,7 @@
                             Info
                         </span>
                     </a>
-                    <a href="download.html" class="modrinth-button">
+                    <a href="download.html" class="modrinth-button" target="_blank" rel="noopener noreferrer">
                         <img src="https://cdn.modrinth.com/modrinth-new.png" alt="Modrinth" class="modrinth-logo">
                         Download the plugin!
                     </a>
@@ -756,6 +756,7 @@
                     return;
                 }
                 let dots = [];
+                let currentDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
                 const shimmerColors = [
                     { r: 255, g: 255, b: 255 }, 
                     { r: 79, g: 70, b: 229 },  
@@ -763,42 +764,46 @@
                 ];
 
                 function buildGrid() {
-                    const dpr = window.devicePixelRatio || 1;
-                    const rect = canvas.getBoundingClientRect();
-                    
-                    canvas.width = rect.width * dpr;
-                    canvas.height = rect.height * dpr;
-                    
+                    const parent = canvas.parentElement || canvas;
+                    const rect = (parent.closest('.hero') || parent).getBoundingClientRect();
+                    currentDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+                    canvas.width = Math.max(1, Math.floor(rect.width * currentDpr));
+                    canvas.height = Math.max(1, Math.floor(rect.height * currentDpr));
+
+                    // Set display size (CSS pixels)
                     canvas.style.width = rect.width + 'px';
                     canvas.style.height = rect.height + 'px';
-                    
-                    ctx.scale(dpr, dpr);
+
+                    ctx.setTransform(currentDpr, 0, 0, currentDpr, 0, 0);
 
                     dots = [];
                     
                     const containerWidth = rect.width;
                     const containerHeight = rect.height;
                     
-                    const baseDotSize = Math.max(3, Math.min(16, containerWidth * 0.012));
-                    const dotSize = baseDotSize;
+                    const baseSize = Math.min(containerWidth, containerHeight);
+                    const dotSize = Math.max(4, Math.min(12, baseSize * 0.015));
                     
-                    const isMinimumSize = baseDotSize <= 10;
-                    const gap = isMinimumSize ? Math.max(10, dotSize * 0.8) : dotSize * 2;
-
-                    const cols = Math.floor((containerWidth + gap) / (dotSize + gap));
-                    const rows = Math.floor((containerHeight + gap) / (dotSize + gap));
+                    const gap = Math.max(5, dotSize * 1.5 + (baseSize * 0.002));
                     
-                    const xOffset = (containerWidth - (cols * (dotSize + gap) - gap)) / 2;
-                    const yOffset = (containerHeight - (rows * (dotSize + gap) - gap)) / 2;
+                    const cols = Math.floor(containerWidth / (dotSize + gap));
+                    const rows = Math.floor(containerHeight / (dotSize + gap));
+                    const totalGridWidth = cols * (dotSize + gap) - gap;
+                    const totalGridHeight = rows * (dotSize + gap) - gap;
+                    const xOffset = (containerWidth - totalGridWidth) / 2;
+                    const yOffset = (containerHeight - totalGridHeight) / 2;
 
                     for (let i = 0; i < rows; i++) {
                         for (let j = 0; j < cols; j++) {
                             dots.push({
-                                x: xOffset + j * (dotSize + gap),
-                                y: yOffset + i * (dotSize + gap),
+                                x: xOffset + j * (dotSize + gap) + dotSize / 2,
+                                y: yOffset + i * (dotSize + gap) + dotSize / 2,
                                 size: dotSize / 2,
                                 shimmerProgress: Math.random(),
-                                shimmerDuration: 5 + Math.random() * 3, 
+                                shimmerDuration: 3 + Math.random() * 4, 
                             });
                         }
                     }
@@ -809,9 +814,11 @@
                     if (!lastTimestamp) lastTimestamp = timestamp;
                     const deltaTime = (timestamp - lastTimestamp) / 1000; 
                     lastTimestamp = timestamp;
-
-                    // clear the canvas
-                    ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+                    // Clear the full backing store regardless of current transform
+                    ctx.save();
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.restore();
 
                     dots.forEach(dot => {
                         dot.shimmerProgress = (dot.shimmerProgress + deltaTime / dot.shimmerDuration) % 1;
@@ -839,7 +846,7 @@
                         ctx.arc(dot.x, dot.y, dot.size, 0, Math.PI * 2);
                         ctx.fillStyle = color;
                         ctx.shadowColor = color;
-                        ctx.shadowBlur = 10;
+                        ctx.shadowBlur = 8;
                         ctx.fill();
                     });
 
@@ -847,9 +854,25 @@
                 }
 
                 let resizeTimeout;
-                window.addEventListener("resize", () => {
+                function handleResize() {
                     clearTimeout(resizeTimeout);
-                    resizeTimeout = setTimeout(buildGrid, 250);
+                    resizeTimeout = setTimeout(() => {
+                        buildGrid();
+                    }, 100);
+                }
+                
+                window.addEventListener("resize", handleResize);
+                
+                // Also observe hero size changes (safer than window resize alone)
+                const hero = document.querySelector('.hero');
+                if (window.ResizeObserver && hero) {
+                    const ro = new ResizeObserver(() => handleResize());
+                    ro.observe(hero);
+                }
+                
+                // Also listen for orientation changes on mobile
+                window.addEventListener("orientationchange", () => {
+                    setTimeout(handleResize, 100);
                 });
 
                 buildGrid();
