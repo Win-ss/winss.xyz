@@ -21,6 +21,17 @@
     <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/OBJLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/OrbitControls.js"></script>
     <link rel="stylesheet" href="app.css">
+    <style>
+        .sizing-mode-glow {
+            outline: 2px solid rgba(147, 51, 234, 0.25);
+            outline-offset: 4px;
+            border-radius: 8px;
+            transition: outline 0.3s ease-out;
+        }
+        .sizing-mode-glow.fade-out {
+            outline: none;
+        }
+    </style>
 </head>
 <body class="p-4 lg:p-8">
     <div class="mobile-warning">
@@ -39,7 +50,17 @@
 
     <!-- Main App Content -->
     <div class="main-content">
-    <div class="container mx-auto max-w-7xl">
+    <!-- Back to Main Page Button - Fixed to Page Corner -->
+    <div class="absolute top-4 left-4 z-50">
+        <a href="index.html" class="inline-flex items-center px-3 py-1.5 btn-secondary font-medium text-sm rounded-md transition-all duration-300" style="color: #747678; background-color: rgba(40, 40, 40, 0.9);">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: #97999c;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Main Page
+        </a>
+    </div>
+    
+    <div class="container mx-auto max-w-7xl relative">
         <header class="text-center mb-8">
             <div class="header-content">
                 <canvas id="silver-spiral-canvas"></canvas>
@@ -47,24 +68,24 @@
             </div>
         </header>
 
-        <main class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <main class="grid grid-cols-1 lg:grid-cols-8 gap-8">
             <!-- Left Column: Controls Panel -->
-            <div class="lg:col-span-1 space-y-6">
+            <div class="lg:col-span-2 space-y-6">
                 <div class="grid grid-cols-1 gap-4">
                     <div id="upload-panel">
                         <div class="flex justify-between items-baseline mb-1">
                             <label for="file-upload" class="block text-sm font-medium" data-tooltip="Supports .png .jpg .webp .gif .obj .glb">Upload File</label>
                         </div>
-                        <input id="file-upload" type="file" class="block w-full text-sm" accept=".png,.jpg,.jpeg,.webp,.gif,.obj,.glb,.gltf"/>
+                        <input id="file-upload" type="file" multiple class="block w-full text-sm" accept=".png,.jpg,.jpeg,.webp,.gif,.obj,.glb,.gltf"/>
                     </div>
                 </div>
 
                 <!-- Left Controls Panel -->
                 <div class="control-panel space-y-6">
                     <!-- Sizing Mode -->
-                    <div class="sizing-mode-container p-3 rounded-lg">
+                    <div class="sizing-mode-container p-3 rounded-lg" id="sizing-mode-container">
                         <label class="block text-sm font-medium mb-2">Sizing Mode</label>
-                        <div class="flex space-x-4">
+                        <div class="flex space-x-4" id="sizing-mode-options">
                             <label class="flex items-center"><input type="radio" name="sizing-mode" value="density" checked class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Density & Res</span></label>
                             <label class="flex items-center"><input type="radio" name="sizing-mode" value="size" class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Size & Res</span></label>
                         </div>
@@ -85,8 +106,8 @@
                         <div id="size-res-controls" class="mt-4 space-y-4 hidden">
                              <label class="block text-sm font-medium -mb-2">Resolution Type</label>
                             <div class="flex space-x-4">
-                                <label class="flex items-center"><input type="radio" name="size-res-type" value="perBlock" checked class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Per Block</span></label>
-                                <label class="flex items-center"><input type="radio" name="size-res-type" value="pixel" class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Pixel</span></label>
+                                <label class="flex items-center"><input type="radio" name="size-res-type" value="perBlock" class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Per Block</span></label>
+                                <label class="flex items-center"><input type="radio" name="size-res-type" value="pixel" checked class="form-radio h-4 w-4 text-indigo-600"> <span class="ml-2 text-sm">Pixel</span></label>
                             </div>
 
                             <div id="per-block-controls">
@@ -120,7 +141,7 @@
             </div>
 
             <!-- Preview Panel -->
-            <div class="lg:col-span-2 preview-panel">
+            <div class="lg:col-span-4 preview-panel">
                 <canvas id="preview-canvas"></canvas>
                 <div id="particle-info" class="text-center"> 
                     <p style="color: var(--color-text-muted);">Particle Count: <span id="particle-count" class="font-bold" style="color: var(--color-text-main);">0</span></p>
@@ -128,7 +149,7 @@
             </div>
 
             <!-- Right Column: Controls Panel -->
-            <div class="lg:col-span-1 space-y-6">
+            <div class="lg:col-span-2 space-y-6">
                 <div id="version-panel" class="p-4 rounded-lg">
                     <label for="version-selector" class="block text-sm font-medium">Minecraft Version</label>
                     <select id="version-selector" class="mt-1 block w-full sm:text-sm p-2">
@@ -145,7 +166,7 @@
                         <div class="toggle-label">
                             <div class="flex items-center">
                                 <span class="text-sm font-medium">Experimental Mode</span>
-                                <span class="info-icon" data-tooltip="When on, allows particle counts over 40k. WILL CAUSE LAG.">
+                                <span class="info-icon" data-tooltip="When on, allows particle counts over 20k. WILL CAUSE LAG.">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 </span>
                             </div>
@@ -183,9 +204,46 @@
                     <div class="pt-4">
                         <div class="slider-label">
                             <label for="particle-scale" class="block text-sm font-medium">Particle Scale</label>
-                            <input type="number" id="particle-scale-value" class="editable-value" step="0.1" min="0.1" max="4">
+                            <input type="number" id="particle-scale-value" class="editable-value" step="0.1" min="0.1" max="5">
                         </div>
-                        <input id="particle-scale" type="range" min="0.1" max="4" value="1" step="0.1" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+                        <input id="particle-scale" type="range" min="0.1" max="5" value="1" step="0.1" class="w-full h-2 rounded-lg appearance-none cursor-pointer">
+                    </div>
+
+                    <div class="border-t pt-4" style="border-color: var(--color-panel-border);">
+                        <div class="toggle-label">
+                            <div class="flex items-center">
+                                <span class="text-sm font-medium">Delay</span>
+                                <span class="info-icon" data-tooltip="Plugin only (JSON). If you have an idea on how to implement it in datapacks, contact me on discord winss.">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </span>
+                            </div>
+                            <label class="switch"><input type="checkbox" id="delay-toggle"><span class="slider"></span></label>
+                        </div>
+                        <div id="delay-controls" class="hidden mt-2 space-y-3">
+                            <div>
+                                <label for="delay-value" class="block text-sm font-medium">Delay per Particle (ticks)</label>
+                                <input type="number" id="delay-value" value="2" min="0" max="100" step="1" class="mt-1 block w-full p-2">
+                            </div>
+                            <div>
+                                <label for="delay-max-time" class="block text-sm font-medium">Max Time (seconds)</label>
+                                <input type="number" id="delay-max-time" value="30" min="1" max="300" step="1" class="mt-1 block w-full p-2">
+                                <p class="text-xs text-gray-500 mt-1">Maximum 30s (600 ticks). Limits total duration.</p>
+                            </div>
+                            <div>
+                                <label for="delay-start-point" class="block text-sm font-medium">Start Point</label>
+                                <select id="delay-start-point" class="mt-1 block w-full sm:text-sm p-2">
+                                    <option value="center" selected>Center</option>
+                                    <option value="top-left">Top-Left</option>
+                                    <option value="top-right">Top-Right</option>
+                                    <option value="bottom-left">Bottom-Left</option>
+                                    <option value="bottom-right">Bottom-Right</option>
+                                    <option value="top">Top</option>
+                                    <option value="bottom">Bottom</option>
+                                    <option value="left">Left</option>
+                                    <option value="right">Right</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="border-t pt-4" style="border-color: var(--color-panel-border);">
@@ -270,6 +328,25 @@
         </div>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sizingModeOptions = document.getElementById('sizing-mode-options');
+            let glowRemoved = false;
+            
+            sizingModeOptions.classList.add('sizing-mode-glow');
+            
+            sizingModeOptions.addEventListener('mouseenter', function() {
+                if (!glowRemoved) {
+                    sizingModeOptions.classList.add('fade-out');
+                    glowRemoved = true;
+                    
+                    setTimeout(() => {
+                        sizingModeOptions.classList.remove('sizing-mode-glow', 'fade-out');
+                    }, 300);
+                }
+            });
+        });
+    </script>
     <script src="app.js"></script>
     </div>
 </body>

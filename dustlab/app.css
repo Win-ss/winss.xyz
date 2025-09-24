@@ -61,6 +61,10 @@
             --color-preview-bg-threejs: 0x181818; 
             --color-grid-helper-center: 0xa0a0a0; 
             --color-grid-helper-grid: 0x3c3c3c; 
+            /* Preview sizing variables */
+            --preview-panel-min-height: 600px;
+            --preview-panel-height: 80vh;
+            --preview-panel-max-height: 1100px;
         }
 
         body {
@@ -77,16 +81,28 @@
             padding: 1rem 1.5rem;
         }
         .preview-panel {
-            background-color: var(--color-panel-bg); 
+            background-color: var(--color-panel-bg);
             border-radius: 0.5rem;
             overflow: hidden;
-            min-height: 400px; 
+            min-height: var(--preview-panel-min-height);
+            height: var(--preview-panel-height);
+            max-height: var(--preview-panel-max-height);
             position: relative;
+            display: flex;
+            flex-direction: column;
         }
         #preview-canvas {
             display: block;
             width: 100%;
+            /* Allow canvas to fill available space without driving parent height growth */
+            flex: 1 1 auto;
             height: 100%;
+        }
+        @media (max-width: 1024px) {
+            .preview-panel { height: 60vh; }
+        }
+        @media (min-width: 1600px) {
+            .preview-panel { height: 85vh; }
         }
         .btn {
             transition: all 0.3s ease;
@@ -182,8 +198,9 @@
             color: var(--color-text-main);
             font-weight: bold;
             text-align: right;
-            width: 60px; 
-            padding: 2px;
+            width: 80px; 
+            min-width: 60px;
+            padding: 2px 4px;
             border-radius: 4px;
             font-size: 0.75rem;
         }        .editable-value:focus {

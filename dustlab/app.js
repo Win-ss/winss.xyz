@@ -2,18 +2,23 @@
         let scene, camera, renderer, controls, particleSystem;
         const canvas = document.getElementById('preview-canvas');
         let gridHelper;
+        const PREVIEW_SIZE_FACTOR = 0.6;
 
         function initPreview() {
             scene = new THREE.Scene();
             const previewBgColorHex = getComputedStyle(document.documentElement).getPropertyValue('--color-preview-bg-threejs').trim();
             scene.background = new THREE.Color(parseInt(previewBgColorHex.replace("#", "0x")));
             
-            const initialWidth = canvas.parentElement.clientWidth || 1;
-            const initialHeight = canvas.parentElement.clientHeight || 1;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const initialWidth = rect.width || 1;
+            const initialHeight = rect.height || 1;
             camera = new THREE.PerspectiveCamera(75, initialWidth / initialHeight, 0.1, 1000);
-            // Position camera at an angle to hint at 3D nature
             camera.position.set(60, 40, 80);
             renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio || 1);
+            if (renderer.outputEncoding !== undefined) {
+                renderer.outputEncoding = THREE.sRGBEncoding; // r128 API
+            }
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
@@ -36,10 +41,18 @@
             const canvasEl = renderer.domElement;
             const parentEl = canvasEl.parentElement;
             if (parentEl) {
-                const width = parentEl.clientWidth;
-                const height = parentEl.clientHeight;
-                if (canvasEl.width !== width || canvasEl.height !== height) {
+                const rect = parentEl.getBoundingClientRect();
+                const width = rect.width;
+                const height = rect.height;
+                const pixelRatio = window.devicePixelRatio || 1;
+                
+                // Check if size changed or DPI changed
+                const needsResize = canvasEl.width !== width * pixelRatio || 
+                                   canvasEl.height !== height * pixelRatio;
+                
+                if (needsResize) {
                     renderer.setSize(width, height, false);
+                    renderer.setPixelRatio(pixelRatio);
                     camera.aspect = width / height;
                     camera.updateProjectionMatrix();
                 }
@@ -50,7 +63,6 @@
 
         initPreview();
 
-        // Initialize Silver Spiral Logo
         (function initOptimizedSpiral() {
             const canvas = document.getElementById('silver-spiral-canvas');
             const ctx = canvas.getContext('2d');
@@ -173,6 +185,11 @@
         const particleScaleValueEl = document.getElementById('particle-scale-value');
         const colorFixerToggle = document.getElementById('color-fixer-toggle');
         const colorFixerControls = document.getElementById('color-fixer-controls');
+        const delayToggle = document.getElementById('delay-toggle');
+        const delayControls = document.getElementById('delay-controls');
+        const delayValueInput = document.getElementById('delay-value');
+        const delayMaxTimeInput = document.getElementById('delay-max-time');
+        const delayStartPointSelect = document.getElementById('delay-start-point');
         const colorFixerHexInput = document.getElementById('color-fixer-hex');
         const colorModeSelect = document.getElementById('color-mode');
         const solidColorControls = document.getElementById('solid-color-controls');
@@ -199,24 +216,25 @@
             if (fileInput.files.length > 0) handleFileUpload({ target: fileInput });
         }
         
-        fileInput.addEventListener('change', triggerGeneration);
-        generateBtn.addEventListener('click', downloadMcfunction);
-        copyBtn.addEventListener('click', copyCommands);
-        copyJsonBtn.addEventListener('click', copyJson);
-        downloadJsonBtn.addEventListener('click', downloadJson);
-        clearBtn.addEventListener('click', resetApp);
+        fileInput && fileInput.addEventListener('change', triggerGeneration);
+        generateBtn && generateBtn.addEventListener('click', downloadMcfunction);
+        copyBtn && copyBtn.addEventListener('click', copyCommands);
+        copyJsonBtn && copyJsonBtn.addEventListener('click', copyJson);
+        downloadJsonBtn && downloadJsonBtn.addEventListener('click', downloadJson);
+        clearBtn && clearBtn.addEventListener('click', resetApp);
         
-        [coordModeSelect, widthInput, heightInput, versionSelector].forEach(el => el.addEventListener('input', generateMcfunctionContent));
+        [coordModeSelect, versionSelector].filter(el => el).forEach(el => el.addEventListener('input', generateMcfunctionContent));
+        [widthInput, heightInput].filter(el => el).forEach(el => el.addEventListener('input', debouncedTriggerGeneration));
         
-        [coordAxisSelect, rotationSelector].forEach(el => el.addEventListener('input', () => {
-            if (livePreviewToggle.checked) {
+        [coordAxisSelect, rotationSelector].filter(el => el).forEach(el => el.addEventListener('input', () => {
+            if (livePreviewToggle && livePreviewToggle.checked) {
                 updatePreview(); 
             } else {
                 generateMcfunctionContent(); 
             }
         }));
 
-        livePreviewToggle.addEventListener('change', () => {
+        livePreviewToggle && livePreviewToggle.addEventListener('change', () => {
             if (livePreviewToggle.checked) {
                 updatePreview();
                 if (gridHelper) gridHelper.visible = true;
@@ -227,7 +245,7 @@
             }
         });
 
-        [experimentalToggle, ...sizingModeRadios, ...sizeResTypeRadios].forEach(el => el.addEventListener('input', debouncedTriggerGeneration));
+        [experimentalToggle, ...sizingModeRadios, ...sizeResTypeRadios].filter(el => el).forEach(el => el.addEventListener('input', debouncedTriggerGeneration));
         
         function setupEditableSlider(slider, numberInput, isFloat = false) {
             numberInput.value = isFloat ? parseFloat(slider.value).toFixed(2) : slider.value;
@@ -247,15 +265,19 @@
         setupEditableSlider(masterResolutionSlider, masterResolutionValueEl);
         setupEditableSlider(scaleSlider, particleScaleValueEl, true);
         
-        [densitySlider, masterResolutionSlider, particlesPerBlockInput, resolutionWidthPxInput, resolutionHeightPxInput, colorFixerToggle, colorFixerHexInput, gradientStartHex, gradientEndHex, gradientDirection].forEach(el => el.addEventListener('input', debouncedTriggerGeneration));
-        scaleSlider.addEventListener('input', () => { updatePreviewAppearance(); generateMcfunctionContent(); });
+        [densitySlider, masterResolutionSlider, particlesPerBlockInput, resolutionWidthPxInput, resolutionHeightPxInput, colorFixerToggle, colorFixerHexInput, gradientStartHex, gradientEndHex, gradientDirection].forEach(el => el && el.addEventListener('input', debouncedTriggerGeneration));
+        // Delay controls only affect JSON output, not preview - so only regenerate mcfunction content
+        [delayToggle, delayValueInput, delayMaxTimeInput, delayStartPointSelect].forEach(el => el && el.addEventListener('input', generateMcfunctionContent));
+        scaleSlider && scaleSlider.addEventListener('input', () => { updatePreviewAppearance(); generateMcfunctionContent(); });
 
-        sizingModeRadios.forEach(radio => radio.addEventListener('change', updateSizingModeUI));
-        sizeResTypeRadios.forEach(radio => radio.addEventListener('change', updateSizeResModeUI));
+        sizingModeRadios.forEach(radio => radio && radio.addEventListener('change', updateSizingModeUI));
+        sizeResTypeRadios.forEach(radio => radio && radio.addEventListener('change', updateSizeResModeUI));
 
-        colorFixerToggle.addEventListener('change', (e) => colorFixerControls.classList.toggle('hidden', !e.target.checked));
-        colorModeSelect.addEventListener('change', updateColorModeUI);
-        [colorFixerHexInput, gradientStartHex, gradientEndHex].forEach(input => {
+        colorFixerToggle && colorFixerToggle.addEventListener('change', (e) => colorFixerControls.classList.toggle('hidden', !e.target.checked));
+        delayToggle && delayToggle.addEventListener('change', (e) => delayControls.classList.toggle('hidden', !e.target.checked));
+        colorModeSelect && colorModeSelect.addEventListener('change', updateColorModeUI);
+        colorModeSelect && colorModeSelect.addEventListener('change', debouncedTriggerGeneration);
+        [colorFixerHexInput, gradientStartHex, gradientEndHex].filter(input => input).forEach(input => {
             input.addEventListener('change', (e) => {
                 // Validate hex color
                 let value = e.target.value;
@@ -266,42 +288,127 @@
         });
 
         function updateSizingModeUI() {
-            const isDensity = document.querySelector('input[name="sizing-mode"]:checked').value === 'density';
-            densityResControls.classList.toggle('hidden', !isDensity);
-            sizeResControls.classList.toggle('hidden', isDensity);
+            const sizingModeElement = document.querySelector('input[name="sizing-mode"]:checked');
+            if (!sizingModeElement) return;
+            const isDensity = sizingModeElement.value === 'density';
+            densityResControls && densityResControls.classList.toggle('hidden', !isDensity);
+            sizeResControls && sizeResControls.classList.toggle('hidden', isDensity);
             if (!isDensity) updateSizeResModeUI();
         }
         
         function updateSizeResModeUI() {
-            const isPerBlock = document.querySelector('input[name="size-res-type"]:checked').value === 'perBlock';
-            perBlockControls.classList.toggle('hidden', !isPerBlock);
-            pixelControls.classList.toggle('hidden', isPerBlock);
+            const sizeResTypeElement = document.querySelector('input[name="size-res-type"]:checked');
+            if (!sizeResTypeElement) return;
+            const isPerBlock = sizeResTypeElement.value === 'perBlock';
+            perBlockControls && perBlockControls.classList.toggle('hidden', !isPerBlock);
+            pixelControls && pixelControls.classList.toggle('hidden', isPerBlock);
         }
 
         function updateColorModeUI() {
+            if (!colorModeSelect) return;
             const isSolid = colorModeSelect.value === 'solid';
-            solidColorControls.classList.toggle('hidden', !isSolid);
-            gradientControls.classList.toggle('hidden', isSolid);
+            solidColorControls && solidColorControls.classList.toggle('hidden', !isSolid);
+            gradientControls && gradientControls.classList.toggle('hidden', isSolid);
         }
 
-        // Custom Color Picker Implementation
+        // Resource tracking to avoid revoking blob URLs before textures finish loading
+        let modelResourceURLs = [];
+        function registerModelResource(url){ modelResourceURLs.push(url); }
+        function clearPreviousModelResources(){
+            if (!modelResourceURLs.length) return;
+            // Defer revocation slightly to avoid interfering with in-flight GPU uploads
+            const urlsToRevoke = modelResourceURLs.slice();
+            modelResourceURLs = [];
+            setTimeout(()=>{ urlsToRevoke.forEach(u=>{ try { URL.revokeObjectURL(u); } catch(_){} }); }, 5000);
+        }
+
+        // Custom Color Picker Implementation BAD
         function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            currentFileName = file.name; 
-            const fileNameLower = file.name.toLowerCase(); 
+            const files = Array.from(event.target.files || []);
+            if (!files.length) return;
+            clearPreviousModelResources();
+            const primary = files.find(f => /\.(obj|gltf|glb|png|jpe?g|webp|gif)$/i.test(f.name));
+            if (!primary) { alert('No supported file found.'); return; }
+            currentFileName = primary.name;
+            const lower = primary.name.toLowerCase();
+
+            const blobURLMap = new Map();
+            files.forEach(f => {
+                const url = URL.createObjectURL(f);
+                blobURLMap.set(f.name, url);
+                registerModelResource(url); // track for later cleanup
+            });
+
             const reader = new FileReader();
-            if (fileNameLower.endsWith('.png') || fileNameLower.endsWith('.jpg') || fileNameLower.endsWith('.jpeg') || fileNameLower.endsWith('.webp') || fileNameLower.endsWith('.gif')) {
+            if (/(png|jpg|jpeg|webp|gif)$/.test(lower)) {
                 reader.onload = e => { const img = new Image(); img.onload = () => processImage(img); img.src = e.target.result; };
-                reader.readAsDataURL(file);
-            } else if (fileNameLower.endsWith('.obj')) {
-                reader.onload = e => processOBJ(e.target.result);
-                reader.readAsText(file);
-            } else if (fileNameLower.endsWith('.glb') || fileNameLower.endsWith('.gltf')) {
-                processGLB(file);
+                reader.readAsDataURL(primary);
+            } else if (lower.endsWith('.obj')) {
+                reader.onload = e => { try { processOBJ(e.target.result); } catch(err){ console.error(err); alert('Failed to parse OBJ.'); } };
+                reader.readAsText(primary);
+            } else if (lower.endsWith('.glb') || lower.endsWith('.gltf')) {
+                processGLTFWithExtras(primary, blobURLMap);
             } else {
                 alert('Unsupported file type.');
             }
+        }
+
+        function processGLTFWithExtras(modelFile, blobURLMap){
+            const currentSizingMode = document.querySelector('input[name="sizing-mode"]:checked').value;
+            if (currentSizingMode !== 'density') {
+                alert("Sizing modes other than 'Density & Res' are primarily designed for 2D images. For 3D models, 'Density & Res' will be used.");
+                document.querySelector('input[name="sizing-mode"][value="density"]').checked = true;
+                updateSizingModeUI();
+            }
+            const manager = new THREE.LoadingManager();
+            manager.setURLModifier((url) => {
+                const fileName = url.split(/[\\\/]/).pop();
+                if (blobURLMap.has(fileName)) return blobURLMap.get(fileName);
+                return url;
+            });
+            manager.onError = (url)=>{ console.warn('Resource failed to load:', url); };
+            const loader = new THREE.GLTFLoader(manager);
+            const existing = blobURLMap.get(modelFile.name);
+            const modelURL = existing || (()=>{ const u = URL.createObjectURL(modelFile); registerModelResource(u); return u; })();
+            loader.load(modelURL, (gltf)=>{
+                try { waitForTexturesThenExtract(gltf.scene); }
+                catch(err){ console.error('Extraction scheduling error', err); alert('Model loaded but texture handling failed.'); }
+            }, undefined, (err)=>{
+                console.error('Error loading GLTF/GLB', err);
+                alert('Failed to load GLTF/GLB model (see console).');
+            });
+        }
+
+        function waitForTexturesThenExtract(scene){
+            // Gather all potential texture images referenced by materials
+            const images = new Set();
+            scene.traverse(obj => {
+                if (obj.isMesh && obj.material) {
+                    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+                    mats.forEach(m => { if (m && m.map && m.map.image) images.add(m.map.image); });
+                }
+            });
+            if (images.size === 0) { extractParticlesFromObject(scene); return; }
+            const pending = [];
+            images.forEach(img => {
+                // Image can be HTMLImageElement, ImageBitmap (already loaded), or Canvas/Video
+                if (img instanceof HTMLImageElement) {
+                    if (img.complete && img.naturalWidth > 0) return; // already loaded
+                    pending.push(new Promise(res => {
+                        img.addEventListener('load', () => res(), { once: true });
+                        img.addEventListener('error', () => res(), { once: true }); // resolve anyway
+                    }));
+                }
+            });
+            if (!pending.length) { extractParticlesFromObject(scene); return; }
+            const timeout = new Promise(res => setTimeout(res, 1500));
+            Promise.race([
+                Promise.all(pending),
+                timeout
+            ]).then(()=>{
+                // Give browser a moment to upload textures to GPU so canvas drawImage succeeds
+                requestAnimationFrame(()=> extractParticlesFromObject(scene));
+            });
         }
         
         function processImage(img) {
@@ -404,65 +511,142 @@
         }
         
         function extractParticlesFromObject(object) {
+            // Collect vertices (randomly sampled by density) applying full world transform + basic coloration
             let newParticles = [];
             const density = parseFloat(densitySlider.value);
             const resolution = parseInt(masterResolutionSlider.value);
             const textureCanvas = document.createElement('canvas');
             const textureCtx = textureCanvas.getContext('2d', { willReadFrequently: true });
-            const isColorFixed = colorFixerToggle.checked;
-            const fixedColor = isColorFixed ? hexToRgb(colorFixerPicker.value) : null;
+            const isColorFixed = colorFixerToggle && colorFixerToggle.checked;
+
+            // Ensure matrices are current
+            object.updateMatrixWorld(true);
             const box = new THREE.Box3().setFromObject(object);
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
             const scale = maxDim > 0 ? resolution / maxDim : 1;
-            
-            object.traverse(child => {
-                if (child.isMesh) {
-                    const { geometry, material } = child;
-                    const positions = geometry.attributes.position.array;
-                    const uvs = geometry.attributes.uv ? geometry.attributes.uv.array : null;
-                    let textureData = null, textureWidth = 0, textureHeight = 0;
 
-                    if (!isColorFixed && material && material.map && material.map.isTexture && uvs) {
-                        const image = material.map.image;
-                        if (image && image.width > 0 && image.height > 0) { 
-                            textureWidth = image.width; textureHeight = image.height;
-                            textureCanvas.width = textureWidth; textureCanvas.height = textureHeight;
+            // Calculate bounding box for gradient mapping
+            const min = box.min;
+            const max = box.max;
+            const range = {
+                x: max.x - min.x,
+                y: max.y - min.y,
+                z: max.z - min.z
+            };
+
+            const tmpPos = new THREE.Vector3();
+
+            object.traverse(child => {
+                if (!child.isMesh) return;
+                // Update child's world matrix in case
+                child.updateWorldMatrix(true, false);
+                const { geometry, material } = child;
+                if (!geometry || !geometry.attributes || !geometry.attributes.position) return;
+                const positions = geometry.attributes.position.array;
+                const uvs = geometry.attributes.uv ? geometry.attributes.uv.array : null;
+                const colorsAttr = geometry.attributes.color ? geometry.attributes.color.array : null;
+                let textureData = null, textureWidth = 0, textureHeight = 0;
+
+                if (!isColorFixed && material && material.map && material.map.isTexture && uvs) {
+                    const image = material.map.image;
+                    // Some image objects in older three can be arrays (cubemaps); ignore those
+                    if (image && image.width > 0 && image.height > 0) {
+                        textureWidth = image.width; textureHeight = image.height;
+                        textureCanvas.width = textureWidth; textureCanvas.height = textureHeight;
+                        try {
+                            textureCtx.clearRect(0, 0, textureWidth, textureHeight);
                             textureCtx.drawImage(image, 0, 0, textureWidth, textureHeight);
-                            try {
-                                textureData = textureCtx.getImageData(0, 0, textureWidth, textureHeight).data;
-                            } catch (e) {
-                                console.warn("Could not getImageData from texture, possibly tainted canvas or incomplete load:", e);
-                                textureData = null;
-                            }
+                            textureData = textureCtx.getImageData(0, 0, textureWidth, textureHeight).data;
+                        } catch (e) {
+                            console.warn('Texture sampling failed (likely CORS or not fully loaded); falling back to material color.', e);
+                            textureData = null;
                         }
-                    }
-                    for(let i=0; i < positions.length; i+=3) {
-                         if (Math.random() > density) continue;
-                        let r=1, g=1, b=1;
-                        if (fixedColor) {
-                            r = fixedColor.r; g = fixedColor.g; b = fixedColor.b;
-                        } else if (textureData && uvs) {
-                            const uvIndex = (i/3)*2;
-                            if (uvs[uvIndex] !== undefined && uvs[uvIndex+1] !== undefined) {
-                                const u = uvs[uvIndex]; const v = 1 - uvs[uvIndex+1]; 
-                                const texX = Math.floor(u * (textureWidth - 1));
-                                const texY = Math.floor(v * (textureHeight - 1));
-                                const pixelIndex = (texY * textureWidth + texX) * 4;
-                                if (pixelIndex >= 0 && pixelIndex + 3 < textureData.length) { 
-                                    r = textureData[pixelIndex]/255;
-                                    g = textureData[pixelIndex+1]/255;
-                                    b = textureData[pixelIndex+2]/255;
-                                    
-                                }
-                            }
-                        } else if(material && material.color){
-                             r = material.color.r; g = material.color.g; b = material.color.b;
-                        }
-                        newParticles.push({ x: positions[i]*scale, y: positions[i+1]*scale, z: positions[i+2]*scale, r, g, b });
                     }
                 }
+
+                for (let i = 0; i < positions.length; i += 3) {
+                    if (Math.random() > density) continue; // random vertex sampling
+                    let r = 1, g = 1, b = 1;
+
+                    // Transform vertex into world space first to get actual position
+                    tmpPos.set(positions[i], positions[i + 1], positions[i + 2]);
+                    tmpPos.applyMatrix4(child.matrixWorld);
+
+                    if (isColorFixed) {
+                        // Calculate normalized position for gradient mapping (0-1 range)
+                        let normalizedX = 0, normalizedY = 0;
+                        
+                        if (range.x > 0) normalizedX = (tmpPos.x - min.x) / range.x;
+                        if (range.y > 0) normalizedY = (tmpPos.y - min.y) / range.y;
+                        
+                        // Use original colors as base for getFixedColor
+                        let originalR = 1, originalG = 1, originalB = 1;
+                        
+                        // Try to get original colors from various sources
+                        if (colorsAttr) {
+                            const ci = (i / 3) * 3;
+                            if (colorsAttr[ci] !== undefined) {
+                                originalR = colorsAttr[ci];
+                                originalG = colorsAttr[ci + 1]; 
+                                originalB = colorsAttr[ci + 2];
+                            }
+                        } else if (textureData && uvs) {
+                            const uvIndex = (i / 3) * 2;
+                            if (uvs[uvIndex] !== undefined && uvs[uvIndex + 1] !== undefined) {
+                                const u = uvs[uvIndex];
+                                const v = 1 - uvs[uvIndex + 1]; // flip V
+                                const texX = Math.min(textureWidth - 1, Math.max(0, Math.floor(u * (textureWidth - 1))));
+                                const texY = Math.min(textureHeight - 1, Math.max(0, Math.floor(v * (textureHeight - 1))));
+                                const pixelIndex = (texY * textureWidth + texX) * 4;
+                                if (pixelIndex >= 0 && pixelIndex + 3 < textureData.length) {
+                                    originalR = textureData[pixelIndex] / 255;
+                                    originalG = textureData[pixelIndex + 1] / 255;
+                                    originalB = textureData[pixelIndex + 2] / 255;
+                                }
+                            }
+                        } else if (material && material.color) {
+                            originalR = material.color.r;
+                            originalG = material.color.g;
+                            originalB = material.color.b;
+                        }
+                        
+                        // Apply color fixer (solid color or gradient)
+                        const fixedColor = getFixedColor(normalizedX, normalizedY, originalR, originalG, originalB);
+                        r = fixedColor.r;
+                        g = fixedColor.g;
+                        b = fixedColor.b;
+                    } else {
+                        // Use original color logic when color fixer is off
+                        if (colorsAttr) {
+                            const ci = (i / 3) * 3;
+                            if (colorsAttr[ci] !== undefined) {
+                                r = colorsAttr[ci]; g = colorsAttr[ci + 1]; b = colorsAttr[ci + 2];
+                            }
+                        } else if (textureData && uvs) {
+                            const uvIndex = (i / 3) * 2;
+                            if (uvs[uvIndex] !== undefined && uvs[uvIndex + 1] !== undefined) {
+                                const u = uvs[uvIndex];
+                                const v = 1 - uvs[uvIndex + 1]; // flip V
+                                const texX = Math.min(textureWidth - 1, Math.max(0, Math.floor(u * (textureWidth - 1))));
+                                const texY = Math.min(textureHeight - 1, Math.max(0, Math.floor(v * (textureHeight - 1))));
+                                const pixelIndex = (texY * textureWidth + texX) * 4;
+                                if (pixelIndex >= 0 && pixelIndex + 3 < textureData.length) {
+                                    r = textureData[pixelIndex] / 255;
+                                    g = textureData[pixelIndex + 1] / 255;
+                                    b = textureData[pixelIndex + 2] / 255;
+                                }
+                            }
+                        } else if (material && material.color) {
+                            r = material.color.r; g = material.color.g; b = material.color.b;
+                        }
+                    }
+
+                    // Scale the position and add to particles
+                    newParticles.push({ x: tmpPos.x * scale, y: tmpPos.y * scale, z: tmpPos.z * scale, r, g, b });
+                }
             });
+
             finalizeParticles(newParticles);
         }
 
@@ -476,15 +660,22 @@
         }
 
         function getFixedColor(x, y, originalR, originalG, originalB) {
-            if (!colorFixerToggle.checked) {
+            if (!colorFixerToggle || !colorFixerToggle.checked) {
                 return { r: originalR, g: originalG, b: originalB };
             }
 
-            if (colorModeSelect.value === 'solid') {
+            if (!colorModeSelect || colorModeSelect.value === 'solid') {
+                if (!colorFixerHexInput) {
+                    return { r: originalR, g: originalG, b: originalB };
+                }
                 const fixedColor = hexToRgb(colorFixerHexInput.value);
                 return { r: fixedColor.r, g: fixedColor.g, b: fixedColor.b };
             } else {
                 // Gradient mode
+                if (!gradientStartHex || !gradientEndHex || !gradientDirection) {
+                    return { r: originalR, g: originalG, b: originalB };
+                }
+                
                 const startColor = hexToRgb(gradientStartHex.value);
                 const endColor = hexToRgb(gradientEndHex.value);
                 const direction = gradientDirection.value;
@@ -521,8 +712,8 @@
         }
 
         function finalizeParticles(newParticles) {
-            if (!experimentalToggle.checked && newParticles.length > 40000) {
-                newParticles = newParticles.slice(0, 40000);
+            if (!experimentalToggle.checked && newParticles.length > 20000) {
+                newParticles = newParticles.slice(0, 20000);
             }
             particleData = newParticles;
             particlesHaveBeenCounted = false; 
@@ -530,7 +721,7 @@
         }
 
         function updatePreviewAppearance() {
-             if (particleSystem) particleSystem.material.size = parseFloat(scaleSlider.value);
+             if (particleSystem) particleSystem.material.size = parseFloat(scaleSlider.value) * PREVIEW_SIZE_FACTOR;
         }
 
         function updatePreview() {
@@ -605,7 +796,7 @@
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
             geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
             const material = new THREE.PointsMaterial({
-                size: parseFloat(scaleSlider.value),
+                size: parseFloat(scaleSlider.value) * PREVIEW_SIZE_FACTOR,
                 vertexColors: true, sizeAttenuation: true
             });
             particleSystem = new THREE.Points(geometry, material);
@@ -747,37 +938,39 @@
             currentFileName = 'N/A'; 
             particleData = [];
             particlesHaveBeenCounted = false;
-            document.querySelector('input[name="sizing-mode"][value="density"]').checked = true;
-            document.querySelector('input[name="size-res-type"][value="perBlock"]').checked = true;
+            const sizingModeElement = document.querySelector('input[name="sizing-mode"][value="density"]');
+            const sizeResTypeElement = document.querySelector('input[name="size-res-type"][value="perBlock"]');
+            sizingModeElement && (sizingModeElement.checked = true);
+            sizeResTypeElement && (sizeResTypeElement.checked = true);
             updateSizingModeUI();
             
-            widthInput.value = 16;
-            heightInput.value = 16;
-            particlesPerBlockInput.value = 2;
-            resolutionWidthPxInput.value = 64;
-            resolutionHeightPxInput.value = 64;
-            densitySlider.value = 0.5;
-            masterResolutionSlider.value = 128;
-            scaleSlider.value = 1.0;
-            coordModeSelect.value = 'local';
-            coordAxisSelect.value = 'X-Y'; 
-            rotationSelector.value = '0'; 
-            versionSelector.value = '1.21+';
-            livePreviewToggle.checked = true;
-            experimentalToggle.checked = false;
-            colorFixerToggle.checked = false;
-            colorModeSelect.value = 'solid';
-            colorFixerHexInput.value = '#FFFFFF';
-            gradientStartHex.value = '#FF0000';
-            gradientEndHex.value = '#0000FF';
-            gradientDirection.value = 'horizontal';
-            colorFixerControls.classList.add('hidden');
+            widthInput && (widthInput.value = 16);
+            heightInput && (heightInput.value = 16);
+            particlesPerBlockInput && (particlesPerBlockInput.value = 2);
+            resolutionWidthPxInput && (resolutionWidthPxInput.value = 64);
+            resolutionHeightPxInput && (resolutionHeightPxInput.value = 64);
+            densitySlider && (densitySlider.value = 0.5);
+            masterResolutionSlider && (masterResolutionSlider.value = 128);
+            scaleSlider && (scaleSlider.value = 1.0);
+            coordModeSelect && (coordModeSelect.value = 'local');
+            coordAxisSelect && (coordAxisSelect.value = 'X-Y'); 
+            rotationSelector && (rotationSelector.value = '0'); 
+            versionSelector && (versionSelector.value = '1.21+');
+            livePreviewToggle && (livePreviewToggle.checked = true);
+            experimentalToggle && (experimentalToggle.checked = false);
+            colorFixerToggle && (colorFixerToggle.checked = false);
+            colorModeSelect && (colorModeSelect.value = 'solid');
+            colorFixerHexInput && (colorFixerHexInput.value = '#FFFFFF');
+            gradientStartHex && (gradientStartHex.value = '#FF0000');
+            gradientEndHex && (gradientEndHex.value = '#0000FF');
+            gradientDirection && (gradientDirection.value = 'horizontal');
+            colorFixerControls && colorFixerControls.classList.add('hidden');
             updateColorModeUI();
 
-            densitySlider.dispatchEvent(new Event('input', {bubbles:true}));
-            masterResolutionSlider.dispatchEvent(new Event('input', {bubbles:true}));
-            scaleSlider.dispatchEvent(new Event('input', {bubbles:true}));
-            livePreviewToggle.dispatchEvent(new Event('change'));
+            densitySlider && densitySlider.dispatchEvent(new Event('input', {bubbles:true}));
+            masterResolutionSlider && masterResolutionSlider.dispatchEvent(new Event('input', {bubbles:true}));
+            scaleSlider && scaleSlider.dispatchEvent(new Event('input', {bubbles:true}));
+            livePreviewToggle && livePreviewToggle.dispatchEvent(new Event('change'));
             updatePreview();
         }
 
@@ -885,7 +1078,7 @@
             }
             if (!isFinite(scaleFactor) || scaleFactor === 0) scaleFactor = 1; 
 
-            const finalParticles = tempParticles.map(p => {
+            let finalParticles = tempParticles.map(p => {
                 const x_norm = pWidth_src > 0 ? (p.x - minX_src) / pWidth_src - 0.5 : 0;
                 const y_norm = pHeight_src > 0 ? (p.y - minY_src) / pHeight_src - 0.5 : 0;
                 const z_norm = pDepth_src > 0 ? (p.z - minZ_src) / pDepth_src - 0.5 : 0;
@@ -894,7 +1087,7 @@
                 const y = y_norm * (pHeight_src * scaleFactor);
                 const z = z_norm * (pDepth_src * scaleFactor); 
                 
-                return {
+                const particle = {
                     x: parseFloat(x.toFixed(3)),
                     y: parseFloat((-y).toFixed(3)), 
                     z: parseFloat(z.toFixed(3)),
@@ -902,12 +1095,125 @@
                     g: parseFloat(p.g.toFixed(4)), 
                     b: parseFloat(p.b.toFixed(4)),
                     scale: particleScale
-                }
+                };
+
+                // Store original normalized coordinates for delay calculation
+                particle._normX = x_norm;
+                particle._normY = y_norm;
+                particle._normZ = z_norm;
+
+                return particle;
             });
 
+            // Apply delay if enabled
+            if (delayToggle && delayToggle.checked) {
+                const delayValue = parseInt(delayValueInput.value) || 2;
+                const startPoint = delayStartPointSelect.value || 'center';
+                
+                // Calculate distance from start point for each particle
+                finalParticles.forEach(particle => {
+                    let distanceFromStart;
+                    
+                    switch (startPoint) {
+                        case 'center':
+                            distanceFromStart = Math.sqrt(
+                                particle._normX * particle._normX + 
+                                particle._normY * particle._normY
+                            );
+                            break;
+                        case 'top-left':
+                            distanceFromStart = Math.sqrt(
+                                (particle._normX + 0.5) * (particle._normX + 0.5) + 
+                                (particle._normY + 0.5) * (particle._normY + 0.5)
+                            );
+                            break;
+                        case 'top-right':
+                            distanceFromStart = Math.sqrt(
+                                (particle._normX - 0.5) * (particle._normX - 0.5) + 
+                                (particle._normY + 0.5) * (particle._normY + 0.5)
+                            );
+                            break;
+                        case 'bottom-left':
+                            distanceFromStart = Math.sqrt(
+                                (particle._normX + 0.5) * (particle._normX + 0.5) + 
+                                (particle._normY - 0.5) * (particle._normY - 0.5)
+                            );
+                            break;
+                        case 'bottom-right':
+                            distanceFromStart = Math.sqrt(
+                                (particle._normX - 0.5) * (particle._normX - 0.5) + 
+                                (particle._normY - 0.5) * (particle._normY - 0.5)
+                            );
+                            break;
+                        case 'top':
+                            distanceFromStart = Math.abs(particle._normY + 0.5);
+                            break;
+                        case 'bottom':
+                            distanceFromStart = Math.abs(particle._normY - 0.5);
+                            break;
+                        case 'left':
+                            distanceFromStart = Math.abs(particle._normX + 0.5);
+                            break;
+                        case 'right':
+                            distanceFromStart = Math.abs(particle._normX - 0.5);
+                            break;
+                        default:
+                            distanceFromStart = Math.sqrt(
+                                particle._normX * particle._normX + 
+                                particle._normY * particle._normY
+                            );
+                    }
+                    
+                    particle._distance = distanceFromStart;
+                });
+
+                // Sort particles by distance from start point
+                finalParticles.sort((a, b) => a._distance - b._distance);
+
+                // Get max time in ticks (convert seconds to ticks: 1 second = 20 ticks)
+                const maxTimeSeconds = parseInt(delayMaxTimeInput.value) || 30;
+                const maxTimeTicks = maxTimeSeconds * 20;
+
+                // Calculate what the total time would be without limit
+                const totalUnlimitedTime = (finalParticles.length - 1) * delayValue;
+                
+                // Assign delays - scale proportionally if exceeding max time
+                finalParticles.forEach((particle, index) => {
+                    if (totalUnlimitedTime <= maxTimeTicks) {
+                        // No scaling needed - use normal cumulative delay
+                        particle.delay = index * delayValue;
+                    } else {
+                        // Scale delays proportionally to fit within max time
+                        const scaleFactor = maxTimeTicks / totalUnlimitedTime;
+                        particle.delay = Math.round(index * delayValue * scaleFactor);
+                    }
+                    // Clean up temporary properties
+                    delete particle._normX;
+                    delete particle._normY;
+                    delete particle._normZ;
+                    delete particle._distance;
+                });
+            } else {
+                // Clean up temporary properties when delay is not enabled
+                finalParticles.forEach(particle => {
+                    delete particle._normX;
+                    delete particle._normY;
+                    delete particle._normZ;
+                });
+            }
+
+            // Calculate total duration
+            let totalDuration = 0;
+            if (delayToggle && delayToggle.checked && finalParticles.length > 0) {
+                // Total duration is the maximum delay used + the delay interval
+                const maxDelay = Math.max(...finalParticles.map(p => p.delay || 0));
+                totalDuration = maxDelay + (parseInt(delayValueInput.value) || 2);
+            }
+
             return {
+                duration: totalDuration,
                 metadata: {
-                    generatedBy: "Dust Lab v1.0",
+                    generatedBy: "Dust Lab v1.1",
                     website: "https://winss.xyz/dustlab",
                     generatedOn: new Date().toISOString(),
                     sourceFile: currentFileName,
@@ -919,17 +1225,31 @@
                         coordinateMode: coordModeSelect.value,
                         coordinateAxis: coordAxis,
                         rotation: selectedRotationDeg,
-                        version: versionSelector.value,
-                        colorFixed: colorFixerToggle.checked,
-                        colorMode: colorFixerToggle.checked ? colorModeSelect.value : null,
-                        fixedColor: colorFixerToggle.checked && colorModeSelect.value === 'solid' ? colorFixerHexInput.value : null,
-                        gradientStart: colorFixerToggle.checked && colorModeSelect.value === 'gradient' ? gradientStartHex.value : null,
-                        gradientEnd: colorFixerToggle.checked && colorModeSelect.value === 'gradient' ? gradientEndHex.value : null,
-                        gradientDirection: colorFixerToggle.checked && colorModeSelect.value === 'gradient' ? gradientDirection.value : null
+                        version: versionSelector && versionSelector.value,
+                        delayEnabled: delayToggle && delayToggle.checked,
+                        delayValue: delayToggle && delayToggle.checked ? parseInt(delayValueInput.value) || 2 : null,
+                        delayMaxTime: delayToggle && delayToggle.checked ? parseInt(delayMaxTimeInput.value) || 30 : null,
+                        delayStartPoint: delayToggle && delayToggle.checked ? delayStartPointSelect.value : null,
+                        colorFixed: colorFixerToggle && colorFixerToggle.checked,
+                        colorMode: colorFixerToggle && colorFixerToggle.checked && colorModeSelect ? colorModeSelect.value : null,
+                        fixedColor: colorFixerToggle && colorFixerToggle.checked && colorModeSelect && colorModeSelect.value === 'solid' && colorFixerHexInput ? colorFixerHexInput.value : null,
+                        gradientStart: colorFixerToggle && colorFixerToggle.checked && colorModeSelect && colorModeSelect.value === 'gradient' && gradientStartHex ? gradientStartHex.value : null,
+                        gradientEnd: colorFixerToggle && colorFixerToggle.checked && colorModeSelect && colorModeSelect.value === 'gradient' && gradientEndHex ? gradientEndHex.value : null,
+                        gradientDirection: colorFixerToggle && colorFixerToggle.checked && colorModeSelect && colorModeSelect.value === 'gradient' && gradientDirection ? gradientDirection.value : null
                     }
                 },
                 particles: finalParticles
             };
+        }
+
+        function formatJsonCompact(jsonData) {
+            const duration = jsonData.duration || 0;
+            const metadata = JSON.stringify(jsonData.metadata, null, 2);
+            const particles = jsonData.particles.map(p => 
+                `    ${JSON.stringify(p)}`
+            ).join(',\n');
+            
+            return `{\n  "duration": ${duration},\n  "metadata": ${metadata},\n  "particles": [\n${particles}\n  ]\n}`;
         }
 
         function copyJson() {
@@ -949,13 +1269,13 @@
                 }
             }
 
-            const jsonString = JSON.stringify(jsonData, null, 2);
+            const jsonString = formatJsonCompact(jsonData);
             navigator.clipboard.writeText(jsonString).then(() => {
                 copyJsonBtn.textContent = 'Copied!';
                 setTimeout(() => { copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
             }, (err) => {
                 console.error('Failed to copy JSON: ', err);
-                alert('Failed to copy JSON. Please try again.');
+                alert('Failed to copy JSON data. Please try again.');
             });
         }
 
@@ -1028,7 +1348,7 @@
                 console.error("Failed to update localStorage:", e);
             }
 
-            const jsonString = JSON.stringify(jsonData, null, 2);
+            const jsonString = formatJsonCompact(jsonData);
             const blob = new Blob([jsonString], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1048,36 +1368,36 @@
         const gradientEndPicker = document.getElementById('gradient-end-picker');
         
         // Sync color picker with hex input
-        colorFixerPicker.addEventListener('input', (e) => {
-            colorFixerHexInput.value = e.target.value.toUpperCase();
-            colorFixerHexInput.dispatchEvent(new Event('input', { bubbles: true }));
+        colorFixerPicker && colorFixerPicker.addEventListener('input', (e) => {
+            colorFixerHexInput && (colorFixerHexInput.value = e.target.value.toUpperCase());
+            colorFixerHexInput && colorFixerHexInput.dispatchEvent(new Event('input', { bubbles: true }));
         });
         
-        colorFixerHexInput.addEventListener('input', (e) => {
+        colorFixerHexInput && colorFixerHexInput.addEventListener('input', (e) => {
             if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                colorFixerPicker.value = e.target.value;
+                colorFixerPicker && (colorFixerPicker.value = e.target.value);
             }
         });
         
-        gradientStartPicker.addEventListener('input', (e) => {
-            gradientStartHex.value = e.target.value.toUpperCase();
-            gradientStartHex.dispatchEvent(new Event('input', { bubbles: true }));
+        gradientStartPicker && gradientStartPicker.addEventListener('input', (e) => {
+            gradientStartHex && (gradientStartHex.value = e.target.value.toUpperCase());
+            gradientStartHex && gradientStartHex.dispatchEvent(new Event('input', { bubbles: true }));
         });
         
-        gradientStartHex.addEventListener('input', (e) => {
+        gradientStartHex && gradientStartHex.addEventListener('input', (e) => {
             if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                gradientStartPicker.value = e.target.value;
+                gradientStartPicker && (gradientStartPicker.value = e.target.value);
             }
         });
         
-        gradientEndPicker.addEventListener('input', (e) => {
-            gradientEndHex.value = e.target.value.toUpperCase();
-            gradientEndHex.dispatchEvent(new Event('input', { bubbles: true }));
+        gradientEndPicker && gradientEndPicker.addEventListener('input', (e) => {
+            gradientEndHex && (gradientEndHex.value = e.target.value.toUpperCase());
+            gradientEndHex && gradientEndHex.dispatchEvent(new Event('input', { bubbles: true }));
         });
         
-        gradientEndHex.addEventListener('input', (e) => {
+        gradientEndHex && gradientEndHex.addEventListener('input', (e) => {
             if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                gradientEndPicker.value = e.target.value;
+                gradientEndPicker && (gradientEndPicker.value = e.target.value);
             }
         });
         

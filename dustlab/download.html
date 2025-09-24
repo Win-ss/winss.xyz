@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Dust Lab v1.1</title>
+    <link rel="icon" type="image/png" href="DUSTLAB.png">
+    <link rel="shortcut icon" type="image/png" href="DUSTLAB.png">
+
+    <meta name="description" content="Download the Dust Lab plugin (v1.1) and view it on GitHub.">
+    <meta property="og:title" content="Download Dust Lab v1.1">
+    <meta property="og:description" content="Grab the JAR directly from the site or view it on GitHub.">
+    <meta property="og:image" content="https://winss.xyz/dustlab/DUSTLAB.png">
+    <meta property="og:url" content="https://winss.xyz/dustlab/download.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#4f46e5">
+
+    <style>
+        @font-face {
+            font-family: 'Monocraft';
+            src: url('../assets/Monocraft.woff2') format('woff2'),
+                 url('../assets/Monocraft.woff') format('woff'),
+                 url('../assets/Monocraft.ttc') format('truetype-collection');
+            font-display: swap;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: #000;
+            color: #ffffff;
+            font-family: 'Monocraft', sans-serif;
+            line-height: 1.6;
+        }
+
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 12px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: #ffffff;
+            margin: 2rem;
+            width: fit-content;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1.5rem 4rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 1rem 0 2rem;
+        }
+
+        .title {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 800;
+            margin-bottom: 0.6rem;
+            background: linear-gradient(135deg, #ffffff, #4f46e5);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.05rem;
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .card {
+            margin: 0 auto;
+            margin-top: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            max-width: 720px;
+        }
+
+        .notice {
+            background: rgba(79, 70, 229, 0.08);
+            border: 1px solid rgba(79, 70, 229, 0.25);
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 1.25rem;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn-glass {
+            display: inline-block;
+            padding: 0.9rem 1.6rem;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            color: #fff;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            will-change: transform, box-shadow, border-color;
+        }
+
+        .btn-glass:hover {
+            transform: translateY(-3px);
+            border-color: rgba(79, 70, 229, 0.4);
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, rgba(79,70,229,0.35), rgba(56,42,78,0.35));
+            border: 1px solid rgba(79, 70, 229, 0.45);
+        }
+
+        .btn-secondary {
+            color: #a9b4ff;
+            background: rgba(79,70,229,0.08);
+            border: 1px solid rgba(79,70,229,0.25);
+        }
+
+        .file-meta {
+            margin-top: 0.75rem;
+            color: rgba(255,255,255,0.6);
+            font-size: 0.95rem;
+        }
+
+        .footer-note {
+            text-align: center;
+            color: rgba(255,255,255,0.45);
+            font-size: 0.9rem;
+            margin-top: 2rem;
+        }
+
+        .highlight {
+            color: #4f46e5;
+            font-weight: 600;
+        }
+        .footer-note a {
+            color: #4f46e5;
+            text-decoration: none;
+            border-bottom: 1px dashed rgba(79,70,229,0.5);
+        }
+        .footer-note a:hover {
+            color: #ffffff;
+            border-bottom-color: rgba(79,70,229,0.9);
+        }
+
+        @media (max-width: 480px) {
+            .actions { flex-direction: column; align-items: stretch; }
+            .btn-glass { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <a class="back-button" href="index.html">← Back to Dust Lab</a>
+
+        <div class="container">
+            <header class="header">
+                <h1 class="title">Download Dust Lab</h1>
+                <p class="subtitle">Grab the latest JAR and find the repo.</p>
+            </header>
+
+            <section class="card" aria-labelledby="download-title">
+                <div class="notice">
+                    The plugin is still being uploaded to modrinith, you can download it from the site, and view it on GitHub.
+                </div>
+
+                <h2 id="download-title" style="font-size:1.25rem; margin-bottom:0.75rem;">Dust Lab v1.1</h2>
+                <div class="actions">
+                    <a id="downloadJar" class="btn-glass btn-primary" href="dustlab-1.1.jar" download aria-label="Download Dust Lab v1.1 JAR">
+                        ⬇ Download JAR
+                    </a>
+                    <a class="btn-glass btn-secondary" href="#" target="_blank" rel="noopener" aria-label="View Dust Lab on GitHub">
+                        View on GitHub
+                    </a>
+                </div>
+                <div class="file-meta">Filename: dustlab-1.1.jar</div>
+
+                <p class="footer-note">
+                    Please join the <a href="https://discord.gg/gx32kxa8nN" target="_blank" rel="noopener" class="highlight">Discord</a>
+                    if you have any questions or issues with the plugin. It’s for Paper 1.20.4+.
+                </p>
+            </section>
+        </div>
+    </div>
+
+    <script>
+    </script>
+</body>
+</html>
