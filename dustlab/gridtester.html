@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Dust Lab v1.1 - Grid Tester</title>
+	<link rel="icon" type="image/png" href="DUSTLAB.png">
+	<link rel="shortcut icon" type="image/png" href="DUSTLAB.png">
+
+	<meta name="description" content="Visualize Dust Lab particle JSON in an interactive XYZ grid.">
+	<meta property="og:title" content="Dust Lab v1.1 - Grid Tester">
+	<meta property="og:description" content="Upload or paste Dust Lab JSON to preview particles in a grid with coordinates.">
+	<meta property="og:image" content="https://winss.xyz/dustlab/DUSTLAB.png">
+	<meta property="og:url" content="https://winss.xyz/dustlab/gridtester.html">
+	<meta property="og:type" content="website">
+	<meta name="theme-color" content="#9e59d6">
+
+	<script src="https://cdn.tailwindcss.com"></script>
+	<script type="importmap">
+	{
+		"imports": {
+			"three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
+			"three/examples/jsm/controls/OrbitControls.js": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/controls/OrbitControls.js"
+		}
+	}
+	</script>
+	<link rel="stylesheet" href="app.css">
+</head>
+<body class="p-4 lg:p-8">
+	<div class="mobile-warning">
+		<div class="mobile-warning-content">
+			<div class="mobile-warning-icon">?????</div>
+			<h2 class="mobile-warning-title">How did you find this page? AND on mobile too?</h2>
+			<p class="mobile-warning-text">The Grid Tester works best on a desktop browser.</p>
+			<a href="index.html" class="mobile-warning-button">← Back to Home</a>
+		</div>
+	</div>
+
+	<div class="main-content">
+		<div class="absolute top-4 left-4 z-50">
+			<a href="index.html" class="inline-flex items-center px-3 py-1.5 btn-secondary font-medium text-sm rounded-md transition-all duration-300" style="color: #747678; background-color: rgba(40, 40, 40, 0.9);">
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: #97999c;">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+				</svg>
+				Back to Main Page
+			</a>
+		</div>
+
+		<div class="container mx-auto max-w-7xl relative">
+			<header class="text-center mb-8">
+				<div class="header-content flex flex-col items-center gap-4">
+					<h1 class="dust-effect-title">Grid Tester<span style="font-size: 0.5em; opacity: 0.7;"></span></h1>
+				</div>
+			</header>
+
+			<main class="grid grid-cols-1 lg:grid-cols-8 gap-8">
+				<div class="lg:col-span-2 space-y-6">
+					<section class="control-panel space-y-4 p-4 rounded-lg">
+						<h2 class="text-lg font-semibold" style="color: var(--color-text-main);">Load Particle JSON</h2>
+						<p class="text-sm" style="color: var(--color-text-muted);">Accepts DustLab exports or compatible particle arrays.</p>
+
+						<div class="space-y-3">
+							<label for="json-file" class="block text-sm font-medium">Upload JSON file</label>
+							<input id="json-file" type="file" accept=".json,application/json" class="block w-full text-sm">
+						</div>
+
+						<div class="space-y-3">
+							<label for="json-text" class="block text-sm font-medium">Paste JSON</label>
+							<textarea id="json-text" rows="8" class="w-full p-3 rounded-md" placeholder="Paste JSON here..."></textarea>
+						</div>
+
+						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+							<button id="render-text-btn" class="btn font-bold py-2 px-4 rounded-lg">Render</button>
+							<button id="clear-btn" class="btn-secondary font-bold py-2 px-4 rounded-lg">Clear</button>
+							<button id="sample-btn" class="btn-secondary font-bold py-2 px-4 rounded-lg sm:col-span-2">Load Sample</button>
+						</div>
+
+						<div id="message" class="text-sm mt-2" role="status" aria-live="polite"></div>
+					</section>
+
+					<section class="p-4 rounded-lg space-y-3" style="border: 1px solid var(--color-panel-border);">
+						<h3 class="text-sm font-semibold" style="color: var(--color-text-main);">Display Options</h3>
+						<div class="flex items-center justify-between">
+							<label for="grid-toggle" class="text-sm" style="color: var(--color-text-muted);">Show Grid</label>
+							<input type="checkbox" id="grid-toggle" class="toggle-switch" checked>
+						</div>
+						<div class="flex items-center justify-between">
+							<label for="axes-toggle" class="text-sm" style="color: var(--color-text-muted);">Show Axes</label>
+							<input type="checkbox" id="axes-toggle" class="toggle-switch" checked>
+						</div>
+						<div class="flex items-center justify-between">
+							<label for="bounds-toggle" class="text-sm" style="color: var(--color-text-muted);">Show Bounds</label>
+							<input type="checkbox" id="bounds-toggle" class="toggle-switch" checked>
+						</div>
+					</section>
+
+					<section class="p-4 rounded-lg space-y-2" style="border: 1px solid var(--color-panel-border);">
+						<h3 class="text-sm font-semibold" style="color: var(--color-text-main);">hi :)</h3>
+						<ul class="text-sm space-y-2" style="color: var(--color-text-muted);">
+						</ul>
+					</section>
+				</div>
+
+				<div class="lg:col-span-4 preview-panel">
+					<canvas id="grid-canvas"></canvas>
+				</div>
+
+				<div class="lg:col-span-2 space-y-6">
+					<section id="stats-panel" class="p-4 rounded-lg" style="border: 1px solid var(--color-panel-border);">
+						<h2 class="text-lg font-semibold mb-3" style="color: var(--color-text-main);">Stats</h2>
+						<div class="flex flex-wrap gap-6 justify-between">
+							<div>
+								<p class="text-sm" style="color: var(--color-text-muted);">Particles</p>
+								<p id="particle-count" class="text-2xl font-semibold" style="color: var(--color-text-main);">0</p>
+							</div>
+							<div>
+								<p class="text-sm" style="color: var(--color-text-muted);">Bounds</p>
+								<p id="bounds-info" class="text-sm" style="color: var(--color-text-main);">—</p>
+							</div>
+						</div>
+						<div class="mt-4">
+							<p class="text-sm" style="color: var(--color-text-muted);">Hover</p>
+							<p id="hover-info" class="text-sm" style="color: var(--color-text-main);">Move over cubes to see coordinates</p>
+						</div>
+					</section>
+
+					<section id="metadata-panel" class="p-4 rounded-lg" style="border: 1px solid var(--color-panel-border);">
+						<h2 class="text-lg font-semibold mb-3" style="color: var(--color-text-main);">Metadata</h2>
+						<dl class="grid grid-cols-1 gap-y-2 text-sm" style="color: var(--color-text-muted);">
+							<div><dt class="font-medium" style="color: var(--color-text-main);">Generated By</dt><dd id="meta-generated" class="truncate">—</dd></div>
+							<div><dt class="font-medium" style="color: var(--color-text-main);">Source File</dt><dd id="meta-source" class="truncate">—</dd></div>
+							<div><dt class="font-medium" style="color: var(--color-text-main);">Version</dt><dd id="meta-version" class="truncate">—</dd></div>
+							<div><dt class="font-medium" style="color: var(--color-text-main);">Scale</dt><dd id="meta-scale" class="truncate">—</dd></div>
+						</dl>
+					</section>
+
+					<section class="p-4 rounded-lg" style="border: 1px solid var(--color-panel-border);">
+						<h2 class="text-lg font-semibold mb-3" style="color: var(--color-text-main);">Coordinates</h2>
+						<div id="coordinate-list" class="space-y-2 max-h-96 overflow-y-auto text-xs" style="color: var(--color-text-muted);">
+							<p>No particles loaded.</p>
+						</div>
+					</section>
+				</div>
+			</main>
+		</div>
+	</div>
+
+	<script type="module" src="gridtester.js"></script>
+</body>
+</html>
