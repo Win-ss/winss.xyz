@@ -373,6 +373,15 @@ document.addEventListener('DOMContentLoaded', () => {
             customImage: null,
             type: 'bouncingLogo',
             enabled: false
+        },
+        'Line Art': {
+            enabled: false,
+            type: 'lineArt',
+            lineColor: '#ffffff',
+            backgroundColor: '#000000',
+            thickness: 1,
+            sensitivity: 50,
+            smoothColors: false
         }
     };
 
@@ -413,14 +422,15 @@ document.addEventListener('DOMContentLoaded', () => {
         'Glitter Field': 'animated',
         'Storm Syndrome': 'animated',
         'Melt': 'animated',
-        'Bouncing Logo': 'animated'
+        'Bouncing Logo': 'animated',
+        'Line Art': 'pixel'
     };
 
     let effectLayers = [
         'Brightness', 'Contrast', 'Temperature', 'Grayscale', 'Sepia', 'Invert', 'Noise',
         'Edge Detection', 'Duotone', 'Glitch', 'Chromatic Aberration', 'Pixelate', 'Mosaic',
         'Posterize', 'Oil Painting', 'Emboss', 'Solarize', 'Cross Hatch', 'Thermal Vision',
-        'Neon Glow', 'Bad Apple', 'Bad TV', 'Spinning Rainbow Wheel', 'Liquid Marble', 'Matrix Rain', 'Glitter Field', 'Storm Syndrome', 'Melt', 'Bouncing Logo', 'Blur', 'Hue', 'Vignette', 'CRT', 'Dotted Matrix', 'Dotted Line',
+        'Neon Glow', 'Bad Apple', 'Bad TV', 'Spinning Rainbow Wheel', 'Liquid Marble', 'Matrix Rain', 'Glitter Field', 'Storm Syndrome', 'Melt', 'Bouncing Logo', 'Line Art', 'Blur', 'Hue', 'Vignette', 'CRT', 'Dotted Matrix', 'Dotted Line',
         'Kaleidoscope', '3D Perspective'
     ];
 
@@ -498,6 +508,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'Bad Apple':
                 if (effectConfig.threshold > 0) badApple(imageData, effectConfig.threshold, effectConfig.fuzz);
+                break;
+            case 'Line Art':
+                lineArt(imageData, effectConfig.lineColor, effectConfig.backgroundColor, effectConfig.thickness, effectConfig.sensitivity, effectConfig.smoothColors);
                 break;
             default:
                 break;
@@ -677,7 +690,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 captureFrame();
                 updateLayersPanel();
                 
-                // Start/stop animation for animated effects
+    
                 if (hasAnimatedEffects() && !animationFrameId) {
                     animate();
                 } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -714,6 +727,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 addMeltControls(controlsContainer, name, config);
             } else if (config.type === 'bouncingLogo') {
                 addBouncingLogoControls(controlsContainer, name, config);
+            } else if (config.type === 'lineArt') {
+                addLineArtControls(controlsContainer, name, config);
             } else if (config.type === 'toggle') {
                 addToggle(controlsContainer, name, config.value);
             }
@@ -899,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].value = parseFloat(slider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -913,7 +928,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].value = parseFloat(numberInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1169,6 +1184,145 @@ document.addEventListener('DOMContentLoaded', () => {
         
         colorInput.addEventListener('input', () => {
             effects[name].backgroundColor = colorInput.value;
+            applyAllEffects();
+            captureFrame();
+        });
+        
+        container.appendChild(controlGroup);
+    }
+
+    function addLineArtControls(container, name, config) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+        
+        const lineColorContainer = document.createElement('div');
+        lineColorContainer.className = 'flex items-center space-x-2';
+        const lineColorLabel = document.createElement('label');
+        lineColorLabel.textContent = 'Line Color';
+        lineColorLabel.className = 'text-sm';
+        const lineColorInput = document.createElement('input');
+        lineColorInput.type = 'color';
+        lineColorInput.value = config.lineColor;
+        lineColorInput.className = 'color-input';
+        lineColorContainer.appendChild(lineColorLabel);
+        lineColorContainer.appendChild(lineColorInput);
+        
+        // Background Color
+        const bgColorContainer = document.createElement('div');
+        bgColorContainer.className = 'flex items-center space-x-2';
+        const bgColorLabel = document.createElement('label');
+        bgColorLabel.textContent = 'Background';
+        bgColorLabel.className = 'text-sm';
+        const bgColorInput = document.createElement('input');
+        bgColorInput.type = 'color';
+        bgColorInput.value = config.backgroundColor;
+        bgColorInput.className = 'color-input';
+        bgColorContainer.appendChild(bgColorLabel);
+        bgColorContainer.appendChild(bgColorInput);
+        
+        const thicknessContainer = document.createElement('div');
+        thicknessContainer.className = 'flex items-center space-x-2';
+        const thicknessLabel = document.createElement('label');
+        thicknessLabel.textContent = 'Thickness';
+        thicknessLabel.className = 'text-sm';
+        const thicknessSlider = document.createElement('input');
+        thicknessSlider.type = 'range';
+        thicknessSlider.min = 1;
+        thicknessSlider.max = 10;
+        thicknessSlider.value = config.thickness;
+        thicknessSlider.className = 'slider';
+        const thicknessNumber = document.createElement('input');
+        thicknessNumber.type = 'number';
+        thicknessNumber.min = 1;
+        thicknessNumber.max = 10;
+        thicknessNumber.value = config.thickness;
+        thicknessNumber.className = 'number-input';
+        thicknessContainer.appendChild(thicknessLabel);
+        thicknessContainer.appendChild(thicknessSlider);
+        thicknessContainer.appendChild(thicknessNumber);
+        
+        const sensitivityContainer = document.createElement('div');
+        sensitivityContainer.className = 'flex items-center space-x-2';
+        const sensitivityLabel = document.createElement('label');
+        sensitivityLabel.textContent = 'Sensitivity';
+        sensitivityLabel.className = 'text-sm';
+        const sensitivitySlider = document.createElement('input');
+        sensitivitySlider.type = 'range';
+        sensitivitySlider.min = 1;
+        sensitivitySlider.max = 100;
+        sensitivitySlider.value = config.sensitivity;
+        sensitivitySlider.className = 'slider';
+        const sensitivityNumber = document.createElement('input');
+        sensitivityNumber.type = 'number';
+        sensitivityNumber.min = 1;
+        sensitivityNumber.max = 100;
+        sensitivityNumber.value = config.sensitivity;
+        sensitivityNumber.className = 'number-input';
+        sensitivityContainer.appendChild(sensitivityLabel);
+        sensitivityContainer.appendChild(sensitivitySlider);
+        sensitivityContainer.appendChild(sensitivityNumber);
+        
+        const smoothContainer = document.createElement('div');
+        smoothContainer.className = 'flex items-center space-x-2';
+        const smoothLabel = document.createElement('label');
+        smoothLabel.textContent = 'Smooth Colors';
+        smoothLabel.className = 'text-sm';
+        const smoothToggle = document.createElement('input');
+        smoothToggle.type = 'checkbox';
+        smoothToggle.checked = config.smoothColors;
+        smoothToggle.className = 'toggle-switch';
+        smoothContainer.appendChild(smoothLabel);
+        smoothContainer.appendChild(smoothToggle);
+        
+        controlGroup.appendChild(lineColorContainer);
+        controlGroup.appendChild(bgColorContainer);
+        controlGroup.appendChild(thicknessContainer);
+        controlGroup.appendChild(sensitivityContainer);
+        controlGroup.appendChild(smoothContainer);
+        
+        // Event listeners
+        lineColorInput.addEventListener('input', () => {
+            effects[name].lineColor = lineColorInput.value;
+            applyAllEffects();
+            captureFrame();
+        });
+        
+        bgColorInput.addEventListener('input', () => {
+            effects[name].backgroundColor = bgColorInput.value;
+            applyAllEffects();
+            captureFrame();
+        });
+        
+        thicknessSlider.addEventListener('input', () => {
+            thicknessNumber.value = thicknessSlider.value;
+            effects[name].thickness = parseInt(thicknessSlider.value);
+            applyAllEffects();
+            captureFrame();
+        });
+        
+        thicknessNumber.addEventListener('change', () => {
+            thicknessSlider.value = thicknessNumber.value;
+            effects[name].thickness = parseInt(thicknessNumber.value);
+            applyAllEffects();
+            captureFrame();
+        });
+        
+        sensitivitySlider.addEventListener('input', () => {
+            sensitivityNumber.value = sensitivitySlider.value;
+            effects[name].sensitivity = parseInt(sensitivitySlider.value);
+            applyAllEffects();
+            captureFrame();
+        });
+        
+        sensitivityNumber.addEventListener('change', () => {
+            sensitivitySlider.value = sensitivitySlider.value;
+            effects[name].sensitivity = parseInt(sensitivityNumber.value);
+            applyAllEffects();
+            captureFrame();
+        });
+        
+        smoothToggle.addEventListener('change', () => {
+            effects[name].smoothColors = smoothToggle.checked;
             applyAllEffects();
             captureFrame();
         });
@@ -1483,7 +1637,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].opacity = parseFloat(opacitySlider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1496,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].opacity = parseFloat(opacityInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1510,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].speed = parseFloat(speedSlider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1523,7 +1677,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].speed = parseFloat(speedInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1611,7 +1765,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].opacity = parseFloat(opacitySlider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1624,7 +1778,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].opacity = parseFloat(opacityInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1638,7 +1792,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].speed = parseFloat(speedSlider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1651,7 +1805,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].speed = parseFloat(speedInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1665,7 +1819,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].turbulence = parseFloat(turbulenceSlider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1678,7 +1832,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].turbulence = parseFloat(turbulenceInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1806,7 +1960,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].opacity = parseFloat(opacitySlider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1819,7 +1973,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].opacity = parseFloat(opacityInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1833,7 +1987,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].speed = parseFloat(speedSlider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1846,7 +2000,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].speed = parseFloat(speedInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1860,7 +2014,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].density = parseFloat(densitySlider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1873,7 +2027,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].density = parseFloat(densityInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1887,7 +2041,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].size = parseFloat(sizeSlider.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -1900,7 +2054,7 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].size = parseFloat(sizeInput.value);
             applyAllEffects();
             captureFrame();
-            // Start/stop animation for animated effects
+
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
             } else if (!hasAnimatedEffects() && animationFrameId) {
@@ -2947,6 +3101,118 @@ upload.addEventListener('change', (e) => {
             g: parseInt(result[2], 16),
             b: parseInt(result[3], 16)
         } : { r: 0, g: 0, b: 0 };
+    }
+    
+    function lineArt(imageData, lineColor, backgroundColor, thickness, sensitivity, smoothColors = false) {
+        const data = imageData.data;
+        const width = imageData.width;
+        const height = imageData.height;
+        const originalData = new Uint8ClampedArray(data);
+        
+        const lineRgb = hexToRgb(lineColor);
+        const bgRgb = hexToRgb(backgroundColor);
+        
+        // Create edge detection data
+        const edgeData = new Float32Array(width * height);
+        
+        const sobelX = [
+            [-1, 0, 1],
+            [-2, 0, 2],
+            [-1, 0, 1]
+        ];
+        
+        const sobelY = [
+            [-1, -2, -1],
+            [ 0,  0,  0],
+            [ 1,  2,  1]
+        ];
+        
+        // Calculate edge magnitudes
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let pixelX = 0;
+                let pixelY = 0;
+                
+                for (let ky = -1; ky <= 1; ky++) {
+                    for (let kx = -1; kx <= 1; kx++) {
+                        const py = Math.max(0, Math.min(height - 1, y + ky));
+                        const px = Math.max(0, Math.min(width - 1, x + kx));
+                        
+                        const pixelIndex = (py * width + px) * 4;
+                        const gray = (originalData[pixelIndex] + originalData[pixelIndex + 1] + originalData[pixelIndex + 2]) / 3;
+                        
+                        pixelX += gray * sobelX[ky + 1][kx + 1];
+                        pixelY += gray * sobelY[ky + 1][kx + 1];
+                    }
+                }
+                
+                const magnitude = Math.sqrt(pixelX * pixelX + pixelY * pixelY);
+                edgeData[y * width + x] = magnitude;
+            }
+        }
+        
+        // Apply thickness by dilating edges
+        const dilatedEdges = new Float32Array(width * height);
+        const kernelSize = Math.max(1, Math.floor(thickness / 2));
+        
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                let maxEdge = 0;
+                for (let ky = -kernelSize; ky <= kernelSize; ky++) {
+                    for (let kx = -kernelSize; kx <= kernelSize; kx++) {
+                        const py = Math.max(0, Math.min(height - 1, y + ky));
+                        const px = Math.max(0, Math.min(width - 1, x + kx));
+                        maxEdge = Math.max(maxEdge, edgeData[py * width + px]);
+                    }
+                }
+                dilatedEdges[y * width + x] = maxEdge;
+            }
+        }
+        
+        // Apply line art effect
+        const threshold = (sensitivity / 100) * 255;
+        
+        for (let i = 0; i < data.length; i += 4) {
+            const pixelIndex = Math.floor(i / 4);
+            const x = pixelIndex % width;
+            const y = Math.floor(pixelIndex / width);
+            const edgeValue = dilatedEdges[pixelIndex];
+            
+            if (edgeValue > threshold) {
+                // Draw line
+                if (smoothColors) {
+                    // Scramble colors smoothly based on position
+                    const noise = Math.sin(x * 0.01 + y * 0.01) * 0.3 + Math.cos(x * 0.02 - y * 0.015) * 0.2;
+                    const variation = Math.sin(x * 0.005 + y * 0.008 + edgeValue * 0.001) * 0.15;
+                    const totalNoise = noise + variation;
+                    
+                    data[i] = Math.max(0, Math.min(255, lineRgb.r + totalNoise * 100));
+                    data[i + 1] = Math.max(0, Math.min(255, lineRgb.g + totalNoise * 80));
+                    data[i + 2] = Math.max(0, Math.min(255, lineRgb.b + totalNoise * 120));
+                } else {
+                    data[i] = lineRgb.r;
+                    data[i + 1] = lineRgb.g;
+                    data[i + 2] = lineRgb.b;
+                }
+            } else {
+                // Draw background
+                if (smoothColors) {
+                    // Scramble background colors smoothly
+                    const noise = Math.sin(x * 0.008 - y * 0.012) * 0.2 + Math.cos(x * 0.015 + y * 0.01) * 0.15;
+                    const variation = Math.sin(x * 0.003 - y * 0.005) * 0.1;
+                    const totalNoise = noise + variation;
+                    
+                    data[i] = Math.max(0, Math.min(255, bgRgb.r + totalNoise * 60));
+                    data[i + 1] = Math.max(0, Math.min(255, bgRgb.g + totalNoise * 40));
+                    data[i + 2] = Math.max(0, Math.min(255, bgRgb.b + totalNoise * 80));
+                } else {
+                    data[i] = bgRgb.r;
+                    data[i + 1] = bgRgb.g;
+                    data[i + 2] = bgRgb.b;
+                }
+            }
+            // Alpha channel remains unchanged
+        }
     }
     
     function pixelate(imageData, pixelSize) {
