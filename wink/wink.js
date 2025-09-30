@@ -2,7 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const upload = document.getElementById('upload');
-    const effectsContainer = document.getElementById('effects-container');    const resetBtn = document.getElementById('reset-btn');
+    const effectsContainer = document.getElementById('effects-container');
+    const resetBtn = document.getElementById('reset-btn');
     const downloadBtn = document.getElementById('download-btn');
     const blinkBtn = document.getElementById('blink-btn');
     const formatSelect = document.getElementById('format-select');
@@ -12,24 +13,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvasContainer = document.getElementById('canvas-container');
     const notificationContainer = document.getElementById('notification-container');
     const pasteHint = document.querySelector('.paste-hint');
-    
+
     function updatePasteHintVisibility(hasImage) {
         if (pasteHint) {
             pasteHint.style.display = hasImage ? 'none' : 'block';
         }
     }
-    
+
     updatePasteHintVisibility(false);
-    
+
     const mobileToggle = document.getElementById('mobile-toggle');
     const mobileClose = document.getElementById('mobile-close');
     const sidebar = document.getElementById('sidebar');
-    
+
     function openSidebar() {
         sidebar.classList.add('open');
         if (mobileToggle) mobileToggle.classList.add('active');
         document.body.style.overflow = 'hidden';
-        
+
         if (!document.querySelector('.sidebar-overlay')) {
             const overlay = document.createElement('div');
             overlay.className = 'sidebar-overlay active';
@@ -37,23 +38,23 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.appendChild(overlay);
         }
     }
-    
+
     function closeSidebar() {
         sidebar.classList.remove('open');
         if (mobileToggle) mobileToggle.classList.remove('active');
         document.body.style.overflow = '';
-        
+
         const overlay = document.querySelector('.sidebar-overlay');
         if (overlay) {
             overlay.remove();
         }
     }
-    
+
     if (mobileToggle) {
         mobileToggle.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             if (sidebar.classList.contains('open')) {
                 closeSidebar();
             } else {
@@ -61,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     if (mobileClose) {
         mobileClose.addEventListener('click', (e) => {
             e.preventDefault();
@@ -69,25 +70,26 @@ document.addEventListener('DOMContentLoaded', () => {
             closeSidebar();
         });
     }
-    
+
     window.addEventListener('resize', () => {
         if (window.innerWidth > 768) {
             closeSidebar();
         }
         resizeCanvas();
     });
-    
+
     function resizeCanvas() {
         if (currentImage.src && originalImageData) {
             const containerRect = canvasContainer.getBoundingClientRect();
             const maxWidth = containerRect.width - 32;
             const maxHeight = containerRect.height - 32;
-            
+
             const imgAspect = currentImage.width / currentImage.height;
             const containerAspect = maxWidth / maxHeight;
-            
-            let displayWidth, displayHeight;
-            
+
+            let displayWidth;
+            let displayHeight;
+
             if (imgAspect > containerAspect) {
                 displayWidth = Math.min(maxWidth, currentImage.width);
                 displayHeight = displayWidth / imgAspect;
@@ -95,27 +97,141 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayHeight = Math.min(maxHeight, currentImage.height);
                 displayWidth = displayHeight * imgAspect;
             }
-            
+
             canvas.width = currentImage.width;
             canvas.height = currentImage.height;
-            
+
             canvas.style.width = displayWidth + 'px';
             canvas.style.height = displayHeight + 'px';
             canvas.style.maxWidth = '100%';
             canvas.style.maxHeight = '100%';
             canvas.style.objectFit = 'contain';
-            
+
             canvas.classList.add('loaded');
-            
+
             applyAllEffects();
         }
-    }    let originalImageData = null;
+    }
+
+    const BLINK_DURATION_MS = 5000;
+    const BLINK_TARGET_FPS = 30;
+    const BLINK_FALLBACK_CAPTURE_FPS = 6;
+    const BLINK_MIN_BITRATE = 3000000;
+    const BLINK_MAX_BITRATE = 12000000;
+    const BLINK_BITS_PER_PIXEL = 0.16;
+    const BLINK_MIME_CANDIDATES = [
+        'video/webm;codecs=vp09.00.10.08',
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm;codecs=vp8,opus',
+        'video/webm'
+    ];
+
+    let originalImageData = null;
     let currentImage = new Image();
     let originalFileName = '';
     let isRecording = false;
-    let recordingInterval = null;
-    let recordedFrames = [];
+    let recordingStream = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let fallbackCaptureTimer = null;
+    let fallbackFrames = [];
     let recordingStartTime = 0;
+    let mediaRecorderMimeType = '';
+    let fallbackCaptureCanvas = null;
+    let fallbackCaptureCtx = null;
+    let animationFrameId = null;
+    let badTVOffset = 0;
+    let rainbowAngle = 0;
+    let badTVOriginalData = null;
+    let matrixChars = null;
+
+    let lastAnimationTime = 0;
+    let preAnimatedImageData = null;
+    let matrixDrops = null;
+    let matrixCanvasWidth = 0;
+    let matrixCanvasHeight = 0;
+    let matrixDensity = 0;
+    let matrixSize = 0;
+    let animatedEffectStack = [];
+    let postAnimatedEffectStack = [];
+    let effectProcessingOrder = [];
+    let processingCanvas = null;
+    let processingCtx = null;
+    let recordingTimeoutId = null;
+    let isFallbackCapturing = false;
+
+    function animate(currentTime = 0) {
+        if (hasAnimatedEffects()) {
+            const targetFPS = isRecording ? 10 : 30;
+            const frameInterval = 1000 / targetFPS;
+
+            if (currentTime - lastAnimationTime >= frameInterval) {
+                applyAnimatedEffects();
+                lastAnimationTime = currentTime;
+            }
+            animationFrameId = requestAnimationFrame(animate);
+        } else {
+            animationFrameId = null;
+        }
+    }
+
+    function hasAnimatedEffects() {
+        return (effects['Bad TV'] && effects['Bad TV'].enabled && effects['Bad TV'].value > 0) ||
+               (effects['Spinning Rainbow Wheel'] && effects['Spinning Rainbow Wheel'].enabled && effects['Spinning Rainbow Wheel'].opacity > 0) ||
+               (effects['Liquid Marble'] && effects['Liquid Marble'].enabled && effects['Liquid Marble'].opacity > 0) ||
+               (effects['Matrix Rain'] && effects['Matrix Rain'].enabled && effects['Matrix Rain'].opacity > 0) ||
+               (effects['Glitter Field'] && effects['Glitter Field'].enabled) ||
+               (effects['Storm Syndrome'] && effects['Storm Syndrome'].enabled && effects['Storm Syndrome'].intensity > 0) ||
+               (effects['Melt'] && effects['Melt'].enabled && effects['Melt'].intensity > 0) ||
+               (effects['Bouncing Logo'] && effects['Bouncing Logo'].enabled);
+    }
+
+    function applyAnimatedEffects() {
+        if (!preAnimatedImageData || animatedEffectStack.length === 0) {
+            return;
+        }
+
+        ctx.putImageData(preAnimatedImageData, 0, 0);
+
+        animatedEffectStack.forEach(effectName => {
+            const effectConfig = effects[effectName];
+            if (!effectConfig) return;
+            applyAnimatedEffect(canvas, ctx, effectName, effectConfig);
+        });
+
+        if (postAnimatedEffectStack.length === 0) {
+            return;
+        }
+
+        postAnimatedEffectStack.forEach(({ name, stage }) => {
+            const effectConfig = effects[name];
+            if (!effectConfig) return;
+
+            switch (stage) {
+                case 'pixel': {
+                    const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    applyPixelEffect(frameData, name, effectConfig);
+                    ctx.putImageData(frameData, 0, 0);
+                    break;
+                }
+                case 'filter':
+                    if ((name === 'Blur' && effectConfig.value <= 0) || (name === 'Hue' && effectConfig.value === 0)) {
+                        break;
+                    }
+                    applyFilterEffect(canvas, ctx, name, effectConfig);
+                    break;
+                case 'overlay':
+                    applyOverlayEffect(canvas, ctx, name, effectConfig);
+                    break;
+                case 'animated':
+                    applyAnimatedEffect(canvas, ctx, name, effectConfig);
+                    break;
+                default:
+                    break;
+            }
+        });
+    }
 
     function showNotification(message, type = 'info', duration = 4000) {
         const notification = document.createElement('div');
@@ -206,26 +322,312 @@ document.addEventListener('DOMContentLoaded', () => {
             fuzz: 20, 
             type: 'dual-slider', 
             enabled: false 
+        },
+        'Bad TV': { value: 0, min: 0, max: 100, type: 'slider', enabled: false },
+        'Spinning Rainbow Wheel': { 
+            opacity: 0, 
+            speed: 50, 
+            type: 'spinningRainbow', 
+            enabled: false 
+        },
+        'Liquid Marble': { 
+            opacity: 0, 
+            speed: 50, 
+            turbulence: 50, 
+            type: 'liquidMarble', 
+            enabled: false 
+        },
+        'Matrix Rain': { 
+            opacity: 0, 
+            speed: 50, 
+            density: 30, 
+            size: 80, 
+            color: '#00ff00',
+            type: 'matrixRain', 
+            enabled: false 
+        },
+        'Glitter Field': {
+            density: 50,
+            size: 3,
+            speed: 100,
+            color: '#ffffff',
+            type: 'glitterField',
+            enabled: false
+        },
+        'Storm Syndrome': {
+            intensity: 30,
+            speed: 50,
+            type: 'stormSyndrome',
+            enabled: false
+        },
+        'Melt': {
+            intensity: 30,
+            speed: 50,
+            type: 'melt',
+            enabled: false
+        },
+        'Bouncing Logo': {
+            speed: 100,
+            size: 50,
+            colorShift: true,
+            customImage: null,
+            type: 'bouncingLogo',
+            enabled: false
         }
     };
 
-    // Layers system
+    const effectStages = {
+        'Brightness': 'pixel',
+        'Contrast': 'pixel',
+        'Temperature': 'pixel',
+        'Grayscale': 'pixel',
+        'Sepia': 'pixel',
+        'Invert': 'pixel',
+        'Noise': 'pixel',
+        'Edge Detection': 'pixel',
+        'Duotone': 'pixel',
+        'Glitch': 'pixel',
+        'Chromatic Aberration': 'pixel',
+        'Pixelate': 'pixel',
+        'Mosaic': 'pixel',
+        'Posterize': 'pixel',
+        'Oil Painting': 'pixel',
+        'Emboss': 'pixel',
+        'Solarize': 'pixel',
+        'Cross Hatch': 'pixel',
+        'Thermal Vision': 'pixel',
+        'Neon Glow': 'pixel',
+        'Bad Apple': 'pixel',
+        'Blur': 'filter',
+        'Hue': 'filter',
+        'Vignette': 'overlay',
+        'CRT': 'overlay',
+        'Dotted Matrix': 'overlay',
+        'Dotted Line': 'overlay',
+        'Kaleidoscope': 'overlay',
+        '3D Perspective': 'overlay',
+        'Bad TV': 'animated',
+        'Spinning Rainbow Wheel': 'animated',
+        'Liquid Marble': 'animated',
+        'Matrix Rain': 'animated',
+        'Glitter Field': 'animated',
+        'Storm Syndrome': 'animated',
+        'Melt': 'animated',
+        'Bouncing Logo': 'animated'
+    };
+
     let effectLayers = [
         'Brightness', 'Contrast', 'Temperature', 'Grayscale', 'Sepia', 'Invert', 'Noise',
         'Edge Detection', 'Duotone', 'Glitch', 'Chromatic Aberration', 'Pixelate', 'Mosaic',
         'Posterize', 'Oil Painting', 'Emboss', 'Solarize', 'Cross Hatch', 'Thermal Vision',
-        'Neon Glow', 'Bad Apple', 'Blur', 'Hue', 'Vignette', 'CRT', 'Dotted Matrix', 'Dotted Line',
+        'Neon Glow', 'Bad Apple', 'Bad TV', 'Spinning Rainbow Wheel', 'Liquid Marble', 'Matrix Rain', 'Glitter Field', 'Storm Syndrome', 'Melt', 'Bouncing Logo', 'Blur', 'Hue', 'Vignette', 'CRT', 'Dotted Matrix', 'Dotted Line',
         'Kaleidoscope', '3D Perspective'
     ];
 
     const layersPanel = document.getElementById('layers-panel');
     const layersList = document.getElementById('layers-list');
 
+    function getEffectStage(effectName) {
+        return effectStages[effectName] || 'pixel';
+    }
+
+    function applyPixelEffect(imageData, effectName, effectConfig) {
+        if (!imageData || !effectConfig) return;
+        const data = imageData.data;
+
+        switch (effectName) {
+            case 'Brightness':
+                if (effectConfig.value !== 0) adjustBrightness(data, effectConfig.value);
+                break;
+            case 'Contrast':
+                if (effectConfig.value !== 0) adjustContrast(data, effectConfig.value);
+                break;
+            case 'Temperature':
+                if (effectConfig.value !== 0) adjustTemperature(data, effectConfig.value);
+                break;
+            case 'Grayscale':
+                if (effectConfig.value > 0) grayscale(data, effectConfig.value / 100);
+                break;
+            case 'Sepia':
+                if (effectConfig.value > 0) sepia(data, effectConfig.value / 100);
+                break;
+            case 'Invert':
+                if (effectConfig.value > 0) invert(data, effectConfig.value / 100);
+                break;
+            case 'Noise':
+                if (effectConfig.value > 0) noise(data, effectConfig.value);
+                break;
+            case 'Edge Detection':
+                if (effectConfig.intensity > 0) edgeDetection(imageData, effectConfig.intensity / 100, effectConfig.backgroundColor);
+                break;
+            case 'Duotone':
+                duotone(data, effectConfig.color1, effectConfig.color2);
+                break;
+            case 'Glitch':
+                if (effectConfig.value > 0) glitch(imageData, effectConfig.value);
+                break;
+            case 'Chromatic Aberration':
+                if (effectConfig.value > 0) chromaticAberration(imageData, effectConfig.value);
+                break;
+            case 'Pixelate':
+                if (effectConfig.value > 1) pixelate(imageData, effectConfig.value);
+                break;
+            case 'Mosaic':
+                if (effectConfig.value > 1) mosaic(imageData, effectConfig.value);
+                break;
+            case 'Posterize':
+                if (effectConfig.value > 0) posterize(imageData, effectConfig.value);
+                break;
+            case 'Oil Painting':
+                if (effectConfig.value > 0) oilPainting(imageData, effectConfig.value);
+                break;
+            case 'Emboss':
+                if (effectConfig.value > 0) emboss(imageData, effectConfig.value);
+                break;
+            case 'Solarize':
+                if (effectConfig.value > 0) solarize(imageData, effectConfig.value);
+                break;
+            case 'Cross Hatch':
+                if (effectConfig.value > 0) crossHatch(imageData, effectConfig.value);
+                break;
+            case 'Thermal Vision':
+                if (effectConfig.value > 0) thermalVision(imageData, effectConfig.value);
+                break;
+            case 'Neon Glow':
+                if (effectConfig.value > 0) neonGlow(imageData, effectConfig.value);
+                break;
+            case 'Bad Apple':
+                if (effectConfig.threshold > 0) badApple(imageData, effectConfig.threshold, effectConfig.fuzz);
+                break;
+            default:
+                break;
+        }
+    }
+
+    let filterCanvas = null;
+    let filterCtx = null;
+
+    function ensureProcessingContext(width, height) {
+        if (!processingCanvas) {
+            processingCanvas = document.createElement('canvas');
+            processingCtx = processingCanvas.getContext('2d');
+        }
+        if (processingCanvas.width !== width || processingCanvas.height !== height) {
+            processingCanvas.width = width;
+            processingCanvas.height = height;
+        }
+    }
+
+    function ensureFilterContext(canvas) {
+        if (!filterCanvas) {
+            filterCanvas = document.createElement('canvas');
+            filterCtx = filterCanvas.getContext('2d');
+        }
+        if (filterCanvas.width !== canvas.width || filterCanvas.height !== canvas.height) {
+            filterCanvas.width = canvas.width;
+            filterCanvas.height = canvas.height;
+        }
+    }
+
+    function applyFilterEffect(canvas, context, effectName, effectConfig) {
+        if (!effectConfig) return;
+        ensureFilterContext(canvas);
+        filterCtx.clearRect(0, 0, filterCanvas.width, filterCanvas.height);
+        filterCtx.drawImage(canvas, 0, 0);
+
+        context.save();
+        switch (effectName) {
+            case 'Blur':
+                if (effectConfig.value > 0) {
+                    context.filter = `blur(${effectConfig.value}px)`;
+                }
+                break;
+            case 'Hue':
+                if (effectConfig.value > 0) {
+                    context.filter = `hue-rotate(${effectConfig.value}deg)`;
+                }
+                break;
+            default:
+                context.restore();
+                return;
+        }
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(filterCanvas, 0, 0);
+        context.restore();
+    }
+
+    function applyOverlayEffect(canvas, context, effectName, effectConfig) {
+        if (!effectConfig) return;
+        switch (effectName) {
+            case 'Vignette':
+                if (effectConfig.value > 0) vignette(canvas, context, effectConfig.value / 100);
+                break;
+            case 'CRT':
+                if (effectConfig.value > 0) crt(canvas, context, effectConfig.value / 100);
+                break;
+            case 'Dotted Matrix':
+                if (effectConfig.value > 0) dottedMatrix(canvas, context, effectConfig.value);
+                break;
+            case 'Dotted Line':
+                if (effectConfig.value > 0) dottedLine(canvas, context, effectConfig.value);
+                break;
+            case 'Kaleidoscope':
+                if (effectConfig.value > 0) kaleidoscope(canvas, context, effectConfig.value);
+                break;
+            case '3D Perspective':
+                perspective3D(canvas, context, effectConfig);
+                break;
+            default:
+                break;
+        }
+    }
+
+    function applyAnimatedEffect(canvas, context, effectName, effectConfig) {
+        if (!effectConfig) return;
+        switch (effectName) {
+            case 'Bad TV':
+                if (effectConfig.value > 0) badTV(canvas, context, effectConfig.value);
+                break;
+            case 'Spinning Rainbow Wheel':
+                if (effectConfig.opacity > 0) spinningRainbowWheel(canvas, context, effectConfig.opacity / 100, effectConfig.speed);
+                break;
+            case 'Liquid Marble':
+                if (effectConfig.opacity > 0) liquidMarble(canvas, context, effectConfig.opacity / 100, effectConfig.speed, effectConfig.turbulence);
+                break;
+            case 'Matrix Rain':
+                if (effectConfig.opacity > 0) matrixRain(canvas, context, effectConfig.opacity / 100, effectConfig.speed, effectConfig.density, effectConfig.size, effectConfig.color);
+                break;
+            case 'Glitter Field':
+                glitterField(canvas, context, effectConfig.density, effectConfig.size, effectConfig.speed, effectConfig.color);
+                break;
+            case 'Storm Syndrome':
+                stormSyndrome(canvas, context, effectConfig.intensity, effectConfig.speed);
+                break;
+            case 'Melt':
+                melt(canvas, context, effectConfig.intensity, effectConfig.speed);
+                break;
+            case 'Bouncing Logo':
+                bouncingLogo(canvas, context, effectConfig.speed, effectConfig.size, effectConfig.colorShift, effectConfig.customImage);
+                break;
+            default:
+                break;
+        }
+    }
+
     function createEffectControls() {
-        for (const name in effects) {
+        const sortedEffectNames = Object.keys(effects).sort((a, b) => {
+            if (a === '3D Perspective') return 1;
+            if (b === '3D Perspective') return -1;
+            return a.localeCompare(b);
+        });
+        for (const name of sortedEffectNames) {
             const config = effects[name];
             const container = document.createElement('div');
             container.className = 'effect-item';
+            if (effectStages[name] === 'animated') {
+                container.classList.add('animated-glow');
+            }
             const header = document.createElement('div');
             header.className = 'effect-header';
             
@@ -275,6 +677,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 captureFrame();
                 updateLayersPanel();
                 
+                // Start/stop animation for animated effects
+                if (hasAnimatedEffects() && !animationFrameId) {
+                    animate();
+                } else if (!hasAnimatedEffects() && animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
             });
             
             const controlsContainer = document.createElement('div');
@@ -291,6 +700,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 addEdgeDetectionControls(controlsContainer, name, config);
             } else if (config.type === 'perspective3d') {
                 addPerspective3DControls(controlsContainer, name, config);
+            } else if (config.type === 'spinningRainbow') {
+                addSpinningRainbowControls(controlsContainer, name, config);
+            } else if (config.type === 'liquidMarble') {
+                addLiquidMarbleControls(controlsContainer, name, config);
+            } else if (config.type === 'matrixRain') {
+                addMatrixRainControls(controlsContainer, name, config);
+            } else if (config.type === 'glitterField') {
+                addGlitterFieldControls(controlsContainer, name, config);
+            } else if (config.type === 'stormSyndrome') {
+                addStormSyndromeControls(controlsContainer, name, config);
+            } else if (config.type === 'melt') {
+                addMeltControls(controlsContainer, name, config);
+            } else if (config.type === 'bouncingLogo') {
+                addBouncingLogoControls(controlsContainer, name, config);
             } else if (config.type === 'toggle') {
                 addToggle(controlsContainer, name, config.value);
             }
@@ -476,6 +899,13 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].value = parseFloat(slider.value);
             applyAllEffects();
             captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
         });
 
         numberInput.addEventListener('change', () => {
@@ -483,6 +913,13 @@ document.addEventListener('DOMContentLoaded', () => {
             effects[name].value = parseFloat(numberInput.value);
             applyAllEffects();
             captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
         });
 
         controlContainer.appendChild(slider);
@@ -991,6 +1428,900 @@ document.addEventListener('DOMContentLoaded', () => {
         
         container.appendChild(controlGroup);
     }
+
+    function addSpinningRainbowControls(container, name, config) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+        
+        const opacityContainer = document.createElement('div');
+        opacityContainer.className = 'flex items-center space-x-2';
+        const opacityLabel = document.createElement('label');
+        opacityLabel.textContent = 'Opacity';
+        opacityLabel.className = 'text-sm';
+        const opacitySlider = document.createElement('input');
+        opacitySlider.type = 'range';
+        opacitySlider.min = 0;
+        opacitySlider.max = 100;
+        opacitySlider.value = config.opacity;
+        opacitySlider.className = 'slider';
+        const opacityInput = document.createElement('input');
+        opacityInput.type = 'number';
+        opacityInput.min = 0;
+        opacityInput.max = 100;
+        opacityInput.value = config.opacity;
+        opacityInput.className = 'number-input';
+        opacityContainer.appendChild(opacityLabel);
+        opacityContainer.appendChild(opacitySlider);
+        opacityContainer.appendChild(opacityInput);
+        
+        const speedContainer = document.createElement('div');
+        speedContainer.className = 'flex items-center space-x-2';
+        const speedLabel = document.createElement('label');
+        speedLabel.textContent = 'Speed';
+        speedLabel.className = 'text-sm';
+        const speedSlider = document.createElement('input');
+        speedSlider.type = 'range';
+        speedSlider.min = 0;
+        speedSlider.max = 100;
+        speedSlider.value = config.speed;
+        speedSlider.className = 'slider';
+        const speedInput = document.createElement('input');
+        speedInput.type = 'number';
+        speedInput.min = 0;
+        speedInput.max = 100;
+        speedInput.value = config.speed;
+        speedInput.className = 'number-input';
+        speedContainer.appendChild(speedLabel);
+        speedContainer.appendChild(speedSlider);
+        speedContainer.appendChild(speedInput);
+        
+        controlGroup.appendChild(opacityContainer);
+        controlGroup.appendChild(speedContainer);
+        
+        opacitySlider.addEventListener('input', () => {
+            opacityInput.value = opacitySlider.value;
+            effects[name].opacity = parseFloat(opacitySlider.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        opacityInput.addEventListener('change', () => {
+            opacitySlider.value = opacityInput.value;
+            effects[name].opacity = parseFloat(opacityInput.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        speedSlider.addEventListener('input', () => {
+            speedInput.value = speedSlider.value;
+            effects[name].speed = parseFloat(speedSlider.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        speedInput.addEventListener('change', () => {
+            speedSlider.value = speedInput.value;
+            effects[name].speed = parseFloat(speedInput.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        container.appendChild(controlGroup);
+    }
+
+    function addLiquidMarbleControls(container, name, config) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+        
+        const opacityContainer = document.createElement('div');
+        opacityContainer.className = 'flex items-center space-x-2';
+        const opacityLabel = document.createElement('label');
+        opacityLabel.textContent = 'Opacity';
+        opacityLabel.className = 'text-sm';
+        const opacitySlider = document.createElement('input');
+        opacitySlider.type = 'range';
+        opacitySlider.min = 0;
+        opacitySlider.max = 100;
+        opacitySlider.value = config.opacity;
+        opacitySlider.className = 'slider';
+        const opacityInput = document.createElement('input');
+        opacityInput.type = 'number';
+        opacityInput.min = 0;
+        opacityInput.max = 100;
+        opacityInput.value = config.opacity;
+        opacityInput.className = 'number-input';
+        opacityContainer.appendChild(opacityLabel);
+        opacityContainer.appendChild(opacitySlider);
+        opacityContainer.appendChild(opacityInput);
+        
+        const speedContainer = document.createElement('div');
+        speedContainer.className = 'flex items-center space-x-2';
+        const speedLabel = document.createElement('label');
+        speedLabel.textContent = 'Speed';
+        speedLabel.className = 'text-sm';
+        const speedSlider = document.createElement('input');
+        speedSlider.type = 'range';
+        speedSlider.min = 0;
+        speedSlider.max = 100;
+        speedSlider.value = config.speed;
+        speedSlider.className = 'slider';
+        const speedInput = document.createElement('input');
+        speedInput.type = 'number';
+        speedInput.min = 0;
+        speedInput.max = 100;
+        speedInput.value = config.speed;
+        speedInput.className = 'number-input';
+        speedContainer.appendChild(speedLabel);
+        speedContainer.appendChild(speedSlider);
+        speedContainer.appendChild(speedInput);
+        
+        const turbulenceContainer = document.createElement('div');
+        turbulenceContainer.className = 'flex items-center space-x-2';
+        const turbulenceLabel = document.createElement('label');
+        turbulenceLabel.textContent = 'Turbulence';
+        turbulenceLabel.className = 'text-sm';
+        const turbulenceSlider = document.createElement('input');
+        turbulenceSlider.type = 'range';
+        turbulenceSlider.min = 0;
+        turbulenceSlider.max = 100;
+        turbulenceSlider.value = config.turbulence;
+        turbulenceSlider.className = 'slider';
+        const turbulenceInput = document.createElement('input');
+        turbulenceInput.type = 'number';
+        turbulenceInput.min = 0;
+        turbulenceInput.max = 100;
+        turbulenceInput.value = config.turbulence;
+        turbulenceInput.className = 'number-input';
+        turbulenceContainer.appendChild(turbulenceLabel);
+        turbulenceContainer.appendChild(turbulenceSlider);
+        turbulenceContainer.appendChild(turbulenceInput);
+        
+        controlGroup.appendChild(opacityContainer);
+        controlGroup.appendChild(speedContainer);
+        controlGroup.appendChild(turbulenceContainer);
+        
+        opacitySlider.addEventListener('input', () => {
+            opacityInput.value = opacitySlider.value;
+            effects[name].opacity = parseFloat(opacitySlider.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        opacityInput.addEventListener('change', () => {
+            opacitySlider.value = opacityInput.value;
+            effects[name].opacity = parseFloat(opacityInput.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        speedSlider.addEventListener('input', () => {
+            speedInput.value = speedSlider.value;
+            effects[name].speed = parseFloat(speedSlider.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        speedInput.addEventListener('change', () => {
+            speedSlider.value = speedInput.value;
+            effects[name].speed = parseFloat(speedInput.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        turbulenceSlider.addEventListener('input', () => {
+            turbulenceInput.value = turbulenceSlider.value;
+            effects[name].turbulence = parseFloat(turbulenceSlider.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        turbulenceInput.addEventListener('change', () => {
+            turbulenceSlider.value = turbulenceInput.value;
+            effects[name].turbulence = parseFloat(turbulenceInput.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        container.appendChild(controlGroup);
+    }
+
+    function addMatrixRainControls(container, name, config) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+        let colorUpdateFrameId = null;
+
+        if (!effects[name].color) {
+            effects[name].color = '#00ff00';
+        }
+        
+        const opacityContainer = document.createElement('div');
+        opacityContainer.className = 'flex items-center space-x-2';
+        const opacityLabel = document.createElement('label');
+        opacityLabel.textContent = 'Opacity';
+        opacityLabel.className = 'text-sm';
+        const opacitySlider = document.createElement('input');
+        opacitySlider.type = 'range';
+        opacitySlider.min = 0;
+        opacitySlider.max = 100;
+        opacitySlider.value = config.opacity;
+        opacitySlider.className = 'slider';
+        const opacityInput = document.createElement('input');
+        opacityInput.type = 'number';
+        opacityInput.min = 0;
+        opacityInput.max = 100;
+        opacityInput.value = config.opacity;
+        opacityInput.className = 'number-input';
+        opacityContainer.appendChild(opacityLabel);
+        opacityContainer.appendChild(opacitySlider);
+        opacityContainer.appendChild(opacityInput);
+        
+        const speedContainer = document.createElement('div');
+        speedContainer.className = 'flex items-center space-x-2';
+        const speedLabel = document.createElement('label');
+        speedLabel.textContent = 'Speed';
+        speedLabel.className = 'text-sm';
+        const speedSlider = document.createElement('input');
+        speedSlider.type = 'range';
+        speedSlider.min = 0;
+        speedSlider.max = 100;
+        speedSlider.value = config.speed;
+        speedSlider.className = 'slider';
+        const speedInput = document.createElement('input');
+        speedInput.type = 'number';
+        speedInput.min = 0;
+        speedInput.max = 100;
+        speedInput.value = config.speed;
+        speedInput.className = 'number-input';
+        speedContainer.appendChild(speedLabel);
+        speedContainer.appendChild(speedSlider);
+        speedContainer.appendChild(speedInput);
+        
+        const densityContainer = document.createElement('div');
+        densityContainer.className = 'flex items-center space-x-2';
+        const densityLabel = document.createElement('label');
+        densityLabel.textContent = 'Density';
+        densityLabel.className = 'text-sm';
+        const densitySlider = document.createElement('input');
+        densitySlider.type = 'range';
+        densitySlider.min = 1;
+        densitySlider.max = 100;
+        densitySlider.value = config.density;
+        densitySlider.className = 'slider';
+        const densityInput = document.createElement('input');
+        densityInput.type = 'number';
+        densityInput.min = 1;
+        densityInput.max = 100;
+        densityInput.value = config.density;
+        densityInput.className = 'number-input';
+        densityContainer.appendChild(densityLabel);
+        densityContainer.appendChild(densitySlider);
+        densityContainer.appendChild(densityInput);
+        
+        const sizeContainer = document.createElement('div');
+        sizeContainer.className = 'flex items-center space-x-2';
+        const sizeLabel = document.createElement('label');
+        sizeLabel.textContent = 'Size';
+        sizeLabel.className = 'text-sm';
+        const sizeSlider = document.createElement('input');
+        sizeSlider.type = 'range';
+    sizeSlider.min = 20;
+    sizeSlider.max = 200;
+        sizeSlider.value = config.size;
+        sizeSlider.className = 'slider';
+        const sizeInput = document.createElement('input');
+        sizeInput.type = 'number';
+    sizeInput.min = 20;
+    sizeInput.max = 200;
+        sizeInput.value = config.size;
+        sizeInput.className = 'number-input';
+        sizeContainer.appendChild(sizeLabel);
+        sizeContainer.appendChild(sizeSlider);
+        sizeContainer.appendChild(sizeInput);
+
+    const colorContainer = document.createElement('div');
+    colorContainer.className = 'flex items-center space-x-2';
+    const colorLabel = document.createElement('label');
+    colorLabel.textContent = 'Color';
+    colorLabel.className = 'text-sm';
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.value = effects[name].color || '#00ff00';
+    colorInput.className = 'color-input';
+    colorContainer.appendChild(colorLabel);
+    colorContainer.appendChild(colorInput);
+        
+        controlGroup.appendChild(opacityContainer);
+        controlGroup.appendChild(speedContainer);
+        controlGroup.appendChild(densityContainer);
+        controlGroup.appendChild(sizeContainer);
+    controlGroup.appendChild(colorContainer);
+        
+        opacitySlider.addEventListener('input', () => {
+            opacityInput.value = opacitySlider.value;
+            effects[name].opacity = parseFloat(opacitySlider.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        opacityInput.addEventListener('change', () => {
+            opacitySlider.value = opacityInput.value;
+            effects[name].opacity = parseFloat(opacityInput.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        speedSlider.addEventListener('input', () => {
+            speedInput.value = speedSlider.value;
+            effects[name].speed = parseFloat(speedSlider.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        speedInput.addEventListener('change', () => {
+            speedSlider.value = speedInput.value;
+            effects[name].speed = parseFloat(speedInput.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        densitySlider.addEventListener('input', () => {
+            densityInput.value = densitySlider.value;
+            effects[name].density = parseFloat(densitySlider.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        densityInput.addEventListener('change', () => {
+            densitySlider.value = densityInput.value;
+            effects[name].density = parseFloat(densityInput.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        sizeSlider.addEventListener('input', () => {
+            sizeInput.value = sizeSlider.value;
+            effects[name].size = parseFloat(sizeSlider.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        sizeInput.addEventListener('change', () => {
+            sizeSlider.value = sizeInput.value;
+            effects[name].size = parseFloat(sizeInput.value);
+            applyAllEffects();
+            captureFrame();
+            // Start/stop animation for animated effects
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+
+        colorInput.addEventListener('input', () => {
+            effects[name].color = colorInput.value;
+            if (colorUpdateFrameId !== null) {
+                cancelAnimationFrame(colorUpdateFrameId);
+            }
+            colorUpdateFrameId = requestAnimationFrame(() => {
+                colorUpdateFrameId = null;
+                applyAllEffects();
+                captureFrame();
+                if (hasAnimatedEffects() && !animationFrameId) {
+                    animate();
+                }
+            });
+        });
+
+        colorInput.addEventListener('change', () => {
+            effects[name].color = colorInput.value;
+            if (colorUpdateFrameId !== null) {
+                cancelAnimationFrame(colorUpdateFrameId);
+                colorUpdateFrameId = null;
+            }
+            applyAllEffects();
+            captureFrame();
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
+            } else if (!hasAnimatedEffects() && animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+        });
+        
+        container.appendChild(controlGroup);
+    }
+
+    function addGlitterFieldControls(container, name, config) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+
+        const densityContainer = document.createElement('div');
+        densityContainer.className = 'flex items-center space-x-2';
+        const densityLabel = document.createElement('label');
+        densityLabel.textContent = 'Density';
+        densityLabel.className = 'text-sm';
+        const densitySlider = document.createElement('input');
+        densitySlider.type = 'range';
+        densitySlider.min = 10;
+        densitySlider.max = 200;
+        densitySlider.value = config.density;
+        densitySlider.className = 'slider';
+        const densityInput = document.createElement('input');
+        densityInput.type = 'number';
+        densityInput.min = 10;
+        densityInput.max = 200;
+        densityInput.value = config.density;
+        densityInput.className = 'number-input';
+        densityContainer.appendChild(densityLabel);
+        densityContainer.appendChild(densitySlider);
+        densityContainer.appendChild(densityInput);
+
+        const sizeContainer = document.createElement('div');
+        sizeContainer.className = 'flex items-center space-x-2';
+        const sizeLabel = document.createElement('label');
+        sizeLabel.textContent = 'Size';
+        sizeLabel.className = 'text-sm';
+        const sizeSlider = document.createElement('input');
+        sizeSlider.type = 'range';
+        sizeSlider.min = 1;
+        sizeSlider.max = 10;
+        sizeSlider.value = config.size;
+        sizeSlider.className = 'slider';
+        const sizeInput = document.createElement('input');
+        sizeInput.type = 'number';
+        sizeInput.min = 1;
+        sizeInput.max = 10;
+        sizeInput.value = config.size;
+        sizeInput.className = 'number-input';
+        sizeContainer.appendChild(sizeLabel);
+        sizeContainer.appendChild(sizeSlider);
+        sizeContainer.appendChild(sizeInput);
+
+        const speedContainer = document.createElement('div');
+        speedContainer.className = 'flex items-center space-x-2';
+        const speedLabel = document.createElement('label');
+        speedLabel.textContent = 'Speed';
+        speedLabel.className = 'text-sm';
+        const speedSlider = document.createElement('input');
+        speedSlider.type = 'range';
+        speedSlider.min = 10;
+        speedSlider.max = 500;
+        speedSlider.value = config.speed;
+        speedSlider.className = 'slider';
+        const speedInput = document.createElement('input');
+        speedInput.type = 'number';
+        speedInput.min = 10;
+        speedInput.max = 500;
+        speedInput.value = config.speed;
+        speedInput.className = 'number-input';
+        speedContainer.appendChild(speedLabel);
+        speedContainer.appendChild(speedSlider);
+        speedContainer.appendChild(speedInput);
+
+        const colorContainer = document.createElement('div');
+        colorContainer.className = 'flex items-center space-x-2';
+        const colorLabel = document.createElement('label');
+        colorLabel.textContent = 'Color';
+        colorLabel.className = 'text-sm';
+        const colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = config.color;
+        colorInput.className = 'color-input';
+        colorContainer.appendChild(colorLabel);
+        colorContainer.appendChild(colorInput);
+
+        controlGroup.appendChild(densityContainer);
+        controlGroup.appendChild(sizeContainer);
+        controlGroup.appendChild(speedContainer);
+        controlGroup.appendChild(colorContainer);
+
+        // Event listeners
+        densitySlider.addEventListener('input', () => {
+            densityInput.value = densitySlider.value;
+            effects[name].density = parseInt(densitySlider.value);
+        });
+        densityInput.addEventListener('change', () => {
+            densitySlider.value = densityInput.value;
+            effects[name].density = parseInt(densityInput.value);
+        });
+
+        sizeSlider.addEventListener('input', () => {
+            sizeInput.value = sizeSlider.value;
+            effects[name].size = parseInt(sizeSlider.value);
+        });
+        sizeInput.addEventListener('change', () => {
+            sizeSlider.value = sizeInput.value;
+            effects[name].size = parseInt(sizeInput.value);
+        });
+
+        speedSlider.addEventListener('input', () => {
+            speedInput.value = speedSlider.value;
+            effects[name].speed = parseInt(speedSlider.value);
+        });
+        speedInput.addEventListener('change', () => {
+            speedSlider.value = speedInput.value;
+            effects[name].speed = parseInt(speedInput.value);
+        });
+
+        colorInput.addEventListener('input', () => {
+            effects[name].color = colorInput.value;
+        });
+
+        container.appendChild(controlGroup);
+    }
+
+    function addStormSyndromeControls(container, name, config) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+
+        const intensityContainer = document.createElement('div');
+        intensityContainer.className = 'flex items-center space-x-2';
+        const intensityLabel = document.createElement('label');
+        intensityLabel.textContent = 'Intensity';
+        intensityLabel.className = 'text-sm';
+        const intensitySlider = document.createElement('input');
+        intensitySlider.type = 'range';
+        intensitySlider.min = 0;
+        intensitySlider.max = 100;
+        intensitySlider.value = config.intensity;
+        intensitySlider.className = 'slider';
+        const intensityInput = document.createElement('input');
+        intensityInput.type = 'number';
+        intensityInput.min = 0;
+        intensityInput.max = 100;
+        intensityInput.value = config.intensity;
+        intensityInput.className = 'number-input';
+        intensityContainer.appendChild(intensityLabel);
+        intensityContainer.appendChild(intensitySlider);
+        intensityContainer.appendChild(intensityInput);
+
+        const speedContainer = document.createElement('div');
+        speedContainer.className = 'flex items-center space-x-2';
+        const speedLabel = document.createElement('label');
+        speedLabel.textContent = 'Speed';
+        speedLabel.className = 'text-sm';
+        const speedSlider = document.createElement('input');
+        speedSlider.type = 'range';
+        speedSlider.min = 10;
+        speedSlider.max = 200;
+        speedSlider.value = config.speed;
+        speedSlider.className = 'slider';
+        const speedInput = document.createElement('input');
+        speedInput.type = 'number';
+        speedInput.min = 10;
+        speedInput.max = 200;
+        speedInput.value = config.speed;
+        speedInput.className = 'number-input';
+        speedContainer.appendChild(speedLabel);
+        speedContainer.appendChild(speedSlider);
+        speedContainer.appendChild(speedInput);
+
+        controlGroup.appendChild(intensityContainer);
+        controlGroup.appendChild(speedContainer);
+
+        // Event listeners
+        intensitySlider.addEventListener('input', () => {
+            intensityInput.value = intensitySlider.value;
+            effects[name].intensity = parseInt(intensitySlider.value);
+        });
+        intensityInput.addEventListener('change', () => {
+            intensitySlider.value = intensityInput.value;
+            effects[name].intensity = parseInt(intensityInput.value);
+        });
+
+        speedSlider.addEventListener('input', () => {
+            speedInput.value = speedSlider.value;
+            effects[name].speed = parseInt(speedSlider.value);
+        });
+        speedInput.addEventListener('change', () => {
+            speedSlider.value = speedInput.value;
+            effects[name].speed = parseInt(speedInput.value);
+        });
+
+        container.appendChild(controlGroup);
+    }
+
+    function addMeltControls(container, name, config) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+
+        const intensityContainer = document.createElement('div');
+        intensityContainer.className = 'flex items-center space-x-2';
+        const intensityLabel = document.createElement('label');
+        intensityLabel.textContent = 'Intensity';
+        intensityLabel.className = 'text-sm';
+        const intensitySlider = document.createElement('input');
+        intensitySlider.type = 'range';
+        intensitySlider.min = 0;
+        intensitySlider.max = 100;
+        intensitySlider.value = config.intensity;
+        intensitySlider.className = 'slider';
+        const intensityInput = document.createElement('input');
+        intensityInput.type = 'number';
+        intensityInput.min = 0;
+        intensityInput.max = 100;
+        intensityInput.value = config.intensity;
+        intensityInput.className = 'number-input';
+        intensityContainer.appendChild(intensityLabel);
+        intensityContainer.appendChild(intensitySlider);
+        intensityContainer.appendChild(intensityInput);
+
+        const speedContainer = document.createElement('div');
+        speedContainer.className = 'flex items-center space-x-2';
+        const speedLabel = document.createElement('label');
+        speedLabel.textContent = 'Speed';
+        speedLabel.className = 'text-sm';
+        const speedSlider = document.createElement('input');
+        speedSlider.type = 'range';
+        speedSlider.min = 10;
+        speedSlider.max = 200;
+        speedSlider.value = config.speed;
+        speedSlider.className = 'slider';
+        const speedInput = document.createElement('input');
+        speedInput.type = 'number';
+        speedInput.min = 10;
+        speedInput.max = 200;
+        speedInput.value = config.speed;
+        speedInput.className = 'number-input';
+        speedContainer.appendChild(speedLabel);
+        speedContainer.appendChild(speedSlider);
+        speedContainer.appendChild(speedInput);
+
+        controlGroup.appendChild(intensityContainer);
+        controlGroup.appendChild(speedContainer);
+
+        // Event listeners
+        intensitySlider.addEventListener('input', () => {
+            intensityInput.value = intensitySlider.value;
+            effects[name].intensity = parseInt(intensitySlider.value);
+        });
+        intensityInput.addEventListener('change', () => {
+            intensitySlider.value = intensityInput.value;
+            effects[name].intensity = parseInt(intensityInput.value);
+        });
+
+        speedSlider.addEventListener('input', () => {
+            speedInput.value = speedSlider.value;
+            effects[name].speed = parseInt(speedSlider.value);
+        });
+        speedInput.addEventListener('change', () => {
+            speedSlider.value = speedInput.value;
+            effects[name].speed = parseInt(speedInput.value);
+        });
+
+        container.appendChild(controlGroup);
+    }
+
+    function addBouncingLogoControls(container, name, config) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+
+        const speedContainer = document.createElement('div');
+        speedContainer.className = 'flex items-center space-x-2';
+        const speedLabel = document.createElement('label');
+        speedLabel.textContent = 'Speed';
+        speedLabel.className = 'text-sm';
+        const speedSlider = document.createElement('input');
+        speedSlider.type = 'range';
+        speedSlider.min = 5;
+        speedSlider.max = 800;
+        speedSlider.value = config.speed;
+        speedSlider.className = 'slider';
+        const speedInput = document.createElement('input');
+        speedInput.type = 'number';
+        speedInput.min = 5;
+        speedInput.max = 800;
+        speedInput.value = config.speed;
+        speedInput.className = 'number-input';
+        speedContainer.appendChild(speedLabel);
+        speedContainer.appendChild(speedSlider);
+        speedContainer.appendChild(speedInput);
+
+        const sizeContainer = document.createElement('div');
+        sizeContainer.className = 'flex items-center space-x-2';
+        const sizeLabel = document.createElement('label');
+        sizeLabel.textContent = 'Size';
+        sizeLabel.className = 'text-sm';
+        const sizeSlider = document.createElement('input');
+        sizeSlider.type = 'range';
+        sizeSlider.min = 10;
+        sizeSlider.max = 500;
+        sizeSlider.value = config.size;
+        sizeSlider.className = 'slider';
+        const sizeInput = document.createElement('input');
+        sizeInput.type = 'number';
+        sizeInput.min = 10;
+        sizeInput.max = 500;
+        sizeInput.value = config.size;
+        sizeInput.className = 'number-input';
+        sizeContainer.appendChild(sizeLabel);
+        sizeContainer.appendChild(sizeSlider);
+        sizeContainer.appendChild(sizeInput);
+
+        const colorShiftContainer = document.createElement('div');
+        colorShiftContainer.className = 'flex items-center space-x-2';
+        const colorShiftLabel = document.createElement('label');
+        colorShiftLabel.textContent = 'Color Shift';
+        colorShiftLabel.className = 'text-sm';
+        const colorShiftCheckbox = document.createElement('input');
+        colorShiftCheckbox.type = 'checkbox';
+        colorShiftCheckbox.checked = config.colorShift;
+        colorShiftCheckbox.className = 'checkbox';
+        colorShiftContainer.appendChild(colorShiftLabel);
+        colorShiftContainer.appendChild(colorShiftCheckbox);
+
+        const imageContainer = document.createElement('div');
+        imageContainer.className = 'flex items-center space-x-2';
+        const imageLabel = document.createElement('label');
+        imageLabel.textContent = 'Custom Logo';
+        imageLabel.className = 'text-sm';
+        const imageInput = document.createElement('input');
+        imageInput.type = 'file';
+        imageInput.accept = 'image/*';
+        imageInput.className = 'file-input';
+        imageContainer.appendChild(imageLabel);
+        imageContainer.appendChild(imageInput);
+
+        controlGroup.appendChild(speedContainer);
+        controlGroup.appendChild(sizeContainer);
+        controlGroup.appendChild(colorShiftContainer);
+        controlGroup.appendChild(imageContainer);
+
+        // Event listeners
+        speedSlider.addEventListener('input', () => {
+            speedInput.value = speedSlider.value;
+            effects[name].speed = parseInt(speedSlider.value);
+        });
+        speedInput.addEventListener('change', () => {
+            speedSlider.value = speedInput.value;
+            effects[name].speed = parseInt(speedInput.value);
+        });
+
+        sizeSlider.addEventListener('input', () => {
+            sizeInput.value = sizeSlider.value;
+            effects[name].size = parseInt(sizeSlider.value);
+        });
+        sizeInput.addEventListener('change', () => {
+            sizeSlider.value = sizeInput.value;
+            effects[name].size = parseInt(sizeInput.value);
+        });
+
+        colorShiftCheckbox.addEventListener('change', () => {
+            effects[name].colorShift = colorShiftCheckbox.checked;
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        effects[name].customImage = img;
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                effects[name].customImage = null;
+            }
+        });
+
+        container.appendChild(controlGroup);
+    }
+
 upload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -1078,7 +2409,13 @@ upload.addEventListener('change', (e) => {
         if (e.ctrlKey && e.key === 'v') {
             return;
         }
-    });function setInitialCanvasSize() {
+    });
+
+    function setInitialCanvasSize() {
+        // Clear cached data when image changes
+        badTVOriginalData = null;
+        matrixDrops = null;
+        
         const containerRect = canvasContainer.getBoundingClientRect();
         const containerWidth = containerRect.width - 32; 
         const containerHeight = containerRect.height - 32;
@@ -1147,20 +2484,31 @@ upload.addEventListener('change', (e) => {
         applyAllEffects();
 
     });downloadBtn.addEventListener('click', () => {
-        const format = formatSelect.value.toLowerCase();
-        const link = document.createElement('a');
-        link.download = `wink-edited.${format}`;
+            if (!originalImageData) {
+                showError('Please upload an image first!');
+                return;
+            }
+
+            const format = formatSelect.value.toLowerCase();
+            const link = document.createElement('a');
+            link.download = `wink-edited.${format}`;
         
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCanvas.width = currentImage.width;
-        tempCanvas.height = currentImage.height;
-        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-        tempCtx.drawImage(currentImage, 0, 0);
-        
-        const finalImageData = applyAllEffectsForDownload(tempCanvas, tempCtx);link.href = tempCanvas.toDataURL(`image/${format}`);
-        link.click();
-    });
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = currentImage.width;
+            tempCanvas.height = currentImage.height;
+
+            applyAllEffects();
+            if (hasAnimatedEffects()) {
+                applyAnimatedEffects();
+            }
+
+            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCtx.drawImage(canvas, 0, 0);
+
+            link.href = tempCanvas.toDataURL(`image/${format}`);
+            link.click();
+        });
 
     blinkBtn.addEventListener('click', startRecording);
 
@@ -1259,6 +2607,22 @@ upload.addEventListener('change', (e) => {
                         intensity: config.intensity,
                         backgroundColor: config.backgroundColor
                     };
+                } else if (config.type === 'melt') {
+                    snapshot.effects[name] = {
+                        type: 'melt',
+                        enabled: config.enabled,
+                        intensity: config.intensity,
+                        speed: config.speed
+                    };
+                } else if (config.type === 'bouncingLogo') {
+                    snapshot.effects[name] = {
+                        type: 'bouncingLogo',
+                        enabled: config.enabled,
+                        speed: config.speed,
+                        size: config.size,
+                        colorShift: config.colorShift
+                        // Note: customImage is not saved in snapshots and not able to because uhh common sense?????
+                    };
                 }
             }
         }
@@ -1298,6 +2662,16 @@ upload.addEventListener('change', (e) => {
                 config.enabled = false;
                 config.intensity = 0;
                 config.backgroundColor = '#000000';
+            } else if (config.type === 'melt') {
+                config.enabled = false;
+                config.intensity = 30;
+                config.speed = 50;
+            } else if (config.type === 'bouncingLogo') {
+                config.enabled = false;
+                config.speed = 100;
+                config.size = 50;
+                config.colorShift = true;
+                config.customImage = null;
             }
         }
         
@@ -1341,6 +2715,16 @@ upload.addEventListener('change', (e) => {
                     effectConfig.enabled = snapshotConfig.enabled;
                     effectConfig.intensity = snapshotConfig.intensity;
                     effectConfig.backgroundColor = snapshotConfig.backgroundColor;
+                } else if (snapshotConfig.type === 'melt') {
+                    effectConfig.enabled = snapshotConfig.enabled;
+                    effectConfig.intensity = snapshotConfig.intensity;
+                    effectConfig.speed = snapshotConfig.speed;
+                } else if (snapshotConfig.type === 'bouncingLogo') {
+                    effectConfig.enabled = snapshotConfig.enabled;
+                    effectConfig.speed = snapshotConfig.speed;
+                    effectConfig.size = snapshotConfig.size;
+                    effectConfig.colorShift = snapshotConfig.colorShift;
+                    // customImage is not restored from snapshots
                 }
             }
         }
@@ -1350,311 +2734,99 @@ upload.addEventListener('change', (e) => {
         applyAllEffects();
     }
 
-    function applyAllEffects(inputImageData = null, isDownload = false) {
+    function applyAllEffects(inputImageData = null) {
         if (!originalImageData && !inputImageData) return;
 
         const sourceImageData = inputImageData || originalImageData;
-        const imageData = new ImageData(
+        ensureProcessingContext(sourceImageData.width, sourceImageData.height);
+
+        let workingImageData = new ImageData(
             new Uint8ClampedArray(sourceImageData.data),
             sourceImageData.width,
             sourceImageData.height
         );
-        
-        const effectGroups = {
-            colorAdjustments: ['Brightness', 'Contrast', 'Temperature'],
-            colorEffects: ['Grayscale', 'Sepia', 'Invert', 'Duotone', 'Hue'],
-            spatialEffects: ['Blur', 'Edge Detection', 'Emboss', 'Solarize'],
-            artisticEffects: ['Oil Painting', 'Posterize', 'Cross Hatch', 'Thermal Vision', 'Neon Glow', 'Bad Apple'],
-            distortionEffects: ['Glitch', 'Chromatic Aberration', 'Pixelate', 'Mosaic', 'Kaleidoscope'],
-            overlayEffects: ['Noise', 'Vignette', 'CRT', 'Dotted Matrix', 'Dotted Line', '3D Perspective']
+        let hasPendingImageData = true;
+
+        processingCtx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
+
+        const enabledEffectsTopDown = effectLayers.filter(effectName => effects[effectName] && effects[effectName].enabled);
+        effectProcessingOrder = [...enabledEffectsTopDown];
+        const bottomToTopOrder = [...enabledEffectsTopDown].reverse();
+
+        animatedEffectStack = [];
+        postAnimatedEffectStack = [];
+
+        const flushImageDataToProcessingCanvas = () => {
+            if (hasPendingImageData) {
+                processingCtx.putImageData(workingImageData, 0, 0);
+                hasPendingImageData = false;
+            }
         };
 
-        const enabledEffects = [];
-        Object.values(effectGroups).forEach(group => {
-            effectLayers.forEach(effectName => {
-                if (group.includes(effectName) && effects[effectName] && effects[effectName].enabled) {
-                    enabledEffects.push(effectName);
-                }
-            });
-        });
+        const ensureWorkingImageData = () => {
+            if (!hasPendingImageData) {
+                workingImageData = processingCtx.getImageData(0, 0, processingCanvas.width, processingCanvas.height);
+                hasPendingImageData = true;
+            }
+        };
 
-        const data = imageData.data;
-        
-        enabledEffects.forEach(effectName => {
-            const effect = effects[effectName];
-            
-            // im skipping canvas based effects for now
-            if (['Blur', 'Hue', 'Vignette', 'CRT', 'Dotted Matrix', 'Dotted Line', 'Kaleidoscope', '3D Perspective'].includes(effectName)) {
+        let encounteredAnimatedEffect = false;
+
+        bottomToTopOrder.forEach(effectName => {
+            const effectConfig = effects[effectName];
+            if (!effectConfig) return;
+
+            const stage = getEffectStage(effectName);
+
+            if (stage === 'animated') {
+                flushImageDataToProcessingCanvas();
+                animatedEffectStack.push(effectName);
+                encounteredAnimatedEffect = true;
                 return;
             }
-            
-            switch(effectName) {
-                case 'Brightness':
-                    if (effect.value !== 0) adjustBrightness(data, effect.value);
+
+            if (encounteredAnimatedEffect) {
+                postAnimatedEffectStack.push({ name: effectName, stage });
+                return;
+            }
+
+            switch (stage) {
+                case 'pixel':
+                    ensureWorkingImageData();
+                    applyPixelEffect(workingImageData, effectName, effectConfig);
                     break;
-                case 'Contrast':
-                    if (effect.value !== 0) adjustContrast(data, effect.value);
+                case 'filter':
+                    if ((effectName === 'Blur' && effectConfig.value <= 0) || (effectName === 'Hue' && effectConfig.value === 0)) {
+                        break;
+                    }
+                    flushImageDataToProcessingCanvas();
+                    applyFilterEffect(processingCanvas, processingCtx, effectName, effectConfig);
+                    hasPendingImageData = false;
                     break;
-                case 'Temperature':
-                    if (effect.value !== 0) adjustTemperature(data, effect.value);
+                case 'overlay':
+                    flushImageDataToProcessingCanvas();
+                    applyOverlayEffect(processingCanvas, processingCtx, effectName, effectConfig);
+                    hasPendingImageData = false;
                     break;
-                case 'Grayscale':
-                    if (effect.value > 0) grayscale(data, effect.value / 100);
-                    break;
-                case 'Sepia':
-                    if (effect.value > 0) sepia(data, effect.value / 100);
-                    break;
-                case 'Invert':
-                    if (effect.value > 0) invert(data, effect.value / 100);
-                    break;
-                case 'Noise':
-                    if (effect.value > 0) noise(data, effect.value);
-                    break;
-                case 'Edge Detection':
-                    if (effect.intensity > 0) edgeDetection(imageData, effect.intensity / 100, effect.backgroundColor);
-                    break;
-                case 'Duotone':
-                    duotone(data, effect.color1, effect.color2);
-                    break;
-                case 'Glitch':
-                    if (effect.value > 0) glitch(imageData, effect.value);
-                    break;
-                case 'Chromatic Aberration':
-                    if (effect.value > 0) chromaticAberration(imageData, effect.value);
-                    break;
-                case 'Pixelate':
-                    if (effect.value > 1) pixelate(imageData, effect.value);
-                    break;
-                case 'Mosaic':
-                    if (effect.value > 1) mosaic(imageData, effect.value);
-                    break;
-                case 'Posterize':
-                    if (effect.value > 0) posterize(imageData, effect.value);
-                    break;
-                case 'Oil Painting':
-                    if (effect.value > 0) oilPainting(imageData, effect.value);
-                    break;
-                case 'Emboss':
-                    if (effect.value > 0) emboss(imageData, effect.value);
-                    break;
-                case 'Solarize':
-                    if (effect.value > 0) solarize(imageData, effect.value);
-                    break;
-                case 'Cross Hatch':
-                    if (effect.value > 0) crossHatch(imageData, effect.value);
-                    break;
-                case 'Thermal Vision':
-                    if (effect.value > 0) thermalVision(imageData, effect.value);
-                    break;
-                case 'Neon Glow':
-                    if (effect.value > 0) neonGlow(imageData, effect.value);
-                    break;
-                case 'Bad Apple':
-                    if (effect.threshold > 0) badApple(imageData, effect.threshold, effect.fuzz);
+                default:
+                    ensureWorkingImageData();
+                    applyPixelEffect(workingImageData, effectName, effectConfig);
                     break;
             }
         });
-        
+
+        flushImageDataToProcessingCanvas();
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.putImageData(imageData, 0, 0);        
-        
-        let filterString = '';
-        enabledEffects.forEach(effectName => {
-            const effect = effects[effectName];
-            
-            switch(effectName) {
-                case 'Blur':
-                    if (effect.value > 0) filterString += `blur(${effect.value}px) `;
-                    break;
-                case 'Hue':
-                    if (effect.value > 0) filterString += `hue-rotate(${effect.value}deg) `;
-                    break;
-            }
-        });
-        
-        if (filterString) {
-            ctx.filter = filterString;
-            ctx.drawImage(canvas, 0, 0); 
-            ctx.filter = 'none';
+
+        if (animatedEffectStack.length > 0) {
+            preAnimatedImageData = processingCtx.getImageData(0, 0, processingCanvas.width, processingCanvas.height);
+            applyAnimatedEffects();
+        } else {
+            preAnimatedImageData = null;
+            ctx.drawImage(processingCanvas, 0, 0);
         }
-        
-        enabledEffects.forEach(effectName => {
-            const effect = effects[effectName];
-            
-            switch(effectName) {
-                case 'Vignette':
-                    if (effect.value > 0) vignette(canvas, ctx, effect.value / 100);
-                    break;
-                case 'CRT':
-                    if (effect.value > 0) crt(canvas, ctx, effect.value / 100);
-                    break;
-                case 'Dotted Matrix':
-                    if (effect.value > 0) dottedMatrix(canvas, ctx, effect.value);
-                    break;
-                case 'Dotted Line':
-                    if (effect.value > 0) dottedLine(canvas, ctx, effect.value);
-                    break;
-                case 'Kaleidoscope':
-                    if (effect.value > 0) kaleidoscope(canvas, ctx, effect.value);
-                    break;
-                case '3D Perspective':
-                    perspective3D(canvas, ctx, effect);
-                    break;
-            }
-        });
     }
-
-    function applyAllEffectsForDownload(tempCanvas, tempCtx) {
-        const sourceImageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-        const imageData = new ImageData(
-            new Uint8ClampedArray(sourceImageData.data),
-            sourceImageData.width,
-            sourceImageData.height
-        );
-        
-        const effectGroups = {
-            colorAdjustments: ['Brightness', 'Contrast', 'Temperature'],
-            colorEffects: ['Grayscale', 'Sepia', 'Invert', 'Duotone', 'Hue'],
-            spatialEffects: ['Blur', 'Edge Detection', 'Emboss', 'Solarize'],
-            artisticEffects: ['Oil Painting', 'Posterize', 'Cross Hatch', 'Thermal Vision', 'Neon Glow', 'Bad Apple'],
-            distortionEffects: ['Glitch', 'Chromatic Aberration', 'Pixelate', 'Mosaic', 'Kaleidoscope'],
-            overlayEffects: ['Noise', 'Vignette', 'CRT', 'Dotted Matrix', 'Dotted Line', '3D Perspective']
-        };
-
-        const enabledEffects = [];
-        Object.values(effectGroups).forEach(group => {
-            effectLayers.forEach(effectName => {
-                if (group.includes(effectName) && effects[effectName] && effects[effectName].enabled) {
-                    enabledEffects.push(effectName);
-                }
-            });
-        });
-
-        const data = imageData.data;
-        
-        enabledEffects.forEach(effectName => {
-            const effect = effects[effectName];
-            
-            if (['Blur', 'Hue', 'Vignette', 'CRT', 'Dotted Matrix', 'Dotted Line', 'Kaleidoscope', '3D Perspective'].includes(effectName)) {
-                return;
-            }
-            
-            switch(effectName) {
-                case 'Brightness':
-                    if (effect.value !== 0) adjustBrightness(data, effect.value);
-                    break;
-                case 'Contrast':
-                    if (effect.value !== 0) adjustContrast(data, effect.value);
-                    break;
-                case 'Temperature':
-                    if (effect.value !== 0) adjustTemperature(data, effect.value);
-                    break;
-                case 'Grayscale':
-                    if (effect.value > 0) grayscale(data, effect.value / 100);
-                    break;
-                case 'Sepia':
-                    if (effect.value > 0) sepia(data, effect.value / 100);
-                    break;
-                case 'Invert':
-                    if (effect.value > 0) invert(data, effect.value / 100);
-                    break;
-                case 'Noise':
-                    if (effect.value > 0) noise(data, effect.value);
-                    break;
-                case 'Edge Detection':
-                    if (effect.intensity > 0) edgeDetection(imageData, effect.intensity / 100, effect.backgroundColor);
-                    break;
-                case 'Duotone':
-                    duotone(data, effect.color1, effect.color2);
-                    break;
-                case 'Glitch':
-                    if (effect.value > 0) glitch(imageData, effect.value);
-                    break;
-                case 'Chromatic Aberration':
-                    if (effect.value > 0) chromaticAberration(imageData, effect.value);
-                    break;
-                case 'Pixelate':
-                    if (effect.value > 1) pixelate(imageData, effect.value);
-                    break;
-                case 'Mosaic':
-                    if (effect.value > 1) mosaic(imageData, effect.value);
-                    break;
-                case 'Posterize':
-                    if (effect.value > 0) posterize(imageData, effect.value);
-                    break;
-                case 'Oil Painting':
-                    if (effect.value > 0) oilPainting(imageData, effect.value);
-                    break;
-                case 'Emboss':
-                    if (effect.value > 0) emboss(imageData, effect.value);
-                    break;
-                case 'Solarize':
-                    if (effect.value > 0) solarize(imageData, effect.value);
-                    break;
-                case 'Cross Hatch':
-                    if (effect.value > 0) crossHatch(imageData, effect.value);
-                    break;
-                case 'Thermal Vision':
-                    if (effect.value > 0) thermalVision(imageData, effect.value);
-                    break;
-                case 'Neon Glow':
-                    if (effect.value > 0) neonGlow(imageData, effect.value);
-                    break;
-                case 'Bad Apple':
-                    if (effect.threshold > 0) badApple(imageData, effect.threshold, effect.fuzz);
-                    break;
-            }
-        });
-        
-        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-        tempCtx.putImageData(imageData, 0, 0);
-        
-        let filterString = '';
-        enabledEffects.forEach(effectName => {
-            const effect = effects[effectName];
-            
-            switch(effectName) {
-                case 'Blur':
-                    if (effect.value > 0) filterString += `blur(${effect.value}px) `;
-                    break;
-                case 'Hue':
-                    if (effect.value > 0) filterString += `hue-rotate(${effect.value}deg) `;
-                    break;
-            }
-        });
-        
-        if (filterString) {
-            tempCtx.filter = filterString;
-            tempCtx.drawImage(tempCanvas, 0, 0);
-            tempCtx.filter = 'none';
-        }
-        
-        enabledEffects.forEach(effectName => {
-            const effect = effects[effectName];
-            
-            switch(effectName) {
-                case 'Vignette':
-                    if (effect.value > 0) vignette(tempCanvas, tempCtx, effect.value / 100);
-                    break;
-                case 'CRT':
-                    if (effect.value > 0) crt(tempCanvas, tempCtx, effect.value / 100);
-                    break;
-                case 'Dotted Matrix':
-                    if (effect.value > 0) dottedMatrix(tempCanvas, tempCtx, effect.value);
-                    break;
-                case 'Dotted Line':
-                    if (effect.value > 0) dottedLine(tempCanvas, tempCtx, effect.value);
-                    break;
-                case 'Kaleidoscope':
-                    if (effect.value > 0) kaleidoscope(tempCanvas, tempCtx, effect.value);
-                    break;
-                case '3D Perspective':
-                    perspective3D(tempCanvas, tempCtx, effect);
-                    break;
-            }
-        });
-    }
-
     function adjustBrightness(data, amount) {
         const value = (amount / 100) * 255;
         for (let i = 0; i < data.length; i += 4) {
@@ -2134,53 +3306,79 @@ upload.addEventListener('change', (e) => {
         const data = imageData.data;
         const width = imageData.width;
         const height = imageData.height;
-        const originalData = new Uint8ClampedArray(data);
-        const effectRadius = Math.min(3, Math.floor(radius / 2)); 
-        const step = Math.max(1, Math.floor(radius / 3)); 
-        
-        for (let y = 0; y < height; y += step) {
-            for (let x = 0; x < width; x += step) {
-                const colorBuckets = new Array(8).fill(null).map(() => ({ count: 0, r: 0, g: 0, b: 0 }));
-                let maxCount = 0;
-                let dominantBucket = 0;
-                
-                for (let dy = -effectRadius; dy <= effectRadius; dy += 2) {
-                    for (let dx = -effectRadius; dx <= effectRadius; dx += 2) {
-                        const nx = Math.max(0, Math.min(width - 1, x + dx));
-                        const ny = Math.max(0, Math.min(height - 1, y + dy));
-                        const idx = (ny * width + nx) * 4;
-                        
-                        const bucketIndex = Math.floor((originalData[idx] + originalData[idx + 1] + originalData[idx + 2]) / 96);
-                        const bucket = colorBuckets[bucketIndex];
-                        
-                        bucket.count++;
-                        bucket.r += originalData[idx];
-                        bucket.g += originalData[idx + 1];
-                        bucket.b += originalData[idx + 2];
-                        
-                        if (bucket.count > maxCount) {
-                            maxCount = bucket.count;
-                            dominantBucket = bucketIndex;
+        const output = new Uint8ClampedArray(data.length);
+
+        // Window size should be odd
+        const windowSize = Math.max(3, 2 * Math.floor(radius / 2) + 1);
+        const halfWindow = Math.floor(windowSize / 2);
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const index = (y * width + x) * 4;
+
+                // Define quadrants
+                const quadrants = [
+                    { minX: x - halfWindow, maxX: x, minY: y - halfWindow, maxY: y },
+                    { minX: x + 1, maxX: x + halfWindow, minY: y - halfWindow, maxY: y },
+                    { minX: x - halfWindow, maxX: x, minY: y + 1, maxY: y + halfWindow },
+                    { minX: x + 1, maxX: x + halfWindow, minY: y + 1, maxY: y + halfWindow }
+                ];
+
+                let minVariance = Infinity;
+                let bestMeanR = 0, bestMeanG = 0, bestMeanB = 0;
+
+                for (const quad of quadrants) {
+                    let sumR = 0, sumG = 0, sumB = 0, count = 0;
+                    let sumSqR = 0, sumSqG = 0, sumSqB = 0;
+
+                    for (let qy = quad.minY; qy <= quad.maxY; qy++) {
+                        for (let qx = quad.minX; qx <= quad.maxX; qx++) {
+                            if (qx >= 0 && qx < width && qy >= 0 && qy < height) {
+                                const qIndex = (qy * width + qx) * 4;
+                                const r = data[qIndex];
+                                const g = data[qIndex + 1];
+                                const b = data[qIndex + 2];
+
+                                sumR += r;
+                                sumG += g;
+                                sumB += b;
+                                sumSqR += r * r;
+                                sumSqG += g * g;
+                                sumSqB += b * b;
+                                count++;
+                            }
+                        }
+                    }
+
+                    if (count > 0) {
+                        const meanR = sumR / count;
+                        const meanG = sumG / count;
+                        const meanB = sumB / count;
+
+                        const varR = (sumSqR / count) - (meanR * meanR);
+                        const varG = (sumSqG / count) - (meanG * meanG);
+                        const varB = (sumSqB / count) - (meanB * meanB);
+                        const variance = varR + varG + varB;
+
+                        if (variance < minVariance) {
+                            minVariance = variance;
+                            bestMeanR = meanR;
+                            bestMeanG = meanG;
+                            bestMeanB = meanB;
                         }
                     }
                 }
-                
-                if (maxCount > 0) {
-                    const bucket = colorBuckets[dominantBucket];
-                    const avgR = Math.floor(bucket.r / bucket.count);
-                    const avgG = Math.floor(bucket.g / bucket.count);
-                    const avgB = Math.floor(bucket.b / bucket.count);
-                    
-                    for (let by = 0; by < step && y + by < height; by++) {
-                        for (let bx = 0; bx < step && x + bx < width; bx++) {
-                            const idx = ((y + by) * width + (x + bx)) * 4;
-                            data[idx] = avgR;
-                            data[idx + 1] = avgG;
-                            data[idx + 2] = avgB;
-                        }
-                    }
-                }
+
+                output[index] = Math.round(bestMeanR);
+                output[index + 1] = Math.round(bestMeanG);
+                output[index + 2] = Math.round(bestMeanB);
+                output[index + 3] = data[index + 3];
             }
+        }
+
+        // Copy output back to data
+        for (let i = 0; i < data.length; i++) {
+            data[i] = output[i];
         }
     }
 
@@ -2451,237 +3649,282 @@ upload.addEventListener('change', (e) => {
         }
     }
 
-    function captureFrame() {
-        if (!isRecording || !originalImageData) return;
-        
-        const captureCanvas = document.createElement('canvas');
-        const captureCtx = captureCanvas.getContext('2d', {
+    function calculateBlinkBitrate(width, height) {
+        const estimated = width * height * BLINK_TARGET_FPS * BLINK_BITS_PER_PIXEL;
+        return Math.round(Math.min(BLINK_MAX_BITRATE, Math.max(BLINK_MIN_BITRATE, estimated)));
+    }
+
+    function getBlinkMimeType() {
+        if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
+            return '';
+        }
+
+        return BLINK_MIME_CANDIDATES.find(type => MediaRecorder.isTypeSupported(type)) || '';
+    }
+
+    function startFallbackCapture() {
+        if (isFallbackCapturing) return;
+
+        isFallbackCapturing = true;
+        fallbackFrames = [];
+
+        fallbackCaptureCanvas = document.createElement('canvas');
+        fallbackCaptureCanvas.width = canvas.width;
+        fallbackCaptureCanvas.height = canvas.height;
+        fallbackCaptureCtx = fallbackCaptureCanvas.getContext('2d', {
             alpha: false,
             colorSpace: 'srgb',
             willReadFrequently: false
         });
-        
-        captureCanvas.width = canvas.width;
-        captureCanvas.height = canvas.height;
-        
-        captureCtx.imageSmoothingEnabled = true;
-        captureCtx.imageSmoothingQuality = 'high';
-        
-        captureCtx.fillStyle = '#000000';
-        captureCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
-        
-        captureCtx.globalCompositeOperation = 'source-over';
-        captureCtx.drawImage(canvas, 0, 0);
-        
-        const frameData = captureCanvas.toDataURL('image/png', 1.0);
-        const timestamp = Date.now() - recordingStartTime;
-        recordedFrames.push({ data: frameData, timestamp: timestamp });
-    }    function startRecording() {
+
+        const intervalMs = Math.max(1000 / BLINK_FALLBACK_CAPTURE_FPS, 50);
+        captureFrame();
+        fallbackCaptureTimer = setInterval(() => {
+            if (!isFallbackCapturing) return;
+            captureFrame();
+        }, intervalMs);
+    }
+
+    function stopFallbackCapture() {
+        if (fallbackCaptureTimer) {
+            clearInterval(fallbackCaptureTimer);
+            fallbackCaptureTimer = null;
+        }
+        isFallbackCapturing = false;
+        fallbackCaptureCanvas = null;
+        fallbackCaptureCtx = null;
+    }
+
+    function captureFrame() {
+        if (!isFallbackCapturing || !fallbackCaptureCtx || !fallbackCaptureCanvas) {
+            return;
+        }
+
+        try {
+            fallbackCaptureCtx.clearRect(0, 0, fallbackCaptureCanvas.width, fallbackCaptureCanvas.height);
+            fallbackCaptureCtx.drawImage(canvas, 0, 0, fallbackCaptureCanvas.width, fallbackCaptureCanvas.height);
+            fallbackFrames.push(fallbackCaptureCanvas.toDataURL('image/webp', 0.95));
+        } catch (error) {
+            console.error('Fallback frame capture failed:', error);
+        }
+    }
+
+    function startRecording() {
         if (!originalImageData) {
             showError('Please upload an image first!');
             return;
         }
-        
+
+        if (isRecording) {
+            return;
+        }
+
         isRecording = true;
-        recordedFrames = [];
-        recordingStartTime = Date.now();
-        
+        recordedChunks = [];
+        fallbackFrames = [];
+        mediaRecorderMimeType = '';
         blinkBtn.textContent = 'Recording... 5s';
         blinkBtn.disabled = true;
-        blinkBtn.style.backgroundColor = '#dc2626'; 
-        
-        captureFrame();
-        
-        recordingInterval = setInterval(() => {
-            if (isRecording) {
-                captureFrame();
-            }
-        }, 100);
-        
-        setTimeout(() => {
-            stopRecording();
-        }, 5000);
-    }    function stopRecording() {
-        isRecording = false;
-        
-        if (recordingInterval) {
-            clearInterval(recordingInterval);
-            recordingInterval = null;
+        blinkBtn.style.backgroundColor = '#dc2626';
+
+        if (hasAnimatedEffects() && !animationFrameId) {
+            animate();
         }
-        
-        blinkBtn.textContent = 'Creating Video...';
-        
-        setTimeout(() => {
-            generateGIF();
-        }, 100);
-    }    async function generateGIF() {
-        if (recordedFrames.length === 0) {
-            showError('No frames recorded!');
+
+        const streamFps = Math.max(BLINK_TARGET_FPS, 10);
+
+        try {
+            recordingStream = canvas.captureStream(streamFps);
+            const mimeType = getBlinkMimeType();
+            mediaRecorderMimeType = mimeType || 'video/webm';
+            const recorderOptions = {
+                videoBitsPerSecond: calculateBlinkBitrate(canvas.width, canvas.height)
+            };
+
+            if (mimeType) {
+                recorderOptions.mimeType = mimeType;
+            }
+
+            mediaRecorder = new MediaRecorder(recordingStream, recorderOptions);
+            mediaRecorder.ondataavailable = event => {
+                if (event.data && event.data.size > 0) {
+                    recordedChunks.push(event.data);
+                }
+            };
+            mediaRecorder.onerror = handleMediaRecorderError;
+            mediaRecorder.onstop = handleMediaRecorderStop;
+            mediaRecorder.start(Math.round(1000 / streamFps));
+        } catch (error) {
+            console.error('MediaRecorder unavailable, falling back to frame capture:', error);
+            mediaRecorder = null;
+            recordingStream = null;
+            startFallbackCapture();
+        }
+
+        if (!mediaRecorder || mediaRecorder.state !== 'recording') {
+            startFallbackCapture();
+        }
+
+        recordingStartTime = performance.now();
+        if (recordingTimeoutId) {
+            clearTimeout(recordingTimeoutId);
+        }
+        recordingTimeoutId = setTimeout(stopRecording, BLINK_DURATION_MS);
+    }
+
+    function stopRecording() {
+        if (!isRecording) {
+            return;
+        }
+
+        isRecording = false;
+
+        if (recordingTimeoutId) {
+            clearTimeout(recordingTimeoutId);
+            recordingTimeoutId = null;
+        }
+
+        blinkBtn.textContent = 'Processing Video...';
+
+        if (mediaRecorder && mediaRecorder.state === 'recording') {
+            try {
+                mediaRecorder.stop();
+                return;
+            } catch (error) {
+                console.error('Failed to stop MediaRecorder gracefully:', error);
+                mediaRecorder = null;
+            }
+        }
+
+        finalizeBlinkRecording();
+    }
+
+    function handleMediaRecorderError(event) {
+        console.error('MediaRecorder error:', event.error || event);
+
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            try {
+                mediaRecorder.stop();
+            } catch (error) {
+                console.error('MediaRecorder stop after error failed:', error);
+            }
+        }
+
+        mediaRecorder = null;
+        recordingStream = null;
+
+        if (!isFallbackCapturing) {
+            startFallbackCapture();
+        }
+    }
+
+    function handleMediaRecorderStop() {
+        finalizeBlinkRecording();
+    }
+
+    function downloadBlinkBlob(blob) {
+        const durationSeconds = BLINK_DURATION_MS / 1000;
+        const metadata = {
+            title: originalFileName || 'Untitled',
+            subtitle: 'made using wink!',
+            size: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
+            duration: `${durationSeconds.toFixed(1)} seconds`,
+            format: mediaRecorderMimeType || 'video/webm',
+            bitrate: `${((blob.size * 8) / durationSeconds / 1000 / 1000).toFixed(2)} Mbps`,
+            timestamp: new Date().toISOString()
+        };
+
+        console.log('Blink video metadata:', metadata);
+
+        const baseFileName = originalFileName || 'wink-animation';
+        const fileName = `${baseFileName}-wink-blink.webm`;
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+
+        showSuccess('HD blink video ready!');
+        resetBlinkButton();
+    }
+
+    function finalizeBlinkRecording() {
+        stopFallbackCapture();
+
+        if (recordingStream) {
+            try {
+                recordingStream.getTracks().forEach(track => track.stop());
+            } catch (error) {
+                console.error('Failed to stop recording stream tracks:', error);
+            }
+        }
+        recordingStream = null;
+
+        const hasVideo = recordedChunks.length > 0;
+
+        if (hasVideo) {
+            const blob = new Blob(recordedChunks, { type: mediaRecorderMimeType || 'video/webm' });
+            recordedChunks = [];
+            downloadBlinkBlob(blob);
+            return;
+        }
+
+        if (fallbackFrames.length > 0) {
+            finalizeBlinkFallback();
+            return;
+        }
+
+        showError('Recording finished but no frames were captured.');
+        resetBlinkButton();
+    }
+
+    function finalizeBlinkFallback() {
+        showInfo('MediaRecorder unavailable — exporting individual HD frames instead.');
+        createFramesDownload(fallbackFrames, 'wink-fallback');
+    }
+
+    function createFramesDownload(frames, prefix = 'wink-frame') {
+        if (!frames || frames.length === 0) {
             resetBlinkButton();
             return;
         }
 
-        createWebMVideo();
-    }    function createWebMVideo() {
-        try {
-            blinkBtn.textContent = 'Creating Video...';
-            
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d', {
-                alpha: false,
-                colorSpace: 'srgb',
-                willReadFrequently: false
-            });
-            tempCanvas.width = currentImage.width;
-            tempCanvas.height = currentImage.height;
-            
-            tempCtx.imageSmoothingEnabled = true;
-            tempCtx.imageSmoothingQuality = 'high';
-            tempCtx.fillStyle = '#000000';
-            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            
-            const stream = tempCanvas.captureStream(60);
-            
-            const pixelCount = tempCanvas.width * tempCanvas.height;
-            const qualityBitrate = Math.max(25000000, pixelCount / 50); 
-            
-            let mediaRecorderOptions;
-            
-            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
-                mediaRecorderOptions = {
-                    mimeType: 'video/webm;codecs=vp9',
-                    videoBitsPerSecond: qualityBitrate,
-                    bitsPerSecond: qualityBitrate
-                };
-            } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                mediaRecorderOptions = {
-                    mimeType: 'video/webm;codecs=vp8',
-                    videoBitsPerSecond: qualityBitrate * 0.8,
-                    bitsPerSecond: qualityBitrate * 0.8
-                };
-            } else if (MediaRecorder.isTypeSupported('video/webm')) {
-                mediaRecorderOptions = {
-                    mimeType: 'video/webm',
-                    videoBitsPerSecond: qualityBitrate,
-                    bitsPerSecond: qualityBitrate
-                };
-            } else {
-                throw new Error('WebM recording not supported');
-            }
-            
-            const mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
-            
-            const chunks = [];
-            
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    chunks.push(event.data);
-                }
-            };            mediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
-                
-                const videoMetadata = {
-                    title: originalFileName || 'Untitled',
-                    subtitle: 'made using wink!',
-                    size: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
-                    duration: '5 seconds',
-                    format: 'WebM (HD)',
-                    timestamp: new Date().toISOString()
-                };
-                
-                console.log('Video Metadata:', videoMetadata);
-                
-                const baseFileName = originalFileName || 'wink-animation';
-                const fileName = `${baseFileName}-wink-blink.webm`;
-                
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.download = fileName;
-                link.href = url;
-                link.click();
-                URL.revokeObjectURL(url);
-                
-                resetBlinkButton();
-            };
-              mediaRecorder.start(50); 
-            
-            const totalDuration = 5000;
-            const frameRate = 60;
-            const frameDuration = 1000 / frameRate;
-            const totalFrames = recordedFrames.length;
-            
-            let frameIndex = 0;
-            let startTime = performance.now();
-            let lastFrameTime = startTime;
-            
-            function playNextFrame() {
-                const currentTime = performance.now();
-                const elapsed = currentTime - startTime;
-                
-                if (currentTime - lastFrameTime >= frameDuration) {
-                    const progress = Math.min(elapsed / totalDuration, 1);
-                    const targetFrameIndex = Math.floor(progress * (totalFrames - 1));
-                    
-                    if (targetFrameIndex < totalFrames) {
-                        frameIndex = targetFrameIndex;
-                          const img = new Image();
-                        img.onload = () => {
-                            tempCtx.fillStyle = '#000000';
-                            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-                            
-                            tempCtx.globalCompositeOperation = 'source-over';
-                            tempCtx.imageSmoothingEnabled = true;
-                            tempCtx.imageSmoothingQuality = 'high';
-                            tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-                        };
-                        img.crossOrigin = 'anonymous';
-                        img.src = recordedFrames[frameIndex].data;
-                        
-                        lastFrameTime = currentTime;
-                    }
-                }
-                
-                if (elapsed < totalDuration) {
-                    requestAnimationFrame(playNextFrame);
-                } else {
-                    setTimeout(() => {
-                        mediaRecorder.stop();
-                    }, 300);
-                }
-            }
-            
-            requestAnimationFrame(playNextFrame);
-            
-        } catch (error) {
-            console.error('Video creation failed:', error);
-            createFramesDownload(); 
-        }
-    }    function createFramesDownload() {
-        showInfo('Creating individual frame downloads since GIF/Video failed...');
-        
-        recordedFrames.forEach((frame, index) => {
+        frames.forEach((frame, index) => {
             setTimeout(() => {
                 const link = document.createElement('a');
-                link.download = `wink-frame-${String(index + 1).padStart(3, '0')}.png`;
-                link.href = frame.data;
+                link.download = `${prefix}-${String(index + 1).padStart(3, '0')}.png`;
+                link.href = frame;
                 link.click();
-            }, index * 200);
+            }, index * 150);
         });
-        
+
         setTimeout(() => {
             resetBlinkButton();
-        }, recordedFrames.length * 200 + 1000);
-    }    function resetBlinkButton() {
+        }, frames.length * 150 + 800);
+    }
+
+    function resetBlinkButton() {
         isRecording = false;
-        
-        if (recordingInterval) {
-            clearInterval(recordingInterval);
-            recordingInterval = null;
+        stopFallbackCapture();
+
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            try {
+                mediaRecorder.stop();
+            } catch (error) {
+                console.error('Error stopping MediaRecorder during reset:', error);
+            }
         }
-        
+
+        mediaRecorder = null;
+        recordingStream = null;
+        recordedChunks = [];
+        fallbackFrames = [];
+
         blinkBtn.textContent = 'BLINK (HD Video)';
         blinkBtn.disabled = false;
-        blinkBtn.style.backgroundColor = ''; 
+        blinkBtn.style.backgroundColor = '';
     }
       function perspective3D(canvas, ctx, config) {
         if (!config.enabled) return;
@@ -2757,188 +4000,551 @@ upload.addEventListener('change', (e) => {
             
             ctx.restore();        }    }
 
-    function captureFrame() {
-        if (!isRecording || !originalImageData) return;
-        
-        const captureCanvas = document.createElement('canvas');
-        const captureCtx = captureCanvas.getContext('2d', {
-            alpha: false,
-            colorSpace: 'srgb',
-            willReadFrequently: false
-        });
-        
-        captureCanvas.width = canvas.width;
-        captureCanvas.height = canvas.height;
-        
-        captureCtx.imageSmoothingEnabled = true;
-        captureCtx.imageSmoothingQuality = 'high';
-        
-        captureCtx.fillStyle = '#000000';
-        captureCtx.fillRect(0, 0, captureCanvas.width, captureCanvas.height);
-        
-        captureCtx.globalCompositeOperation = 'source-over';
-        captureCtx.drawImage(canvas, 0, 0);
-        
-        const frameData = captureCanvas.toDataURL('image/png', 1.0);
-        const timestamp = Date.now() - recordingStartTime;
-        recordedFrames.push({ data: frameData, timestamp: timestamp });
-    }    function startRecording() {
-        if (!originalImageData) {
-            showError('Please upload an image first!');
-            return;
+    function badTV(canvas, ctx, speed) {
+        if (!badTVOriginalData) {
+            badTVOriginalData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         }
         
-        isRecording = true;
-        recordedFrames = [];
-        recordingStartTime = Date.now();
+        if (typeof badTVOffset === 'undefined') badTVOffset = 0;
+        badTVOffset += speed / 10; 
         
-        blinkBtn.textContent = 'Recording... 5s';
-        blinkBtn.disabled = true;
-        blinkBtn.style.backgroundColor = '#dc2626'; 
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        captureFrame();
+        const scrollY = badTVOffset % canvas.height;
         
-        recordingInterval = setInterval(() => {
-            if (isRecording) {
-                captureFrame();
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.putImageData(badTVOriginalData, 0, 0);
+        
+        ctx.drawImage(tempCanvas, 0, scrollY, canvas.width, canvas.height - scrollY, 0, 0, canvas.width, canvas.height - scrollY);
+        ctx.drawImage(tempCanvas, 0, 0, canvas.width, scrollY, 0, canvas.height - scrollY, canvas.width, scrollY);
+        
+        ctx.fillStyle = 'rgba(255,255,255,0.02)';
+        for (let i = 0; i < 20; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const size = Math.random() * 2 + 1;
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const gradient = ctx.createRadialGradient(
+            centerX, centerY, Math.min(canvas.width, canvas.height) * 0.3,
+            centerX, centerY, Math.max(canvas.width, canvas.height) * 0.7
+        );
+        gradient.addColorStop(0, 'rgba(0,0,0,0)');
+        gradient.addColorStop(1, 'rgba(0,0,0,0.3)');
+        
+        ctx.fillStyle = gradient;
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'source-over';
+        
+        ctx.fillStyle = 'rgba(255, 200, 150, 0.1)';
+        ctx.globalCompositeOperation = 'overlay';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function spinningRainbowWheel(canvas, ctx, opacity, speed) {
+        if (typeof rainbowAngle === 'undefined') rainbowAngle = 0;
+        rainbowAngle += speed / 100;
+        
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / 2;
+        
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.globalCompositeOperation = 'screen';
+        ctx.translate(centerX, centerY);
+        ctx.rotate(rainbowAngle);
+        
+        const gradient = ctx.createConicGradient(0, 0, 0);
+        
+        for (let i = 0; i <= 360; i += 1) { 
+            const hue = i;
+            const saturation = 100;
+            const lightness = 50;
+            const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            gradient.addColorStop(i / 360, color);
+        }
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+
+    function liquidMarble(canvas, ctx, opacity, speed, turbulence) {
+        if (typeof liquidMarbleTime === 'undefined') liquidMarbleTime = 0;
+        liquidMarbleTime += speed / 1000;
+        liquidMarbleTime = liquidMarbleTime % (Math.PI * 4);
+        
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.globalCompositeOperation = 'overlay'
+        const scaleFactor = 0.5;
+        const scaledWidth = Math.floor(canvas.width * scaleFactor);
+        const scaledHeight = Math.floor(canvas.height * scaleFactor);
+        
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = scaledWidth;
+        tempCanvas.height = scaledHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        const imageData = tempCtx.createImageData(scaledWidth, scaledHeight);
+        const data = imageData.data;
+        
+        const turbulenceFactor = (turbulence / 100) * 2;
+        const freq1 = 0.01 / scaleFactor;
+        const freq2 = 0.005 / scaleFactor;
+        const freq3 = 0.02 / scaleFactor;
+        const freqY1 = 0.01 / scaleFactor;
+        const freqY2 = 0.007 / scaleFactor;
+        const freqY3 = 0.015 / scaleFactor;
+        
+        for (let y = 0; y < scaledHeight; y++) {
+            for (let x = 0; x < scaledWidth; x++) {
+                const i = (y * scaledWidth + x) * 4;
+                
+                const wave1 = Math.sin(x * freq1 + liquidMarbleTime) * Math.cos(y * freqY1 + liquidMarbleTime * 0.7);
+                const wave2 = Math.sin(x * freq2 + liquidMarbleTime * 1.3) * Math.cos(y * freqY2 + liquidMarbleTime * 0.5);
+                const wave3 = Math.sin(x * freq3 + liquidMarbleTime * 0.8) * Math.cos(y * freqY3 + liquidMarbleTime * 1.1);
+                
+                let combinedWave = (wave1 + wave2 * 0.5 + wave3 * 0.3) * turbulenceFactor;
+                combinedWave = Math.max(-10, Math.min(10, combinedWave));
+                
+                const marbleValue = Math.sin(combinedWave) * 80 + 128;
+                
+                data[i] = Math.max(0, Math.min(255, marbleValue + 15));
+                data[i + 1] = Math.max(0, Math.min(255, marbleValue - 8));
+                data[i + 2] = Math.max(0, Math.min(255, marbleValue + 20));
+                data[i + 3] = 60;
             }
-        }, 100); 
-        
-        setTimeout(() => {
-            stopRecording();
-        }, 5000);
-    }    function stopRecording() {
-        isRecording = false;
-        
-        if (recordingInterval) {
-            clearInterval(recordingInterval);
-            recordingInterval = null;
         }
         
-        blinkBtn.textContent = 'Creating Video...';
+        tempCtx.putImageData(imageData, 0, 0);
         
-        setTimeout(() => {
-            generateGIF();
-        }, 100);
-    }    async function generateGIF() {
-        if (recordedFrames.length === 0) {
-            showError('No frames recorded!');
-            resetBlinkButton();
+        ctx.drawImage(tempCanvas, 0, 0, scaledWidth, scaledHeight, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+    }
+
+    function hexToRgb(color) {
+        if (typeof color !== 'string') {
+            return { r: 0, g: 255, b: 0 };
+        }
+
+        let hex = color.trim().replace('#', '');
+        if (hex.length === 3) {
+            hex = hex.split('').map(char => char + char).join('');
+        }
+
+        if (hex.length !== 6) {
+            return { r: 0, g: 255, b: 0 };
+        }
+
+        const parsed = parseInt(hex, 16);
+        if (Number.isNaN(parsed)) {
+            return { r: 0, g: 255, b: 0 };
+        }
+
+        return {
+            r: (parsed >> 16) & 255,
+            g: (parsed >> 8) & 255,
+            b: parsed & 255
+        };
+    }
+
+    function matrixRain(canvas, ctx, opacity, speed, density, size, color) {
+        // Cache character set to avoid recreating every frame
+        if (!matrixChars) {
+            matrixChars = 'WinssWasHereアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲンアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        }
+
+        const fontSize = Math.max(12, size / 2);
+        const trailBase = Math.max(5, size / 8);
+        const baseColor = hexToRgb(color || '#00ff00');
+
+        if (!matrixDrops || matrixCanvasWidth !== canvas.width || matrixCanvasHeight !== canvas.height || matrixDensity !== density || matrixSize !== size) {
+            matrixCanvasWidth = canvas.width;
+            matrixCanvasHeight = canvas.height;
+            matrixDensity = density;
+            matrixSize = size;
+            matrixDrops = [];
+            const animationDensity = Math.max(1, Math.floor(density * canvas.width / 400));
+            for (let i = 0; i < animationDensity; i++) {
+                matrixDrops[i] = {
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    speed: Math.random() * 2 + 1,
+                    length: Math.random() * trailBase + trailBase / 2,
+                    opacity: Math.random() * 0.8 + 0.2
+                };
+            }
+        }
+
+        ctx.save();
+        ctx.font = `${fontSize}px monospace`;
+        ctx.textAlign = 'center';
+
+        for (let i = 0; i < matrixDrops.length; i++) {
+            const drop = matrixDrops[i];
+
+            const trailLength = Math.min(drop.length, trailBase);
+            for (let j = 0; j < trailLength; j++) {
+                const charY = drop.y - j * fontSize;
+                if (charY > 0 && charY < canvas.height) {
+                    const alpha = (trailLength - j) / trailLength * drop.opacity;
+                    ctx.globalAlpha = Math.max(0, Math.min(1, opacity * alpha));
+
+                    const brightnessFactor = 0.35 + 0.65 * alpha;
+                    const finalR = Math.min(255, Math.round(baseColor.r * brightnessFactor));
+                    const finalG = Math.min(255, Math.round(baseColor.g * brightnessFactor));
+                    const finalB = Math.min(255, Math.round(baseColor.b * brightnessFactor));
+                    ctx.fillStyle = `rgb(${finalR}, ${finalG}, ${finalB})`;
+
+                    const char = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+                    ctx.fillText(char, drop.x, charY);
+                }
+            }
+
+            drop.y += drop.speed * (speed / 50);
+
+            if (drop.y > canvas.height + drop.length * fontSize) {
+                drop.y = -drop.length * fontSize;
+                drop.x = Math.random() * canvas.width;
+                drop.speed = Math.random() * 2 + 1;
+                drop.length = Math.random() * trailBase + trailBase / 2;
+                drop.opacity = Math.random() * 0.8 + 0.2;
+            }
+        }
+
+        ctx.restore();
+    }
+
+    function glitterField(canvas, ctx, density, size, speed, color) {
+        const time = Date.now() * speed / 1000;
+        const sparkleCount = Math.max(10, Math.min(500, density));
+
+        ctx.save();
+
+        for (let i = 0; i < sparkleCount; i++) {
+            const seed = i * 1000;
+            const noise1 = Math.sin(time * 0.01 + seed * 0.017) * Math.cos(time * 0.008 + seed * 0.023);
+            const noise2 = Math.sin(time * 0.012 + seed * 0.031) * Math.cos(time * 0.006 + seed * 0.019);
+            const noise3 = Math.sin(time * 0.009 + seed * 0.041) * Math.cos(time * 0.011 + seed * 0.037);
+
+            const movementX = (noise1 + noise2 * 0.7) * 120;
+            const movementY = (noise2 + noise3 * 0.8) * 90;
+
+            const gridSize = Math.ceil(Math.sqrt(sparkleCount));
+            const cellWidth = canvas.width / gridSize;
+            const cellHeight = canvas.height / gridSize;
+            const gridX = i % gridSize;
+            const gridY = Math.floor(i / gridSize);
+            const baseX = gridX * cellWidth + (Math.sin(seed * 0.01) * cellWidth * 0.4);
+            const baseY = gridY * cellHeight + (Math.cos(seed * 0.015) * cellHeight * 0.4);
+
+            const x = baseX + movementX;
+            const y = baseY + movementY;
+
+            const clampedX = ((x % canvas.width) + canvas.width) % canvas.width;
+            const clampedY = ((y % canvas.height) + canvas.height) % canvas.height;
+
+            const twinkleSeed = seed * 0.1;
+            const twinkle = Math.sin(time * 0.05 + twinkleSeed) * Math.cos(time * 0.03 + twinkleSeed * 1.3) * 0.5 + 0.5;
+            const alpha = twinkle * 0.9 + 0.1;
+
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = color;
+
+            const sparkleSize = size;
+            ctx.shadowColor = color;
+            ctx.shadowBlur = sparkleSize * 2;
+
+            ctx.beginPath();
+            ctx.arc(clampedX, clampedY, sparkleSize, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(clampedX - sparkleSize * 1.5, clampedY);
+            ctx.lineTo(clampedX + sparkleSize * 1.5, clampedY);
+            ctx.moveTo(clampedX, clampedY - sparkleSize * 1.5);
+            ctx.lineTo(clampedX, clampedY + sparkleSize * 1.5);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = sparkleSize * 0.3;
+            ctx.globalAlpha = alpha * 0.7;
+            ctx.stroke();
+        }
+
+        ctx.restore();
+    }
+
+    function stormSyndrome(canvas, ctx, intensity, speed) {
+        if (intensity <= 0) return;
+
+        const time = Date.now() * (speed / 200);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const width = canvas.width;
+        const height = canvas.height;
+        const output = new Uint8ClampedArray(data);
+
+        const intensityFactor = intensity / 100;
+
+        const freqX1 = 0.015;
+        const freqY1 = 0.012;
+        const freqCombined = 0.008;
+        const freqThreshold1 = 0.003;
+        const freqThreshold2 = 0.005;
+        const freqSheenX = 0.08;
+        const freqSheenY = 0.06;
+
+        const stepSize = 3;
+
+        for (let y = 0; y < height; y += stepSize) {
+            for (let x = 0; x < width; x += stepSize) {
+                const index = (y * width + x) * 4;
+
+                const wave1 = Math.sin(x * freqX1 + time * 0.008) * intensityFactor * 12;
+                const wave2 = Math.cos(y * freqY1 + time * 0.006) * intensityFactor * 8;
+                const wave3 = Math.sin((x * 0.8 + y * 1.2) * freqCombined + time * 0.004) * intensityFactor * 6;
+
+                const totalDistortion = wave1 + wave2 + wave3;
+                const meltThreshold1 = Math.sin(x * freqThreshold1 + y * 0.004 + time * 0.002) * 0.5 + 0.5;
+                const meltThreshold2 = Math.cos(x * freqThreshold2 + y * 0.003 + time * 0.003) * 0.5 + 0.5;
+                const meltThreshold = (meltThreshold1 + meltThreshold2) * 0.5;
+
+                if (meltThreshold > (1 - intensityFactor * 0.8)) {
+                    const stretchFactor = 1 + Math.abs(totalDistortion) * 0.08;
+                    const sourceY = Math.max(0, y - Math.abs(totalDistortion) * stretchFactor);
+                    const sourceX = x + Math.sin(y * 0.03 + time * 0.008) * intensityFactor * 4;
+
+                    const sourceXClamped = Math.max(0, Math.min(width - 1, Math.floor(sourceX)));
+                    const sourceYClamped = Math.max(0, Math.min(height - 1, Math.floor(sourceY)));
+                    const sourceIndex = (sourceYClamped * width + sourceXClamped) * 4;
+
+                    output[index] = data[sourceIndex];
+                    output[index + 1] = data[sourceIndex + 1];
+                    output[index + 2] = data[sourceIndex + 2];
+                    output[index + 3] = data[sourceIndex + 3];
+
+                    const sheenIntensity = Math.sin(x * freqSheenX + y * freqSheenY + time * 0.04) * 0.5 + 0.5;
+                    const sheenAmount = sheenIntensity * intensityFactor * 30;
+
+                    const baseHue = (x * 0.8 + y * 0.5 + time * 0.05) % 360;
+                    const hueNoise = Math.sin(x * 0.02 + y * 0.03 + time * 0.1) * 30;
+                    const hue = (baseHue + hueNoise) % 360;
+
+                    const saturation = 0.6;
+                    const oilR = Math.sin(hue * Math.PI / 180) * sheenAmount * saturation;
+                    const oilG = Math.sin((hue + 120) * Math.PI / 180) * sheenAmount * saturation;
+                    const oilB = Math.sin((hue + 240) * Math.PI / 180) * sheenAmount * saturation;
+
+                    const blendFactor = 0.7;
+                    output[index] = Math.min(255, Math.max(0, output[index] * blendFactor + oilR));
+                    output[index + 1] = Math.min(255, Math.max(0, output[index + 1] * blendFactor + oilG));
+                    output[index + 2] = Math.min(255, Math.max(0, output[index + 2] * blendFactor + oilB));
+
+                    const colorVariation = Math.sin(x * 0.05 + y * 0.07 + time * 0.08) * intensityFactor * 15;
+                    output[index] = Math.min(255, Math.max(0, output[index] + colorVariation * 0.3));
+                    output[index + 1] = Math.min(255, Math.max(0, output[index + 1] + colorVariation * 0.2));
+                    output[index + 2] = Math.min(255, Math.max(0, output[index + 2] + colorVariation * 0.4));
+
+                    const darken = intensityFactor * 15 * (1 - sheenIntensity);
+                    output[index] = Math.max(0, output[index] - darken);
+                    output[index + 1] = Math.max(0, output[index + 1] - darken);
+                    output[index + 2] = Math.max(0, output[index + 2] - darken);
+                } else {
+                    output[index] = data[index];
+                    output[index + 1] = data[index + 1];
+                    output[index + 2] = data[index + 2];
+                    output[index + 3] = data[index + 3];
+                }
+            }
+        }
+
+        // Second pass: Bilinear interpolation to fill gaps
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const index = (y * width + x) * 4;
+
+                if ((x % stepSize === 0) && (y % stepSize === 0)) continue;
+
+                const x0 = Math.floor(x / stepSize) * stepSize;
+                const y0 = Math.floor(y / stepSize) * stepSize;
+                const x1 = Math.min(x0 + stepSize, width - 1);
+                const y1 = Math.min(y0 + stepSize, height - 1);
+
+                const wx = (x - x0) / (x1 - x0 || 1);
+                const wy = (y - y0) / (y1 - y0 || 1);
+
+                const idx00 = (y0 * width + x0) * 4;
+                const idx10 = (y0 * width + x1) * 4;
+                const idx01 = (y1 * width + x0) * 4;
+                const idx11 = (y1 * width + x1) * 4;
+
+                for (let c = 0; c < 4; c++) {
+                    const val00 = output[idx00 + c];
+                    const val10 = output[idx10 + c];
+                    const val01 = output[idx01 + c];
+                    const val11 = output[idx11 + c];
+
+                    const top = val00 * (1 - wx) + val10 * wx;
+                    const bottom = val01 * (1 - wx) + val11 * wx;
+                    output[index + c] = top * (1 - wy) + bottom * wy;
+                }
+            }
+        }
+
+        ctx.putImageData(new ImageData(output, width, height), 0, 0);
+    }
+
+    function melt(canvas, ctx, intensity, speed) {
+        if (intensity <= 0) return;
+
+        const time = Date.now() * (speed / 200);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const width = canvas.width;
+        const height = canvas.height;
+        const output = new Uint8ClampedArray(data);
+
+        const intensityFactor = intensity / 100;
+
+        const freqX1 = 0.012;
+        const freqY1 = 0.008;
+        const freqDrip1 = 0.006;
+        const freqDrip2 = 0.004;
+        const freqWave1 = 0.01;
+        const freqWave2 = 0.007;
+
+        const stepSize = 3;
+
+        for (let y = 0; y < height; y += stepSize) {
+            for (let x = 0; x < width; x += stepSize) {
+                const index = (y * width + x) * 4;
+
+                const drip1 = Math.sin(x * freqDrip1 + time * 0.005) * Math.cos(y * freqDrip2 + time * 0.003);
+                const drip2 = Math.sin((x + y) * freqWave1 + time * 0.004) * Math.cos(x * freqWave2 + time * 0.006);
+
+                const meltOffset = (drip1 + drip2 * 0.7) * intensityFactor * 15;
+                const sourceY = Math.max(0, Math.min(height - 1, y + meltOffset));
+
+                const sourceIndex = (Math.floor(sourceY) * width + x) * 4;
+                for (let c = 0; c < 4; c++) {
+                    output[index + c] = data[sourceIndex + c];
+                }
+            }
+        }
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const index = (y * width + x) * 4;
+
+                if ((y % stepSize === 0) && (x % stepSize === 0)) continue;
+
+                const x0 = Math.floor(x / stepSize) * stepSize;
+                const x1 = Math.min(width - 1, x0 + stepSize);
+                const y0 = Math.floor(y / stepSize) * stepSize;
+                const y1 = Math.min(height - 1, y0 + stepSize);
+
+                const wx = (x - x0) / stepSize;
+                const wy = (y - y0) / stepSize;
+
+                for (let c = 0; c < 4; c++) {
+                    const idx00 = (y0 * width + x0) * 4 + c;
+                    const idx10 = (y0 * width + x1) * 4 + c;
+                    const idx01 = (y1 * width + x0) * 4 + c;
+                    const idx11 = (y1 * width + x1) * 4 + c;
+
+                    const val00 = output[idx00];
+                    const val10 = output[idx10];
+                    const val01 = output[idx01];
+                    const val11 = output[idx11];
+
+                    const top = val00 * (1 - wx) + val10 * wx;
+                    const bottom = val01 * (1 - wx) + val11 * wx;
+                    output[index + c] = top * (1 - wy) + bottom * wy;
+                }
+            }
+        }
+
+        ctx.putImageData(new ImageData(output, width, height), 0, 0);
+    }
+
+    function bouncingLogo(canvas, ctx, speed, size, colorShift, customImage) {
+        // Initialize logo position and velocity if not set
+        if (typeof bouncingLogoX === 'undefined') bouncingLogoX = canvas.width / 2;
+        if (typeof bouncingLogoY === 'undefined') bouncingLogoY = canvas.height / 2;
+        if (typeof bouncingLogoVX === 'undefined') bouncingLogoVX = (speed / 50) * 2;
+        if (typeof bouncingLogoVY === 'undefined') bouncingLogoVY = (speed / 50) * 1.5;
+
+        bouncingLogoX += bouncingLogoVX;
+        bouncingLogoY += bouncingLogoVY;
+
+        const logoSize = Math.max(20, Math.min(200, size));
+        const halfSize = logoSize / 2;
+
+        if (bouncingLogoX - halfSize <= 0 || bouncingLogoX + halfSize >= canvas.width) {
+            bouncingLogoVX = -bouncingLogoVX;
+            bouncingLogoX = Math.max(halfSize, Math.min(canvas.width - halfSize, bouncingLogoX));
+        }
+
+        // Top and bottom edges
+        if (bouncingLogoY - halfSize <= 0 || bouncingLogoY + halfSize >= canvas.height) {
+            bouncingLogoVY = -bouncingLogoVY;
+            bouncingLogoY = Math.max(halfSize, Math.min(canvas.height - halfSize, bouncingLogoY));
+        }
+
+        // Prevent corner trapping by adding slight randomization when hitting edges
+        if (bouncingLogoX - halfSize <= 5 || bouncingLogoX + halfSize >= canvas.width - 5 ||
+            bouncingLogoY - halfSize <= 5 || bouncingLogoY + halfSize >= canvas.height - 5) {
+            bouncingLogoVX += (Math.random() - 0.5) * 0.5;
+            bouncingLogoVY += (Math.random() - 0.5) * 0.5;
+            bouncingLogoVX = Math.max(-5, Math.min(5, bouncingLogoVX));
+            bouncingLogoVY = Math.max(-5, Math.min(5, bouncingLogoVY));
+        }
+
+        ctx.save();
+
+        const drawX = bouncingLogoX - halfSize;
+        const drawY = bouncingLogoY - halfSize;
+
+        let logoImage;
+        if (customImage) {
+            logoImage = customImage;
+        } else {
+            logoImage = new Image();
+            logoImage.src = '../assets/wink/winkwhite.png';
+            if (!logoImage.complete) {
+                ctx.restore();
+                return;
+            }
+        }
+
+        // Apply color shifting if enabled
+        if (colorShift) {
+            const time = Date.now() * 0.001;
+            const hue = (time * 30) % 360;
+
+            ctx.filter = `sepia(1) saturate(4) hue-rotate(${hue}deg)`;
+
+            ctx.drawImage(logoImage, drawX, drawY, logoSize, logoSize);
+
+            ctx.restore();
             return;
         }
 
-        createWebMVideo();
-    }    function createWebMVideo() {
-        try {
-            blinkBtn.textContent = 'Creating Video...';
-            
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = currentImage.width;
-            tempCanvas.height = currentImage.height;
-            
-            const stream = tempCanvas.captureStream(48); 
-            const mediaRecorder = new MediaRecorder(stream, { 
-                mimeType: 'video/webm;codecs=vp9',
-                videoBitsPerSecond: 2500000 
-            });
-            
-            const chunks = [];
-            
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    chunks.push(event.data);
-                }
-            };            mediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
-                
-                const videoMetadata = {
-                    title: originalFileName || 'Untitled',
-                    subtitle: 'made using wink!',
-                    size: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
-                    duration: '5 seconds',
-                    format: 'WebM (Standard)',
-                    timestamp: new Date().toISOString()
-                };
-                
-                console.log('🎬 Video Metadata:', videoMetadata);
-                
-                const baseFileName = originalFileName || 'wink-animation';
-                const fileName = `${baseFileName}-wink-blink.webm`;
-                
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.download = fileName;
-                link.href = url;
-                link.click();
-                URL.revokeObjectURL(url);
-                
-                resetBlinkButton();
-            };
-            
-            mediaRecorder.start();
-            const totalDuration = 5000; 
-            const totalFrames = recordedFrames.length;
-            
-            let frameIndex = 0;
-            const startTime = performance.now();
-            
-            function playNextFrame() {
-                const elapsed = performance.now() - startTime;
-                const progress = Math.min(elapsed / totalDuration, 1);
-                const targetFrameIndex = Math.floor(progress * (totalFrames - 1));
-                
-                if (targetFrameIndex !== frameIndex && targetFrameIndex < totalFrames) {
-                    frameIndex = targetFrameIndex;
-                    
-                    const img = new Image();
-                    img.onload = () => {
-                        tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
-                        tempCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-                    };
-                    img.src = recordedFrames[frameIndex].data;
-                }
-                
-                if (elapsed < totalDuration) {
-                    requestAnimationFrame(playNextFrame);
-                } else {
-                    setTimeout(() => {
-                        mediaRecorder.stop();
-                    }, 100);
-                }
-            }
-            
-            requestAnimationFrame(playNextFrame);
-            
-        } catch (error) {
-            console.error('Video creation failed:', error);
-            createFramesDownload(); 
-        }
-    }    function createFramesDownload() {
-        showInfo('Creating individual frame downloads since GIF/Video failed...');
-        
-        recordedFrames.forEach((frame, index) => {
-            setTimeout(() => {
-                const link = document.createElement('a');
-                link.download = `wink-frame-${String(index + 1).padStart(3, '0')}.png`;
-                link.href = frame.data;
-                link.click();
-            }, index * 200);
-        });
-        
-        setTimeout(() => {
-            resetBlinkButton();
-        }, recordedFrames.length * 200 + 1000);
-    }    function resetBlinkButton() {
-        isRecording = false;
-        
-        if (recordingInterval) {
-            clearInterval(recordingInterval);
-            recordingInterval = null;
-        }        
-        blinkBtn.textContent = 'BLINK';
-        blinkBtn.disabled = false;
-        blinkBtn.style.backgroundColor = ''; 
+        ctx.drawImage(logoImage, drawX, drawY, logoSize, logoSize);
     }
 
     createEffectControls();
