@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dust Lab v1.0 Documentation - Complete Guide</title>
+    <title>Dust Lab v1.1 Documentation</title>
     <link rel="icon" type="image/png" href="DUSTLAB.png">
     <link rel="shortcut icon" type="image/png" href="DUSTLAB.png">
     
     <meta name="description" content="docs!!!">
-    <meta property="og:title" content="Dust Lab v1.0 Documentation - Complete Guide">
+    <meta property="og:title" content="Dust Lab v1.1 Documentation">
     <meta property="og:description" content="docs">
     <meta property="og:image" content="https://winss.xyz/dustlab/DUSTLAB.png">
     <meta property="og:url" content="https://winss.xyz/dustlab/documentation.html">
@@ -207,6 +207,24 @@
             box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4) !important;
         }
 
+        .btn-glass {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: #ffffff;
+            text-decoration: none;
+            padding: 0.8rem 2rem;
+            border-radius: 12px;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        .btn-glass:hover {
+            transform: translateY(-2px);
+            border-color: rgba(79, 70, 229, 0.3);
+        }
+
         @media (max-width: 768px) {
             .documentation-layout {
                 flex-direction: column;
@@ -290,6 +308,7 @@
                 <li><a href="#datapack">3. Creating Datapacks</a></li>
                 <li><a href="#misc">4. Misc</a></li>
                 <li><a href="#credits">5. Credits</a></li>
+                <li><a href="#plugin">6. Plugin</a></li>
             </ul>
         </aside>
 
@@ -365,6 +384,17 @@
                 <p class="step-description">
                 Inspired by <a href="https://github.com/kemo14331/Particle-Converter" class="highlight" target="_blank" rel="noopener">kemo14331</a>'s particle converter
                 </p>
+            </div>
+
+            <div class="step" id="plugin">
+                <div class="step-number">6</div>
+                <h2 class="step-title">Plugin</h2>
+                <p class="step-description">
+                    View the Dust Lab plugin on GitHub for the latest updates and source code.
+                </p>
+                <a class="download-button" href="https://github.com/winss/winss.xyz" target="_blank" rel="noopener" aria-label="View Dust Lab on GitHub" style="display: inline-block; padding: 0.8rem 2rem; background: linear-gradient(135deg, #4f46e5, #382a4e); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                    View on GitHub
+                </a>
             </div>
         </main>
     </div>
