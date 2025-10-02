@@ -211,6 +211,164 @@
             pointer-events: none;
         }
 
+        .examples-section {
+            padding: 6rem 2rem;
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .examples-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .examples-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .examples-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #e5e5e5 0%, #8b87a8 50%, #6b6b7d 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradientShift 3s ease-in-out infinite alternate;
+        }
+
+        .examples-subtitle {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.6);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 500px), 1fr));
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .example-card {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+            will-change: transform;
+        }
+
+        .example-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(139, 135, 168, 0.4);
+            box-shadow: 0 20px 60px rgba(107, 107, 125, 0.3),
+                        0 0 80px rgba(139, 135, 168, 0.2);
+        }
+
+        .example-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(139, 135, 168, 0.1) 0%, rgba(107, 107, 125, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .example-card:hover::before {
+            opacity: 1;
+        }
+
+        .video-wrapper {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            background: #000;
+            overflow: hidden;
+        }
+
+        .example-video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 20px 20px 0 0;
+            filter: brightness(0.9);
+            transition: filter 0.4s ease, transform 0.4s ease;
+        }
+
+        .example-card:hover .example-video {
+            filter: brightness(1.1);
+            transform: scale(1.05);
+        }
+
+        .example-info {
+            padding: 2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .example-label {
+            display: inline-block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.4rem 1rem;
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(147, 51, 234, 0.2));
+            border: 1px solid rgba(79, 70, 229, 0.3);
+            border-radius: 20px;
+            color: #a78bfa;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .example-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 0.75rem;
+        }
+
+        .example-description {
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
+        }
+
+        .example-model-name {
+            font-size: 0.9rem;
+            color: rgba(139, 135, 168, 0.8);
+            font-style: italic;
+            margin-top: 0.75rem;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .examples-section {
+                padding: 4rem 1rem;
+            }
+
+            .examples-grid {
+                gap: 2rem;
+            }
+
+            .example-info {
+                padding: 1.5rem;
+            }
+        }
+
         .features {
             padding: 8rem 2rem;
             background: #000;
@@ -630,6 +788,53 @@
         </div>
     </section>
 
+    <section class="examples-section">
+        <div class="examples-container">
+            <div class="examples-header">
+                <h2 class="examples-title">See It In Action</h2>
+                <p class="examples-subtitle">
+                    Watch these stunning particle effects created with Dust Lab
+                </p>
+            </div>
+            
+            <div class="examples-grid">
+                <div class="example-card">
+                    <div class="video-wrapper">
+                        <video class="example-video" autoplay loop muted playsinline preload="metadata" id="example-video-1">
+                            <source src="../assets/dustlabexample1.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    <div class="example-info">
+                        <span class="example-label">Example #1</span>
+                        <h3 class="example-title">Animated Models Support</h3>
+                        <p class="example-description">
+                            Particle models attached to players
+                        </p>
+                        <p class="example-model-name">model name: magic_circle</p>
+                    </div>
+                </div>
+
+                <div class="example-card">
+                    <div class="video-wrapper">
+                        <video class="example-video" autoplay loop muted playsinline preload="metadata">
+                            <source src="../assets/dustlabexample2.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                    <div class="example-info">
+                        <span class="example-label">Example #2</span>
+                        <h3 class="example-title">Wonderfully Optimized.</h3>
+                        <p class="example-description">
+                            Enchance your server or map with dustlab. The plugin has various effects you can apply to models.
+                        </p>
+                        <p class="example-model-name">model name: prismatic_burst</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section class="features">
         <div class="features-container">
             <h2 class="features-title">Features</h2>
@@ -941,6 +1146,14 @@
                 });
             }
         })();
+
+        // Set playback speed for example video 1 (20% faster)
+        document.addEventListener('DOMContentLoaded', function() {
+            const exampleVideo1 = document.getElementById('example-video-1');
+            if (exampleVideo1) {
+                exampleVideo1.playbackRate = 1.2;
+            }
+        });
     </script>
 </body>
 </html>
