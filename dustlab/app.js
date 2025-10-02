@@ -46,7 +46,6 @@
                 const height = rect.height;
                 const pixelRatio = window.devicePixelRatio || 1;
                 
-                // Check if size changed or DPI changed
                 const needsResize = canvasEl.width !== width * pixelRatio || 
                                    canvasEl.height !== height * pixelRatio;
                 
@@ -166,6 +165,7 @@
         const clearBtn = document.getElementById('clear-btn');
         const coordAxisSelect = document.getElementById('coord-axis-selector'); 
         const rotationSelector = document.getElementById('rotation-selector'); 
+        const alignmentSelector = document.getElementById('alignment-selector');
         const sizingModeRadios = document.querySelectorAll('input[name="sizing-mode"]');
         const densityResControls = document.getElementById('density-res-controls');
         const sizeResControls = document.getElementById('size-res-controls');
@@ -226,7 +226,7 @@
         [coordModeSelect, versionSelector].filter(el => el).forEach(el => el.addEventListener('input', generateMcfunctionContent));
         [widthInput, heightInput].filter(el => el).forEach(el => el.addEventListener('input', debouncedTriggerGeneration));
         
-        [coordAxisSelect, rotationSelector].filter(el => el).forEach(el => el.addEventListener('input', () => {
+        [coordAxisSelect, rotationSelector, alignmentSelector].filter(el => el).forEach(el => el.addEventListener('input', () => {
             if (livePreviewToggle && livePreviewToggle.checked) {
                 updatePreview(); 
             } else {
@@ -336,7 +336,7 @@
             files.forEach(f => {
                 const url = URL.createObjectURL(f);
                 blobURLMap.set(f.name, url);
-                registerModelResource(url); // track for later cleanup
+                registerModelResource(url); 
             });
 
             const reader = new FileReader();
@@ -380,7 +380,6 @@
         }
 
         function waitForTexturesThenExtract(scene){
-            // Gather all potential texture images referenced by materials
             const images = new Set();
             scene.traverse(obj => {
                 if (obj.isMesh && obj.material) {
@@ -393,10 +392,10 @@
             images.forEach(img => {
                 // Image can be HTMLImageElement, ImageBitmap (already loaded), or Canvas/Video
                 if (img instanceof HTMLImageElement) {
-                    if (img.complete && img.naturalWidth > 0) return; // already loaded
+                    if (img.complete && img.naturalWidth > 0) return; 
                     pending.push(new Promise(res => {
                         img.addEventListener('load', () => res(), { once: true });
-                        img.addEventListener('error', () => res(), { once: true }); // resolve anyway
+                        img.addEventListener('error', () => res(), { once: true });
                     }));
                 }
             });
@@ -566,7 +565,7 @@
                 }
 
                 for (let i = 0; i < positions.length; i += 3) {
-                    if (Math.random() > density) continue; // random vertex sampling
+                    if (Math.random() > density) continue;
                     let r = 1, g = 1, b = 1;
 
                     // Transform vertex into world space first to get actual position
@@ -595,7 +594,7 @@
                             const uvIndex = (i / 3) * 2;
                             if (uvs[uvIndex] !== undefined && uvs[uvIndex + 1] !== undefined) {
                                 const u = uvs[uvIndex];
-                                const v = 1 - uvs[uvIndex + 1]; // flip V
+                                const v = 1 - uvs[uvIndex + 1];
                                 const texX = Math.min(textureWidth - 1, Math.max(0, Math.floor(u * (textureWidth - 1))));
                                 const texY = Math.min(textureHeight - 1, Math.max(0, Math.floor(v * (textureHeight - 1))));
                                 const pixelIndex = (texY * textureWidth + texX) * 4;
@@ -627,7 +626,7 @@
                             const uvIndex = (i / 3) * 2;
                             if (uvs[uvIndex] !== undefined && uvs[uvIndex + 1] !== undefined) {
                                 const u = uvs[uvIndex];
-                                const v = 1 - uvs[uvIndex + 1]; // flip V
+                                const v = 1 - uvs[uvIndex + 1];
                                 const texX = Math.min(textureWidth - 1, Math.max(0, Math.floor(u * (textureWidth - 1))));
                                 const texY = Math.min(textureHeight - 1, Math.max(0, Math.floor(v * (textureHeight - 1))));
                                 const pixelIndex = (texY * textureWidth + texX) * 4;
@@ -685,10 +684,10 @@
                 // Calculate interpolation factor based on direction
                 switch (direction) {
                     case 'horizontal':
-                        factor = x; // Assuming x is normalized 0-1
+                        factor = x;
                         break;
                     case 'vertical':
-                        factor = y; // Assuming y is normalized 0-1
+                        factor = y;
                         break;
                     case 'diagonal':
                         factor = (x + y) / 2;
@@ -697,11 +696,11 @@
                         const centerX = 0.5;
                         const centerY = 0.5;
                         const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
-                        factor = Math.min(distance * Math.sqrt(2), 1); // Normalize to max distance
+                        factor = Math.min(distance * Math.sqrt(2), 1);
                         break;
                 }
                 
-                factor = Math.max(0, Math.min(1, factor)); // Clamp to 0-1
+                factor = Math.max(0, Math.min(1, factor));
                 
                 return {
                     r: startColor.r + (endColor.r - startColor.r) * factor,
@@ -789,8 +788,55 @@
             const centerY = (minY === Infinity || maxY === -Infinity) ? 0 : (minY + maxY) / 2;
             const centerZ = (minZ === Infinity || maxZ === -Infinity) ? 0 : (minZ + maxZ) / 2;
 
+            // Apply alignment offset for preview
+            const alignment = alignmentSelector ? alignmentSelector.value : 'center';
+            const rangeX = maxX - minX;
+            const rangeY = maxY - minY;
+            
+            let alignOffsetX = 0;
+            let alignOffsetY = 0;
+            
+            switch(alignment) {
+                case 'top-left':
+                    alignOffsetX = rangeX / 2;
+                    alignOffsetY = -rangeY / 2;
+                    break;
+                case 'top':
+                    alignOffsetX = 0;
+                    alignOffsetY = -rangeY / 2;
+                    break;
+                case 'top-right':
+                    alignOffsetX = -rangeX / 2;
+                    alignOffsetY = -rangeY / 2;
+                    break;
+                case 'left':
+                    alignOffsetX = rangeX / 2;
+                    alignOffsetY = 0;
+                    break;
+                case 'right':
+                    alignOffsetX = -rangeX / 2;
+                    alignOffsetY = 0;
+                    break;
+                case 'bottom-left':
+                    alignOffsetX = rangeX / 2;
+                    alignOffsetY = rangeY / 2;
+                    break;
+                case 'bottom':
+                    alignOffsetX = 0;
+                    alignOffsetY = rangeY / 2;
+                    break;
+                case 'bottom-right':
+                    alignOffsetX = -rangeX / 2;
+                    alignOffsetY = rangeY / 2;
+                    break;
+            }
+
             for (const p of previewParticles) {
-                positions.push(p.x_src - centerX, -(p.y_src - centerY), p.z_src - centerZ); 
+                positions.push(
+                    p.x_src - centerX + alignOffsetX, 
+                    -(p.y_src - centerY) - alignOffsetY,
+                    p.z_src - centerZ
+                ); 
                 colors.push(p.r, p.g, p.b);
             }
             geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -916,11 +962,67 @@
                 const z = z_norm * (pDepth_src * scaleFactor); 
                 
                 return {
-                    x: x.toFixed(3),
-                    y: -y.toFixed(3), 
-                    z: z.toFixed(3),
-                    r: p.r.toFixed(4), g: p.g.toFixed(4), b: p.b.toFixed(4)
+                    x: x,
+                    y: -y, 
+                    z: z,
+                    r: p.r, g: p.g, b: p.b
                 }
+            });
+
+            // Apply alignment offset
+            const alignment = alignmentSelector ? alignmentSelector.value : 'center';
+            const finalWidth = pWidth_src * scaleFactor;
+            const finalHeight = pHeight_src * scaleFactor;
+            
+            let offsetX = 0;
+            let offsetY = 0;
+            
+            switch(alignment) {
+                case 'top-left':
+                    offsetX = -finalWidth / 2;
+                    offsetY = finalHeight / 2;
+                    break;
+                case 'top':
+                    offsetX = 0;
+                    offsetY = finalHeight / 2;
+                    break;
+                case 'top-right':
+                    offsetX = finalWidth / 2;
+                    offsetY = finalHeight / 2;
+                    break;
+                case 'left':
+                    offsetX = -finalWidth / 2;
+                    offsetY = 0;
+                    break;
+                case 'center':
+                    offsetX = 0;
+                    offsetY = 0;
+                    break;
+                case 'right':
+                    offsetX = finalWidth / 2;
+                    offsetY = 0;
+                    break;
+                case 'bottom-left':
+                    offsetX = -finalWidth / 2;
+                    offsetY = -finalHeight / 2;
+                    break;
+                case 'bottom':
+                    offsetX = 0;
+                    offsetY = -finalHeight / 2;
+                    break;
+                case 'bottom-right':
+                    offsetX = finalWidth / 2;
+                    offsetY = -finalHeight / 2;
+                    break;
+            }
+
+            finalParticles.forEach(p => {
+                p.x = (p.x + offsetX).toFixed(3);
+                p.y = (p.y + offsetY).toFixed(3);
+                p.z = p.z.toFixed(3);
+                p.r = p.r.toFixed(4);
+                p.g = p.g.toFixed(4);
+                p.b = p.b.toFixed(4);
             });
 
             finalParticles.forEach(p => {

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Parametric Grapher</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Import map for Three.js modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+        }
+      }
+    </script>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            overscroll-behavior: none;
+            background-color: #000000; /* True black background */
+        }
+        /* Custom scrollbar for a better look in dark mode */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4f46e5; /* indigo-600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #6366f1; /* indigo-500 */
+        }
+        .label-text {
+            color: #9ca3af; /* text-gray-400 */
+        }
+        .input-field {
+            background-color: #1F1F1F; /* Darker than gray-700 */
+            border: 1px solid #333; /* Darker than gray-600 */
+            color: white;
+            border-radius: 0.375rem; /* rounded-md */
+            padding: 0.5rem 0.75rem;
+            width: 100%;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #6366f1; /* focus:border-indigo-500 */
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+        }
+        .btn {
+            padding: 0.625rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            text-align: center;
+        }
+        .btn-primary {
+            background-color: #4f46e5; /* bg-indigo-600 */
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #6366f1; /* hover:bg-indigo-500 */
+        }
+        .btn-secondary {
+            background-color: #1F1F1F; /* Darker than gray-700 */
+            color: white;
+            border: 1px solid #333;
+        }
+        .btn-secondary:hover {
+            background-color: #333; /* Darker than gray-600 */
+        }
+        .preset-btn {
+            background-color: #1F1F1F; /* Darker than gray-700 */
+            color: #d1d5db; /* text-gray-300 */
+            width: 100%;
+            border: 1px solid #333;
+        }
+        .preset-btn:hover {
+            background-color: #333; /* Darker than gray-600 */
+            border-color: #4b5563;
+        }
+    </style>
+</head>
+<body class="text-white overflow-hidden">
+    <div id="app" class="flex flex-col md:flex-row h-screen">
+
+        <!-- Controls Sidebar -->
+        <div id="controls-panel" class="w-full md:w-80 lg:w-96 p-6 shadow-2xl overflow-y-auto flex-shrink-0" style="background-color: #080808;">
+            <h1 class="text-2xl font-bold text-white mb-1">3D Grapher</h1>
+            <p class="text-gray-400 mb-6">Create shapes with parametric equations.</p>
+
+            <!-- Equation Inputs -->
+            <div class="space-y-4 mb-6">
+                <div>
+                    <label for="x-eq" class="label-text text-sm font-semibold mb-1 block">x(t) =</label>
+                    <input type="text" id="x-eq" class="input-field" value="(2 + cos(2*t)) * cos(3*t)">
+                </div>
+                <div>
+                    <label for="y-eq" class="label-text text-sm font-semibold mb-1 block">y(t) =</label>
+                    <input type="text" id="y-eq" class="input-field" value="(2 + cos(2*t)) * sin(3*t)">
+                </div>
+                <div>
+                    <label for="z-eq" class="label-text text-sm font-semibold mb-1 block">z(t) =</label>
+                    <input type="text" id="z-eq" class="input-field" value="sin(4*t)">
+                </div>
+            </div>
+
+            <!-- Parameters -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                    <label for="t-min" class="label-text text-sm">t Min</label>
+                    <input type="number" id="t-min" class="input-field" value="0" step="0.1">
+                </div>
+                <div>
+                    <label for="t-max" class="label-text text-sm">t Max</label>
+                    <input type="number" id="t-max" class="input-field" value="6.28" step="0.1">
+                </div>
+                 <div>
+                    <label for="segments" class="label-text text-sm">Segments</label>
+                    <input type="number" id="segments" class="input-field" value="1000" step="10">
+                </div>
+                 <div>
+                    <label for="radius" class="label-text text-sm">Radius</label>
+                    <input type="number" id="radius" class="input-field" value="0.05" step="0.01">
+                </div>
+            </div>
+
+            <button id="graph-btn" class="btn btn-primary w-full mb-3">Graph It</button>
+            <button id="download-btn" class="btn btn-secondary w-full mb-6">Download .GLB</button>
+
+            <!-- Presets -->
+            <div>
+                <h2 class="text-lg font-semibold text-white mb-3">Cool Presets</h2>
+                <div id="presets-container" class="grid grid-cols-2 gap-3">
+                    <!-- Preset buttons will be injected here -->
+                </div>
+            </div>
+             <div id="error-message" class="mt-4 text-red-400 bg-red-900/50 p-3 rounded-md hidden"></div>
+        </div>
+
+        <!-- 3D Canvas -->
+        <div id="canvas-container" class="flex-1 min-h-0 relative">
+            <!-- Canvas will be appended here by three.js -->
+        </div>
+
+    </div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+        // --- DOM Elements ---
+        const canvasContainer = document.getElementById('canvas-container');
+        const graphBtn = document.getElementById('graph-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const errorMessage = document.getElementById('error-message');
+        const inputs = {
+            x: document.getElementById('x-eq'),
+            y: document.getElementById('y-eq'),
+            z: document.getElementById('z-eq'),
+            tMin: document.getElementById('t-min'),
+            tMax: document.getElementById('t-max'),
+            segments: document.getElementById('segments'),
+            radius: document.getElementById('radius')
+        };
+        
+        // --- Presets Data ---
+        const presets = [
+            { name: "Lissajous Knot", x: "cos(3*t + 0.7)", y: "cos(2*t)", z: "cos(7*t + 0.2)", tMin: 0, tMax: 6.28, segs: 2000, rad: 0.1 },
+            { name: "3D Hypotrochoid", x: "2*cos(t) + 5*cos(t*2/3)", y: "2*sin(t) - 5*sin(t*2/3)", z: "2*sin(t*4/3)", tMin: 0, tMax: 18.85, segs: 2500, rad: 0.08 },
+            { name: "Wobbly Spheroid", x: "(3+cos(20*t))*sin(t)*cos(10*t)", y: "(3+cos(20*t))*sin(t)*sin(10*t)", z: "(3+cos(20*t))*cos(t)", tMin: 0, tMax: 6.28, segs: 4000, rad: 0.05 },
+            { name: "Seashell Spiral", x: "t/2*cos(15*t)*sin(t)", y: "t/2*sin(15*t)*sin(t)", z: "t/2*cos(t)", tMin: 0, tMax: 31.4, segs: 5000, rad: 0.04 },
+            { name: "Dini's Spiral", x: "cos(10*t)*sin(t)", y: "sin(10*t)*sin(t)", z: "cos(t)+log(tan(t/2))+2*t", tMin: 0.1, tMax: 3.1, segs: 3000, rad: 0.06 },
+            { name: "Astroidal Torus", x: "(4+sin(8*t))*cos(t)", y: "(4+sin(8*t))*sin(t)", z: "cos(8*t)", tMin: 0, tMax: 6.28, segs: 2000, rad: 0.07 },
+            { name: "Maurer Rose 3D", x: "sin(7*t)*cos(t)", y: "sin(7*t)*sin(t)", z: "0.5*cos(14*t)", tMin: 0, tMax: 6.28, segs: 2000, rad: 0.05 },
+            { name: "Twisted Heart", x: "1.6 * sin(t)**3", y: "1.3*cos(t) - 0.5*cos(2*t) - 0.2*cos(3*t) - 0.1*cos(4*t)", z: "t/3", tMin: 0, tMax: 6.28, segs: 1500, rad: 0.1 },
+            { name: "Granny Knot", x: "-0.22*cos(t) - 1.28*sin(t) - 0.44*cos(3*t) - 0.78*sin(3*t)", y: "-0.1*cos(2*t) - 0.27*sin(2*t) + 0.38*cos(4*t) + 0.46*sin(4*t)", z: "0.7*cos(3*t) - 0.4*sin(3*t)", tMin: 0, tMax: 6.28, segs: 1500, rad: 0.1 },
+            { name: "Torus Knot (5,3)", x: "(2 + cos(3*t)) * cos(5*t)", y: "(2 + cos(3*t)) * sin(5*t)", z: "sin(3*t)", tMin: 0, tMax: 6.28, segs: 2000, rad: 0.08 },
+            { name: "Chain Link", x: "cos(t) + 0.5 * cos(5*t)", y: "sin(t) + 0.5 * sin(5*t)", z: "cos(2*t)", tMin: 0, tMax: 6.28, segs: 1000, rad: 0.1 },
+            { name: "Trefoil Knot", x: "sin(t) + 2*sin(2*t)", y: "cos(t) - 2*cos(2*t)", z: "-sin(3*t)", tMin: 0, tMax: 6.28, segs: 1000, rad: 0.15 }
+        ];
+        
+        // --- 3D Scene Setup ---
+        let scene, camera, renderer, controls, currentMesh;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000); // True black background
+
+            camera = new THREE.PerspectiveCamera(75, canvasContainer.clientWidth / canvasContainer.clientHeight, 0.1, 1000);
+            camera.position.z = 5;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+            canvasContainer.appendChild(renderer.domElement);
+
+            // --- Moody Ambient Lighting ---
+            const skyColor = 0x4f46e5;      // Indigo
+            const groundColor = 0x382a4e;   // Dark Purple
+            const hemisphereLight = new THREE.HemisphereLight(skyColor, groundColor, 2.5); // Increased intensity
+            scene.add(hemisphereLight);
+
+            // Adding a subtle purple light from one side to give a bit of shape
+            const subtleLight = new THREE.DirectionalLight(0x4f46e5, 0.8);
+            subtleLight.position.set(-5, 3, 2);
+            scene.add(subtleLight);
+
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            window.addEventListener('resize', onWindowResize, false);
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = canvasContainer.clientWidth / canvasContainer.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(canvasContainer.clientWidth, canvasContainer.clientHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- Graphing Logic ---
+        function createSafeFunction(equation) {
+            // To make user-input equations work, we need to give them access to Math functions
+            // like sin, cos, etc. The 'new Function' constructor only has global scope.
+            // Instead of using eval() or 'with', we can pre-process the string to add 'Math.'
+            // before each recognized function or constant.
+            let processedEquation = equation;
+            
+            const mathItems = [
+                'sin', 'cos', 'tan', 'exp', 'log', 'sqrt', 'abs', 'pow', 'sinh', 'cosh', 'tanh', 'PI'
+            ];
+
+            mathItems.forEach(item => {
+                // The regex looks for the math item as a whole word (\b) to avoid replacing
+                // parts of other words (e.g. 'cosine' should not become 'Math.cosine').
+                // The 'g' flag ensures all occurrences are replaced.
+                const regex = new RegExp(`\\b${item}\\b`, 'g');
+                processedEquation = processedEquation.replace(regex, `Math.${item}`);
+            });
+            
+            try {
+                return new Function('t', `return ${processedEquation}`);
+            } catch (e) {
+                console.error("Error compiling function:", e);
+                // Re-throw a more user-friendly error to be caught by generateGraph
+                throw new Error("Invalid syntax in equation. Check for typos or mismatched parentheses.");
+            }
+        }
+
+        function generateGraph() {
+            try {
+                const eqX = createSafeFunction(inputs.x.value);
+                const eqY = createSafeFunction(inputs.y.value);
+                const eqZ = createSafeFunction(inputs.z.value);
+
+                const tMin = parseFloat(inputs.tMin.value);
+                const tMax = parseFloat(inputs.tMax.value);
+                const segments = parseInt(inputs.segments.value);
+                const radius = parseFloat(inputs.radius.value);
+                
+                if (isNaN(tMin) || isNaN(tMax) || isNaN(segments) || isNaN(radius) || segments <= 1) {
+                    throw new Error("Invalid parameters. Check your t-range, segments, and radius.");
+                }
+
+                const points = [];
+                const step = (tMax - tMin) / segments;
+
+                for (let i = 0; i <= segments; i++) {
+                    const t = tMin + i * step;
+                    const x = eqX(t);
+                    const y = eqY(t);
+                    const z = eqZ(t);
+                    if ([x,y,z].some(isNaN)) continue; // Skip non-numeric results
+                    points.push(new THREE.Vector3(x, y, z));
+                }
+
+                if (points.length < 2) {
+                    throw new Error("Could not generate enough points to draw a line.");
+                }
+                
+                const curve = new THREE.CatmullRomCurve3(points);
+                const geometry = new THREE.TubeGeometry(curve, segments, radius, 16, false);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0x818cf8, // indigo-400
+                    metalness: 0.3,
+                    roughness: 0.4
+                });
+                
+                const newMesh = new THREE.Mesh(geometry, material);
+
+                // Clear previous mesh and add the new one
+                if (currentMesh) {
+                    scene.remove(currentMesh);
+                    currentMesh.geometry.dispose();
+                    currentMesh.material.dispose();
+                }
+                currentMesh = newMesh;
+                scene.add(currentMesh);
+                
+                // Hide error message on success
+                errorMessage.classList.add('hidden');
+                errorMessage.textContent = '';
+
+            } catch (e) {
+                console.error("Graphing error:", e);
+                errorMessage.textContent = `Error: ${e.message}. Check your equations for typos.`;
+                errorMessage.classList.remove('hidden');
+            }
+        }
+        
+        // --- UI and Event Handling ---
+        function loadPreset(preset) {
+            inputs.x.value = preset.x;
+            inputs.y.value = preset.y;
+            inputs.z.value = preset.z;
+            inputs.tMin.value = preset.tMin;
+            inputs.tMax.value = preset.tMax;
+            inputs.segments.value = preset.segs;
+            inputs.radius.value = preset.rad;
+            generateGraph();
+        }
+
+        function downloadModel() {
+            if (!currentMesh) {
+                errorMessage.textContent = 'Please generate a graph first before downloading.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+
+            const exporter = new GLTFExporter();
+            const options = {
+                binary: true // Export as a binary .glb file
+            };
+
+            exporter.parse(
+                currentMesh,
+                function (result) { // onCompleted
+                    const blob = new Blob([result], { type: 'model/gltf-binary' });
+                    const url = URL.createObjectURL(blob);
+
+                    const link = document.createElement('a');
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+
+                    link.href = url;
+                    link.download = 'parametric_shape.glb';
+                    link.click();
+
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                },
+                function (error) { // onError
+                    console.error('An error happened during GLTF export:', error);
+                    errorMessage.textContent = 'Error: Could not export the model.';
+                    errorMessage.classList.remove('hidden');
+                },
+                options
+            );
+        }
+
+        function populatePresets() {
+            const container = document.getElementById('presets-container');
+            presets.forEach(p => {
+                const button = document.createElement('button');
+                button.textContent = p.name;
+                button.className = 'btn preset-btn text-sm';
+                button.onclick = () => loadPreset(p);
+                container.appendChild(button);
+            });
+        }
+        
+        // --- Initialization ---
+        init();
+        populatePresets();
+        loadPreset(presets[0]); // Load the first preset on start
+        
+        graphBtn.addEventListener('click', generateGraph);
+        downloadBtn.addEventListener('click', downloadModel);
+    </script>
+</body>
+</html>
+
+
+
+
+

@@ -1,14 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dust Lab v1.1 - App</title>
+    <title>Dust Lab v1.2 - App</title>
     <link rel="icon" type="image/png" href="DUSTLAB.png">
     <link rel="shortcut icon" type="image/png" href="DUSTLAB.png">
     
     <meta name="description" content="Dust Lab App">
-    <meta property="og:title" content="Dust Lab v1.1 - Minecraft Particle Generator App">
+    <meta property="og:title" content="Dust Lab v1.2 - Minecraft Particle Generator App">
     <meta property="og:description" content="Create stunning Minecraft particle effects from images and 3D models. Generate .mcfunction files instantly.">
     <meta property="og:image" content="https://winss.xyz/dustlab/DUSTLAB.png">
     <meta property="og:url" content="https://winss.xyz/dustlab/app.html">
@@ -59,12 +60,20 @@
             Back to Main Page
         </a>
     </div>
+
+    <!-- Math Mode Button - Fixed to Top Right Corner -->
+    <div class="absolute top-4 right-4 z-50">
+        <a href="mathmode.html" class="inline-flex items-center px-3 py-1.5 btn-secondary font-medium text-sm rounded-md transition-all duration-300" style="background-color: rgba(40, 40, 40, 0.9); box-shadow: 0 0 15px rgba(255, 215, 0, 0.3), 0 0 30px rgba(255, 215, 0, 0.15);">
+            <span style="color: #ffd700; font-weight: 700; margin-right: 0.375rem;">[NEW]</span>
+            <span style="color: #ffffff;">Math mode!</span>
+        </a>
+    </div>
     
     <div class="container mx-auto max-w-7xl relative">
         <header class="text-center mb-8">
             <div class="header-content">
                 <canvas id="silver-spiral-canvas"></canvas>
-                <h1 class="dust-effect-title">Dust Lab <span style="font-size: 0.5em; opacity: 0.7;">v1.1</span></h1>
+                <h1 class="dust-effect-title">Dust Lab <span style="font-size: 0.5em; opacity: 0.7;">v1.2</span></h1>
             </div>
         </header>
 
@@ -198,6 +207,20 @@
                                     <option value="360">360°</option>
                                 </select>
                             </div>
+                        </div>
+                        <div>
+                            <label for="alignment-selector" class="block text-sm font-medium">Alignment</label>
+                            <select id="alignment-selector" class="mt-1 block w-full sm:text-sm p-2">
+                                <option value="center" selected>Center</option>
+                                <option value="top-left">Top-Left</option>
+                                <option value="top">Top</option>
+                                <option value="top-right">Top-Right</option>
+                                <option value="left">Left</option>
+                                <option value="right">Right</option>
+                                <option value="bottom-left">Bottom-Left</option>
+                                <option value="bottom">Bottom</option>
+                                <option value="bottom-right">Bottom-Right</option>
+                            </select>
                         </div>
                     </div>
 
@@ -347,7 +370,7 @@
             });
         });
     </script>
-    <script src="app.js"></script>
+    <script src="appg.js"></script>
     </div>
 </body>
 </html>

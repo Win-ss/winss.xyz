@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dust Lab - Math Mode</title>
+    <link rel="icon" type="image/png" href="DUSTLAB.png">
+    <meta name="description" content="Dust Lab Math Mode - Generate Minecraft particles from parametric equations">
+    <meta name="theme-color" content="#9e59d6">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/OrbitControls.js"></script>
+    
+    <style>
+        @font-face {
+            font-family: 'Monocraft';
+            src: url('../assets/Monocraft.woff2') format('woff2'),
+                 url('../assets/Monocraft.woff') format('woff'),
+                 url('../assets/Monocraft.ttc') format('truetype-collection');
+            font-display: swap;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-bg-main: #000000;
+            --color-text-main: #e0e0e0;
+            --color-text-muted: #a0a0a0;
+            --color-panel-bg: #181818;
+            --color-input-bg: #2a2a2a;
+            --color-input-border: #3c3c3c;
+            --color-button-primary-bg: #4f46e5;
+            --color-button-primary-hover-bg: #4338ca;
+        }
+
+        body {
+            font-family: 'Monocraft', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: var(--color-bg-main);
+            color: var(--color-text-main);
+            padding: 2rem;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--color-text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--color-text-muted);
+            font-size: 0.9rem;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1280px) {
+            .main-layout {
+                grid-template-columns: 300px 1fr 300px;
+                gap: 1.5rem;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .control-panel {
+            background-color: var(--color-panel-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+
+        #version-panel {
+            background-color: var(--color-panel-bg);
+            border-radius: 0.75rem;
+            padding: 1rem 1.5rem;
+        }
+
+        .form-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-divider {
+            border-top: 1px solid #2a2a2a;
+            margin: 1.5rem 0;
+        }
+
+        .toggle-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .toggle-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--color-text-main);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--color-input-bg);
+            transition: 0.4s;
+            border-radius: 28px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--color-button-primary-bg);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        select {
+            background-color: var(--color-input-bg);
+            border: 1px solid var(--color-input-border);
+            color: var(--color-text-main);
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--color-button-primary-bg);
+        }
+
+        .color-picker-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        input[type="color"] {
+            width: 50px;
+            height: 38px;
+            border: 1px solid var(--color-input-border);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            background-color: var(--color-input-bg);
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--color-text-main);
+        }
+
+        .hint {
+            font-size: 0.75rem;
+            color: var(--color-text-muted);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: var(--color-input-bg);
+            border: 1px solid var(--color-input-border);
+            border-radius: 0.5rem;
+            color: var(--color-text-main);
+            font-family: 'Monocraft', monospace;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--color-button-primary-bg);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.875rem;
+            background-color: var(--color-button-primary-bg);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-family: 'Monocraft', sans-serif;
+            font-size: 0.875rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background-color: var(--color-button-primary-hover-bg);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .preview-container {
+            background-color: var(--color-panel-bg);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #preview-canvas {
+            width: 100%;
+            height: 600px;
+            display: block;
+        }
+
+        .particle-info {
+            padding: 1rem;
+            text-align: center;
+            color: var(--color-text-muted);
+            font-size: 0.875rem;
+        }
+
+        .particle-count {
+            color: var(--color-text-main);
+            font-weight: 700;
+        }
+
+        .status {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            text-align: center;
+        }
+
+        .status.info {
+            background-color: rgba(79, 70, 229, 0.2);
+            color: #a5b4fc;
+        }
+
+        .status.error {
+            background-color: rgba(220, 38, 38, 0.2);
+            color: #fca5a5;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: var(--color-text-muted);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--color-text-main);
+        }
+
+        .output-display-container {
+            background-color: var(--color-panel-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .output-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--color-text-main);
+        }
+
+        .output-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .output-code {
+            background-color: #0d0d0d;
+            color: var(--color-text-muted);
+            font-family: 'Monocraft', monospace;
+            font-size: 0.75rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            max-height: 24rem;
+            overflow-y: auto;
+            white-space: pre;
+        }
+
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 700;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary-small {
+            background-color: var(--color-button-primary-bg);
+            color: white;
+        }
+
+        .btn-primary-small:hover {
+            background-color: var(--color-button-primary-hover-bg);
+        }
+
+        .btn-secondary-small {
+            background-color: var(--color-input-bg);
+            color: var(--color-text-main);
+            border: 1px solid var(--color-input-border);
+        }
+
+        .btn-secondary-small:hover {
+            background-color: #3c3c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="app.html" class="back-link">← Back to Full App</a>
+        
+        <header>
+            <h1>Dust Lab Math Mode</h1>
+        </header>
+
+        <div class="main-layout">
+            <!-- Controls -->
+            <div class="control-panel">
+                <div class="hint">Use 't' as your parameter</div>
+                
+                <div class="form-section">
+                    <label for="x-equation">X Equation</label>
+                    <input type="text" id="x-equation" value="cos(t)" placeholder="e.g., cos(t)">
+                </div>
+
+                <div class="form-section">
+                    <label for="y-equation">Y Equation</label>
+                    <input type="text" id="y-equation" value="sin(t)" placeholder="e.g., sin(t)">
+                </div>
+
+                <div class="form-section">
+                    <label for="z-equation">Z Equation</label>
+                    <input type="text" id="z-equation" value="t*0.1" placeholder="e.g., t*0.1">
+                </div>
+
+                <div class="form-section">
+                    <div class="grid-2">
+                        <div>
+                            <label for="t-min">T Min</label>
+                            <input type="number" id="t-min" value="0" step="0.1">
+                        </div>
+                        <div>
+                            <label for="t-max">T Max</label>
+                            <input type="number" id="t-max" value="6.28" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <label for="point-count">Point Count</label>
+                    <input type="number" id="point-count" value="100" min="1" max="10000">
+                </div>
+
+                <button id="generate-btn">Generate Particles</button>
+
+                <div id="status" class="status info" style="display: none;">Ready</div>
+
+                <div class="section-divider"></div>
+
+                <!-- Download Buttons -->
+                <button id="download-mcfunction-btn" style="width: 100%; margin-bottom: 0.5rem;">Download .mcfunction</button>
+                <button id="download-json-btn" style="width: 100%; background-color: var(--color-input-bg); color: var(--color-text-main);">Download JSON</button>
+            </div>
+
+            <!-- Preview -->
+            <div class="preview-container">
+                <canvas id="preview-canvas"></canvas>
+                <div class="particle-info">
+                    Particle Count: <span id="particle-count" class="particle-count">0</span>
+                </div>
+            </div>
+
+            <!-- Right Controls Panel -->
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <!-- Version Panel -->
+                <div id="version-panel">
+                    <label for="version-selector" style="display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--color-text-main);">Minecraft Version</label>
+                    <select id="version-selector">
+                        <option value="1.21+" selected>1.21+</option>
+                        <option value="legacy">Legacy (pre-1.21)</option>
+                    </select>
+                </div>
+
+                <div class="control-panel">
+                    <h3 style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1.5rem; color: var(--color-text-main);">Output Settings</h3>
+                    
+                    <!-- Output Controls -->
+                    <div class="form-section">
+                        <label for="output-width">Output Width (blocks)</label>
+                        <input type="number" id="output-width" value="8" min="1">
+                    </div>
+
+                    <div class="form-section">
+                        <label for="output-height">Output Height (blocks)</label>
+                        <input type="number" id="output-height" value="8" min="1">
+                    </div>
+
+                    <div class="form-section">
+                        <label for="particle-scale">Particle Scale</label>
+                        <input type="number" id="particle-scale" value="1" min="0.1" max="5" step="0.1">
+                    </div>
+
+                    <div class="form-section">
+                        <label for="coord-mode">Coordinate Mode</label>
+                        <select id="coord-mode">
+                            <option value="local" selected>Local (^ ^ ^)</option>
+                            <option value="relative">Relative (~ ~ ~)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-section">
+                        <div class="toggle-section">
+                            <span class="toggle-label">Show Axis</span>
+                            <label class="switch">
+                                <input type="checkbox" id="axis-toggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                <!-- Delay Controls -->
+                <div class="form-section">
+                    <div class="toggle-section">
+                        <span class="toggle-label">Delay Animation</span>
+                        <label class="switch">
+                            <input type="checkbox" id="delay-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="delay-controls" class="hidden" style="margin-top: 1rem;">
+                        <div style="margin-bottom: 1rem;">
+                            <label for="delay-value">Delay per Particle (ticks)</label>
+                            <input type="number" id="delay-value" value="2" min="0" max="100" step="1">
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <label for="delay-max-time">Max Time (seconds)</label>
+                            <input type="number" id="delay-max-time" value="30" min="1" max="300" step="1">
+                        </div>
+                        <div>
+                            <label for="delay-start-point">Start Point</label>
+                            <select id="delay-start-point">
+                                <option value="center" selected>Center</option>
+                                <option value="top-left">Top-Left</option>
+                                <option value="top-right">Top-Right</option>
+                                <option value="bottom-left">Bottom-Left</option>
+                                <option value="bottom-right">Bottom-Right</option>
+                                <option value="top">Top</option>
+                                <option value="bottom">Bottom</option>
+                                <option value="left">Left</option>
+                                <option value="right">Right</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Color Fixer Controls -->
+                <div class="form-section">
+                    <div class="toggle-section">
+                        <span class="toggle-label">Color Fixer</span>
+                        <label class="switch">
+                            <input type="checkbox" id="color-fixer-toggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div id="color-fixer-controls" style="margin-top: 1rem;">
+                        <div style="margin-bottom: 1rem;">
+                            <label for="color-mode">Color Mode</label>
+                            <select id="color-mode">
+                                <option value="solid">Solid Color</option>
+                                <option value="gradient" selected>Gradient</option>
+                            </select>
+                        </div>
+                        <div id="solid-color-controls" class="hidden">
+                            <label>Color</label>
+                            <div class="color-picker-group" style="margin-top: 0.5rem;">
+                                <input type="text" id="color-fixer-hex" value="#FFFFFF" style="width: 100px;">
+                                <input type="color" id="color-fixer-picker" value="#FFFFFF">
+                            </div>
+                        </div>
+                        <div id="gradient-controls">
+                            <div style="margin-bottom: 1rem;">
+                                <label>Start Color</label>
+                                <div class="color-picker-group" style="margin-top: 0.5rem;">
+                                    <input type="text" id="gradient-start-hex" value="#FF0099" style="width: 100px;">
+                                    <input type="color" id="gradient-start-picker" value="#FF0099">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <label>End Color</label>
+                                <div class="color-picker-group" style="margin-top: 0.5rem;">
+                                    <input type="text" id="gradient-end-hex" value="#00FFFF" style="width: 100px;">
+                                    <input type="color" id="gradient-end-picker" value="#00FFFF">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="gradient-direction">Direction</label>
+                                <select id="gradient-direction">
+                                    <option value="horizontal">Horizontal</option>
+                                    <option value="vertical">Vertical</option>
+                                    <option value="diagonal" selected>Diagonal</option>
+                                    <option value="radial">Radial</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+
+        <!-- Output Display -->
+        <div class="output-display-container">
+            <div class="output-header">
+                <h2 class="output-title">Generated .mcfunction</h2>
+                <div class="output-buttons">
+                    <button id="copy-output-btn" class="btn-small btn-primary-small">Copy</button>
+                    <button id="copy-json-output-btn" class="btn-small btn-secondary-small">Copy JSON</button>
+                </div>
+            </div>
+            <pre id="output-code" class="output-code">Awaiting particle generation...</pre>
+        </div>
+    </div>
+
+    <script>
+        // Math utilities (embedded from math-utils.js)
+        const DustlabMath = (function () {
+            "use strict";
+
+            const expressionCache = new Map();
+            const INVALID_IDENTIFIER_PATTERN = /(?:^|[^A-Za-z_])(constructor|prototype|__proto__|window|document|globalThis|Function|this)\b/;
+            const VALID_CHAR_PATTERN = /^[0-9+\-*/%^().,\sA-Za-z_]*$/;
+            const MATH_CONTEXT = "const { sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh, sqrt, abs, exp, log, pow, floor, ceil, round, min, max, sign, trunc, hypot } = Math;" +
+                "const PI = Math.PI; const pi = Math.PI; const TAU = Math.PI * 2; const tau = Math.PI * 2;" +
+                "const E = Math.E; const e = Math.E;";
+
+            function sanitizeExpression(rawExpression) {
+                const trimmed = rawExpression.trim();
+                if (!trimmed) throw new Error("Expression cannot be empty.");
+                const replacedExponents = trimmed.replace(/\^/g, "**");
+                if (!VALID_CHAR_PATTERN.test(replacedExponents)) {
+                    throw new Error("Expression contains unsupported characters.");
+                }
+                if (INVALID_IDENTIFIER_PATTERN.test(replacedExponents)) {
+                    throw new Error("Expression uses forbidden keywords.");
+                }
+                let balance = 0;
+                for (const char of replacedExponents) {
+                    if (char === "(") balance++;
+                    if (char === ")") {
+                        balance--;
+                        if (balance < 0) throw new Error("Parentheses are imbalanced.");
+                    }
+                }
+                if (balance !== 0) throw new Error("Parentheses are imbalanced.");
+                return replacedExponents;
+            }
+
+            function compileMathExpression(expression) {
+                const cached = expressionCache.get(expression);
+                if (cached) return cached;
+                const sanitized = sanitizeExpression(expression);
+                let evaluator;
+                try {
+                    evaluator = new Function("t", `'use strict'; ${MATH_CONTEXT} return (${sanitized});`);
+                    evaluator(0);
+                } catch (error) {
+                    throw new Error(`Invalid math expression "${expression}": ${error.message}`);
+                }
+                expressionCache.set(expression, evaluator);
+                return evaluator;
+            }
+
+            function compileEquationSet(xExpression, yExpression, zExpression) {
+                return {
+                    fx: compileMathExpression(xExpression),
+                    fy: compileMathExpression(yExpression),
+                    fz: compileMathExpression(zExpression)
+                };
+            }
+
+            function evaluateComponent(fn, t, label) {
+                let value;
+                try {
+                    value = fn(t);
+                } catch (error) {
+                    throw new Error(`Failed to evaluate ${label}(t) at t=${t}: ${error.message}`);
+                }
+                if (!Number.isFinite(value)) {
+                    throw new Error(`${label}(t) returned a non-finite result at t=${t}.`);
+                }
+                return value;
+            }
+
+            function lerp(a, b, amount) {
+                return a + (b - a) * amount;
+            }
+
+            function clamp(value, min, max) {
+                return Math.min(Math.max(value, min), max);
+            }
+
+            function buildSampledCurve(equations, tMin, tMax, sampleCount) {
+                const { fx, fy, fz } = equations;
+                const points = [];
+                const cumulativeDistances = [];
+                if (sampleCount <= 1 || !Number.isFinite(tMin) || !Number.isFinite(tMax)) {
+                    throw new Error("Sample count must be greater than 1 and bounds must be finite.");
+                }
+                const step = (tMax - tMin) / (sampleCount - 1);
+                let previousPoint = null;
+                let accumulatedDistance = 0;
+
+                for (let i = 0; i < sampleCount; i++) {
+                    const t = i === sampleCount - 1 ? tMax : tMin + step * i;
+                    const x = evaluateComponent(fx, t, "X");
+                    const y = evaluateComponent(fy, t, "Y");
+                    const z = evaluateComponent(fz, t, "Z");
+                    const currentPoint = { t, x, y, z };
+                    points.push(currentPoint);
+                    if (previousPoint) {
+                        const dx = currentPoint.x - previousPoint.x;
+                        const dy = currentPoint.y - previousPoint.y;
+                        const dz = currentPoint.z - previousPoint.z;
+                        accumulatedDistance += Math.hypot(dx, dy, dz);
+                    }
+                    cumulativeDistances.push(accumulatedDistance);
+                    previousPoint = currentPoint;
+                }
+                return { points, cumulativeDistances, totalLength: accumulatedDistance };
+            }
+
+            function generateUniformPoints(equations, tMin, tMax, pointCount) {
+                const { fx, fy, fz } = equations;
+                if (pointCount <= 0) return [];
+                if (!Number.isFinite(tMin) || !Number.isFinite(tMax)) {
+                    throw new Error("Bounds must be finite numbers.");
+                }
+                if (pointCount === 1) {
+                    const tMid = tMin + (tMax - tMin) / 2;
+                    return [{
+                        t: tMid,
+                        x: evaluateComponent(fx, tMid, "X"),
+                        y: evaluateComponent(fy, tMid, "Y"),
+                        z: evaluateComponent(fz, tMid, "Z")
+                    }];
+                }
+                const step = (tMax - tMin) / (pointCount - 1);
+                const uniformPoints = [];
+                for (let i = 0; i < pointCount; i++) {
+                    const t = i === pointCount - 1 ? tMax : tMin + step * i;
+                    uniformPoints.push({
+                        t,
+                        x: evaluateComponent(fx, t, "X"),
+                        y: evaluateComponent(fy, t, "Y"),
+                        z: evaluateComponent(fz, t, "Z")
+                    });
+                }
+                return uniformPoints;
+            }
+
+            function generateAdaptivePoints(equations, tMin, tMax, pointCount) {
+                if (pointCount <= 0) return [];
+                if (pointCount === 1) {
+                    return generateUniformPoints(equations, tMin, tMax, pointCount);
+                }
+                const baseSamples = Math.max(pointCount * 4, 200);
+                const sampleCount = Math.min(5000, Math.max(baseSamples, pointCount + 1));
+                let sampled;
+                try {
+                    sampled = buildSampledCurve(equations, tMin, tMax, sampleCount);
+                } catch (error) {
+                    return generateUniformPoints(equations, tMin, tMax, pointCount);
+                }
+                const { points, cumulativeDistances, totalLength } = sampled;
+                if (!Number.isFinite(totalLength) || totalLength < 1e-8) {
+                    return generateUniformPoints(equations, tMin, tMax, pointCount);
+                }
+
+                const result = [];
+                const step = totalLength / (pointCount - 1);
+                let sampleIndex = 0;
+
+                for (let i = 0; i < pointCount; i++) {
+                    const targetDistance = i === pointCount - 1 ? totalLength : step * i;
+                    while (sampleIndex < cumulativeDistances.length - 2 && cumulativeDistances[sampleIndex + 1] < targetDistance) {
+                        sampleIndex++;
+                    }
+                    const currentPoint = points[sampleIndex];
+                    const currentDistance = cumulativeDistances[sampleIndex];
+                    if (targetDistance <= currentDistance || sampleIndex === points.length - 1) {
+                        result.push({ ...currentPoint });
+                        continue;
+                    }
+                    const nextPoint = points[sampleIndex + 1];
+                    const nextDistance = cumulativeDistances[sampleIndex + 1];
+                    const segmentLength = nextDistance - currentDistance;
+                    const amount = segmentLength <= 0 ? 0 : clamp((targetDistance - currentDistance) / segmentLength, 0, 1);
+                    result.push({
+                        t: lerp(currentPoint.t, nextPoint.t, amount),
+                        x: lerp(currentPoint.x, nextPoint.x, amount),
+                        y: lerp(currentPoint.y, nextPoint.y, amount),
+                        z: lerp(currentPoint.z, nextPoint.z, amount)
+                    });
+                }
+                result[result.length - 1] = { ...points[points.length - 1] };
+                return result;
+            }
+
+            function normalizePoints(points) {
+                if (!points.length) return points;
+                let minX = Infinity, maxX = -Infinity;
+                let minY = Infinity, maxY = -Infinity;
+                let minZ = Infinity, maxZ = -Infinity;
+                points.forEach(point => {
+                    minX = Math.min(minX, point.x);
+                    maxX = Math.max(maxX, point.x);
+                    minY = Math.min(minY, point.y);
+                    maxY = Math.max(maxY, point.y);
+                    minZ = Math.min(minZ, point.z);
+                    maxZ = Math.max(maxZ, point.z);
+                });
+                const rangeX = maxX - minX;
+                const rangeY = maxY - minY;
+                const rangeZ = maxZ - minZ;
+                const maxRange = Math.max(rangeX, rangeY, rangeZ);
+                if (maxRange === 0) {
+                    return points.map(point => ({ x: 0, y: 0, z: 0, t: point.t }));
+                }
+                const scaleFactor = 80 / maxRange;
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                const centerZ = (minZ + maxZ) / 2;
+                return points.map(point => ({
+                    x: (point.x - centerX) * scaleFactor,
+                    y: (point.y - centerY) * scaleFactor,
+                    z: (point.z - centerZ) * scaleFactor,
+                    t: point.t
+                }));
+            }
+
+            function safeProgress(t, tMin, tMax) {
+                if (!Number.isFinite(t) || !Number.isFinite(tMin) || !Number.isFinite(tMax)) return 0;
+                if (tMax === tMin) return 0.5;
+                return clamp((t - tMin) / (tMax - tMin), 0, 1);
+            }
+
+            return {
+                compileEquationSet,
+                generateAdaptivePoints,
+                normalizePoints,
+                safeProgress
+            };
+        })();
+
+        // Main application
+        let scene, camera, renderer, controls, particleSystem, gridHelper;
+        let particleData = [];
+
+        // Presets from mathmodetest.html
+        const presets = [
+            { name: "Lissajous Knot", x: "cos(3*t + 0.7)", y: "cos(2*t)", z: "cos(7*t + 0.2)", tMin: 0, tMax: 6.28, points: 2000 },
+            { name: "3D Hypotrochoid", x: "2*cos(t) + 5*cos(t*2/3)", y: "2*sin(t) - 5*sin(t*2/3)", z: "2*sin(t*4/3)", tMin: 0, tMax: 18.85, points: 2500 },
+            { name: "Wobbly Spheroid", x: "(3+cos(20*t))*sin(t)*cos(10*t)", y: "(3+cos(20*t))*sin(t)*sin(10*t)", z: "(3+cos(20*t))*cos(t)", tMin: 0, tMax: 6.28, points: 4000 },
+            { name: "Seashell Spiral", x: "t/2*cos(15*t)*sin(t)", y: "t/2*sin(15*t)*sin(t)", z: "t/2*cos(t)", tMin: 0, tMax: 31.4, points: 5000 },
+            { name: "Dini's Spiral", x: "cos(10*t)*sin(t)", y: "sin(10*t)*sin(t)", z: "cos(t)+log(tan(t/2))+2*t", tMin: 0.1, tMax: 3.1, points: 3000 },
+            { name: "Astroidal Torus", x: "(4+sin(8*t))*cos(t)", y: "(4+sin(8*t))*sin(t)", z: "cos(8*t)", tMin: 0, tMax: 6.28, points: 2000 },
+            { name: "Maurer Rose 3D", x: "sin(7*t)*cos(t)", y: "sin(7*t)*sin(t)", z: "0.5*cos(14*t)", tMin: 0, tMax: 6.28, points: 2000 },
+            { name: "Twisted Heart", x: "1.6 * sin(t)**3", y: "1.3*cos(t) - 0.5*cos(2*t) - 0.2*cos(3*t) - 0.1*cos(4*t)", z: "t/3", tMin: 0, tMax: 6.28, points: 1500 },
+            { name: "Granny Knot", x: "-0.22*cos(t) - 1.28*sin(t) - 0.44*cos(3*t) - 0.78*sin(3*t)", y: "-0.1*cos(2*t) - 0.27*sin(2*t) + 0.38*cos(4*t) + 0.46*sin(4*t)", z: "0.7*cos(3*t) - 0.4*sin(3*t)", tMin: 0, tMax: 6.28, points: 1500 },
+            { name: "Torus Knot (5,3)", x: "(2 + cos(3*t)) * cos(5*t)", y: "(2 + cos(3*t)) * sin(5*t)", z: "sin(3*t)", tMin: 0, tMax: 6.28, points: 2000 },
+            { name: "Chain Link", x: "cos(t) + 0.5 * cos(5*t)", y: "sin(t) + 0.5 * sin(5*t)", z: "cos(2*t)", tMin: 0, tMax: 6.28, points: 1000 },
+            { name: "Trefoil Knot", x: "sin(t) + 2*sin(2*t)", y: "cos(t) - 2*cos(2*t)", z: "-sin(3*t)", tMin: 0, tMax: 6.28, points: 1000 }
+        ];
+
+        // DOM elements
+        const canvas = document.getElementById('preview-canvas');
+        const xEqInput = document.getElementById('x-equation');
+        const yEqInput = document.getElementById('y-equation');
+        const zEqInput = document.getElementById('z-equation');
+        const tMinInput = document.getElementById('t-min');
+        const tMaxInput = document.getElementById('t-max');
+        const pointCountInput = document.getElementById('point-count');
+        const generateBtn = document.getElementById('generate-btn');
+        const statusEl = document.getElementById('status');
+        const particleCountEl = document.getElementById('particle-count');
+        
+        // Delay controls
+        const delayToggle = document.getElementById('delay-toggle');
+        const delayControls = document.getElementById('delay-controls');
+        const delayValueInput = document.getElementById('delay-value');
+        const delayMaxTimeInput = document.getElementById('delay-max-time');
+        const delayStartPointSelect = document.getElementById('delay-start-point');
+        
+        // Color fixer controls
+        const colorFixerToggle = document.getElementById('color-fixer-toggle');
+        const colorFixerControls = document.getElementById('color-fixer-controls');
+        const colorModeSelect = document.getElementById('color-mode');
+        const solidColorControls = document.getElementById('solid-color-controls');
+        const gradientControls = document.getElementById('gradient-controls');
+        const colorFixerHex = document.getElementById('color-fixer-hex');
+        const colorFixerPicker = document.getElementById('color-fixer-picker');
+        const gradientStartHex = document.getElementById('gradient-start-hex');
+        const gradientStartPicker = document.getElementById('gradient-start-picker');
+        const gradientEndHex = document.getElementById('gradient-end-hex');
+        const gradientEndPicker = document.getElementById('gradient-end-picker');
+        const gradientDirection = document.getElementById('gradient-direction');
+        
+        // Output controls
+        const outputWidthInput = document.getElementById('output-width');
+        const outputHeightInput = document.getElementById('output-height');
+        const particleScaleInput = document.getElementById('particle-scale');
+        const coordModeSelect = document.getElementById('coord-mode');
+        const axisToggle = document.getElementById('axis-toggle');
+        const versionSelector = document.getElementById('version-selector');
+        const downloadMcfunctionBtn = document.getElementById('download-mcfunction-btn');
+        const downloadJsonBtn = document.getElementById('download-json-btn');
+        
+        // Output display
+        const outputCodeEl = document.getElementById('output-code');
+        const copyOutputBtn = document.getElementById('copy-output-btn');
+        const copyJsonOutputBtn = document.getElementById('copy-json-output-btn');
+
+        // Initialize Three.js scene
+        function initScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x181818);
+
+            const rect = canvas.getBoundingClientRect();
+            camera = new THREE.PerspectiveCamera(75, rect.width / rect.height, 0.1, 1000);
+            camera.position.set(20, 15, 25);
+
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio || 1);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            directionalLight.position.set(10, 20, 10);
+            scene.add(directionalLight);
+
+            // Initial grid for default 8x8 size (8 blocks * 10 = 80 units)
+            gridHelper = new THREE.GridHelper(80, 8, 0xa0a0a0, 0x3c3c3c);
+            scene.add(gridHelper);
+            
+            // Add axis helper (X=red, Y=green, Z=blue)
+            window.axisHelper = new THREE.AxesHelper(40);
+            scene.add(window.axisHelper);
+
+            animate();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const rect = canvas.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+            const pixelRatio = window.devicePixelRatio || 1;
+            
+            const needsResize = canvas.width !== width * pixelRatio || 
+                               canvas.height !== height * pixelRatio;
+            
+            if (needsResize) {
+                renderer.setSize(width, height, false);
+                renderer.setPixelRatio(pixelRatio);
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function showStatus(message, type = 'info') {
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.style.display = 'block';
+        }
+
+        function hideStatus() {
+            statusEl.style.display = 'none';
+        }
+
+        // Color utility functions
+        function hexToRgb(hex) {
+            let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16) / 255,
+                g: parseInt(result[2], 16) / 255,
+                b: parseInt(result[3], 16) / 255
+            } : {r: 1, g: 1, b: 1};
+        }
+
+        function getFixedColor(normalizedX, normalizedY, normalizedT) {
+            if (!colorFixerToggle.checked) {
+                // Default gradient based on position
+                return {
+                    r: 0.5 + 0.5 * normalizedX,
+                    g: 0.4 + 0.4 * normalizedY,
+                    b: 0.7 + 0.3 * normalizedT
+                };
+            }
+
+            if (colorModeSelect.value === 'solid') {
+                const fixedColor = hexToRgb(colorFixerHex.value);
+                return fixedColor;
+            } else {
+                // Gradient mode
+                const startColor = hexToRgb(gradientStartHex.value);
+                const endColor = hexToRgb(gradientEndHex.value);
+                const direction = gradientDirection.value;
+                
+                let factor = 0;
+                switch (direction) {
+                    case 'horizontal':
+                        factor = normalizedX;
+                        break;
+                    case 'vertical':
+                        factor = normalizedY;
+                        break;
+                    case 'diagonal':
+                        factor = (normalizedX + normalizedY) / 2;
+                        break;
+                    case 'radial':
+                        const centerX = 0.5;
+                        const centerY = 0.5;
+                        const distance = Math.sqrt(Math.pow(normalizedX - centerX, 2) + Math.pow(normalizedY - centerY, 2));
+                        factor = Math.min(distance * Math.sqrt(2), 1);
+                        break;
+                }
+                
+                factor = Math.max(0, Math.min(1, factor));
+                
+                return {
+                    r: startColor.r + (endColor.r - startColor.r) * factor,
+                    g: startColor.g + (endColor.g - startColor.g) * factor,
+                    b: startColor.b + (endColor.b - startColor.b) * factor
+                };
+            }
+        }
+
+        // Load random preset on page load
+        function loadRandomPreset() {
+            const randomPreset = presets[Math.floor(Math.random() * presets.length)];
+            xEqInput.value = randomPreset.x;
+            yEqInput.value = randomPreset.y;
+            zEqInput.value = randomPreset.z;
+            tMinInput.value = randomPreset.tMin;
+            tMaxInput.value = randomPreset.tMax;
+            pointCountInput.value = randomPreset.points;
+        }
+
+        // Generate mcfunction content
+        function generateMcfunctionContent() {
+            if (particleData.length === 0) return '';
+
+            const particleScale = parseFloat(particleScaleInput.value).toFixed(2);
+            const coordPrefix = coordModeSelect.value === 'local' ? '^' : '~';
+            const version = versionSelector.value;
+            let commands = "";
+
+            // Calculate bounds
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+
+            particleData.forEach(p => {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+                if (p.z < minZ) minZ = p.z;
+                if (p.z > maxZ) maxZ = p.z;
+            });
+
+            const pWidth = maxX - minX || 1;
+            const pHeight = maxY - minY || 1;
+            const pDepth = maxZ - minZ || 1;
+
+            const outWidth = parseFloat(outputWidthInput.value) || 16;
+            const outHeight = parseFloat(outputHeightInput.value) || 16;
+
+            // Calculate scale factor
+            let scaleFactor;
+            const aspect = pWidth / pHeight;
+            const targetAspect = outWidth / outHeight;
+            if (aspect > targetAspect) {
+                scaleFactor = outWidth / pWidth;
+            } else {
+                scaleFactor = outHeight / pHeight;
+            }
+
+            // Generate commands
+            particleData.forEach(p => {
+                const x_norm = (p.x - minX) / pWidth - 0.5;
+                const y_norm = (p.y - minY) / pHeight - 0.5;
+                const z_norm = (p.z - minZ) / pDepth - 0.5;
+
+                const x = (x_norm * pWidth * scaleFactor).toFixed(3);
+                const y = (-y_norm * pHeight * scaleFactor).toFixed(3);
+                const z = (z_norm * pDepth * scaleFactor).toFixed(3);
+
+                const r = p.r.toFixed(4);
+                const g = p.g.toFixed(4);
+                const b = p.b.toFixed(4);
+
+                if (version === 'legacy') {
+                    commands += `particle minecraft:dust ${r} ${g} ${b} ${particleScale} ${coordPrefix}${x} ${coordPrefix}${y} ${coordPrefix}${z} 0 0 0 0 1 force @a\n`;
+                } else {
+                    commands += `particle minecraft:dust{color:[${r},${g},${b}],scale:${particleScale}} ${coordPrefix}${x} ${coordPrefix}${y} ${coordPrefix}${z} 0 0 0 0 1 normal\n`;
+                }
+            });
+
+            return commands;
+        }
+
+        // Generate JSON data
+        function generateJsonData() {
+            if (particleData.length === 0) return null;
+
+            const particleScale = parseFloat(particleScaleInput.value);
+
+            // Calculate bounds
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            let minZ = Infinity, maxZ = -Infinity;
+
+            particleData.forEach(p => {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+                if (p.z < minZ) minZ = p.z;
+                if (p.z > maxZ) maxZ = p.z;
+            });
+
+            const pWidth = maxX - minX || 1;
+            const pHeight = maxY - minY || 1;
+            const pDepth = maxZ - minZ || 1;
+
+            const outWidth = parseFloat(outputWidthInput.value) || 16;
+            const outHeight = parseFloat(outputHeightInput.value) || 16;
+
+            let scaleFactor;
+            const aspect = pWidth / pHeight;
+            const targetAspect = outWidth / outHeight;
+            if (aspect > targetAspect) {
+                scaleFactor = outWidth / pWidth;
+            } else {
+                scaleFactor = outHeight / pHeight;
+            }
+
+            // Generate particles array with delay if enabled
+            let finalParticles = particleData.map((p, index) => {
+                const x_norm = (p.x - minX) / pWidth - 0.5;
+                const y_norm = (p.y - minY) / pHeight - 0.5;
+                const z_norm = (p.z - minZ) / pDepth - 0.5;
+
+                const x = parseFloat((x_norm * pWidth * scaleFactor).toFixed(3));
+                const y = parseFloat((-y_norm * pHeight * scaleFactor).toFixed(3));
+                const z = parseFloat((z_norm * pDepth * scaleFactor).toFixed(3));
+
+                const particle = {
+                    x, y, z,
+                    r: parseFloat(p.r.toFixed(4)),
+                    g: parseFloat(p.g.toFixed(4)),
+                    b: parseFloat(p.b.toFixed(4)),
+                    scale: particleScale,
+                    _normX: x_norm,
+                    _normY: y_norm,
+                    _normZ: z_norm
+                };
+
+                return particle;
+            });
+
+            // Apply delay if enabled
+            if (delayToggle.checked) {
+                const delayValue = parseInt(delayValueInput.value) || 2;
+                const maxTime = parseInt(delayMaxTimeInput.value) || 30;
+                const startPoint = delayStartPointSelect.value;
+
+                finalParticles.forEach(particle => {
+                    let distanceFromStart;
+                    
+                    switch (startPoint) {
+                        case 'center':
+                            distanceFromStart = Math.sqrt(particle._normX ** 2 + particle._normY ** 2);
+                            break;
+                        case 'top-left':
+                            distanceFromStart = Math.sqrt((particle._normX + 0.5) ** 2 + (particle._normY + 0.5) ** 2);
+                            break;
+                        case 'top-right':
+                            distanceFromStart = Math.sqrt((particle._normX - 0.5) ** 2 + (particle._normY + 0.5) ** 2);
+                            break;
+                        case 'bottom-left':
+                            distanceFromStart = Math.sqrt((particle._normX + 0.5) ** 2 + (particle._normY - 0.5) ** 2);
+                            break;
+                        case 'bottom-right':
+                            distanceFromStart = Math.sqrt((particle._normX - 0.5) ** 2 + (particle._normY - 0.5) ** 2);
+                            break;
+                        case 'top':
+                            distanceFromStart = Math.abs(particle._normY + 0.5);
+                            break;
+                        case 'bottom':
+                            distanceFromStart = Math.abs(particle._normY - 0.5);
+                            break;
+                        case 'left':
+                            distanceFromStart = Math.abs(particle._normX + 0.5);
+                            break;
+                        case 'right':
+                            distanceFromStart = Math.abs(particle._normX - 0.5);
+                            break;
+                        default:
+                            distanceFromStart = 0;
+                    }
+
+                    particle.delay = Math.min(Math.floor(distanceFromStart * 100) * delayValue, maxTime * 20);
+                    delete particle._normX;
+                    delete particle._normY;
+                    delete particle._normZ;
+                });
+
+                finalParticles.sort((a, b) => a.delay - b.delay);
+            } else {
+                finalParticles.forEach(p => {
+                    delete p._normX;
+                    delete p._normY;
+                    delete p._normZ;
+                });
+            }
+
+            const duration = delayToggle.checked ? 
+                Math.max(...finalParticles.map(p => p.delay || 0)) / 20 : 0;
+
+            return {
+                duration,
+                metadata: {
+                    generatedBy: 'Dust Lab Math Mode',
+                    timestamp: new Date().toISOString(),
+                    equations: {
+                        x: xEqInput.value,
+                        y: yEqInput.value,
+                        z: zEqInput.value,
+                        tMin: parseFloat(tMinInput.value),
+                        tMax: parseFloat(tMaxInput.value),
+                        points: parseInt(pointCountInput.value)
+                    },
+                    outputWidth: parseFloat(outputWidthInput.value),
+                    outputHeight: parseFloat(outputHeightInput.value),
+                    particleScale: parseFloat(particleScaleInput.value),
+                    coordinateMode: coordModeSelect.value,
+                    version: versionSelector.value,
+                    delayEnabled: delayToggle.checked,
+                    colorFixed: colorFixerToggle.checked
+                },
+                particles: finalParticles
+            };
+        }
+
+        function formatJsonCompact(jsonData) {
+            const duration = jsonData.duration || 0;
+            const metadata = JSON.stringify(jsonData.metadata, null, 2);
+            const particles = jsonData.particles.map(p => 
+                `    ${JSON.stringify(p)}`
+            ).join(',\n');
+            
+            return `{\n  "duration": ${duration},\n  "metadata": ${metadata},\n  "particles": [\n${particles}\n  ]\n}`;
+        }
+
+        // Download/Copy functions
+        function downloadMcfunction() {
+            const commands = generateMcfunctionContent();
+            if (!commands) {
+                alert("Please generate some particles first!");
+                return;
+            }
+
+            let header = `# Dust Lab Math Mode - https://winss.xyz/dustlab\n`;
+            header += `# Generated on: ${new Date().toLocaleString()}\n`;
+            header += `# Equations: x=${xEqInput.value}, y=${yEqInput.value}, z=${zEqInput.value}\n`;
+            header += `# Particles: ${particleData.length}\n`;
+            header += `# --------------------------------------\n`;
+
+            const blob = new Blob([header + commands], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mathmode-${Date.now()}.mcfunction`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadJson() {
+            const jsonData = generateJsonData();
+            if (!jsonData) {
+                alert("Please generate some particles first!");
+                return;
+            }
+
+            const jsonString = formatJsonCompact(jsonData);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mathmode-${Date.now()}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function copyJson() {
+            const jsonData = generateJsonData();
+            if (!jsonData) {
+                alert("Please generate some particles first!");
+                return;
+            }
+
+            const jsonString = formatJsonCompact(jsonData);
+            navigator.clipboard.writeText(jsonString).then(() => {
+                copyJsonBtn.textContent = 'Copied!';
+                setTimeout(() => { copyJsonBtn.textContent = 'Copy JSON'; }, 2000);
+            }, (err) => {
+                console.error('Failed to copy:', err);
+                alert('Failed to copy. Please try again.');
+            });
+        }
+
+        function generateParticles() {
+            const xEq = xEqInput.value.trim();
+            const yEq = yEqInput.value.trim();
+            const zEq = zEqInput.value.trim();
+            const tMin = parseFloat(tMinInput.value);
+            const tMax = parseFloat(tMaxInput.value);
+            const pointCount = parseInt(pointCountInput.value);
+
+            // Validation
+            if (!xEq || !yEq || !zEq) {
+                showStatus('Please provide equations for X, Y, and Z.', 'error');
+                return;
+            }
+
+            if (!Number.isFinite(tMin) || !Number.isFinite(tMax) || tMin >= tMax) {
+                showStatus('T min must be less than T max.', 'error');
+                return;
+            }
+
+            if (!Number.isInteger(pointCount) || pointCount < 1 || pointCount > 10000) {
+                showStatus('Point count must be between 1 and 10000.', 'error');
+                return;
+            }
+
+            try {
+                const equations = DustlabMath.compileEquationSet(xEq, yEq, zEq);
+                let rawPoints = DustlabMath.generateAdaptivePoints(equations, tMin, tMax, pointCount);
+                
+                // Ensure we have exactly the requested number of points
+                if (rawPoints.length > pointCount) {
+                    rawPoints = rawPoints.slice(0, pointCount);
+                }
+                
+                const normalizedPoints = DustlabMath.normalizePoints(rawPoints);
+
+                // Calculate bounds for color generation
+                let minX = Infinity, maxX = -Infinity;
+                let minY = Infinity, maxY = -Infinity;
+                normalizedPoints.forEach(point => {
+                    if (point.x < minX) minX = point.x;
+                    if (point.x > maxX) maxX = point.x;
+                    if (point.y < minY) minY = point.y;
+                    if (point.y > maxY) maxY = point.y;
+                });
+                const rangeX = maxX - minX || 1;
+                const rangeY = maxY - minY || 1;
+
+                particleData = normalizedPoints.map((point, index) => {
+                    const normalizedX = (point.x - minX) / rangeX;
+                    const normalizedY = (point.y - minY) / rangeY;
+                    const normalizedT = index / (normalizedPoints.length - 1);
+                    const color = getFixedColor(normalizedX, normalizedY, normalizedT);
+                    
+                    return {
+                        x: point.x,
+                        y: point.y,
+                        z: point.z,
+                        r: color.r,
+                        g: color.g,
+                        b: color.b
+                    };
+                });
+
+                updatePreview();
+                updateOutputDisplay();
+            } catch (error) {
+                console.error('Generation error:', error);
+                showStatus(error.message, 'error');
+                setTimeout(hideStatus, 3000);
+            }
+        }
+
+        function updateOutputDisplay() {
+            const commands = generateMcfunctionContent();
+            if (commands) {
+                outputCodeEl.textContent = commands;
+            } else {
+                outputCodeEl.textContent = 'Awaiting particle generation...';
+            }
+        }
+
+        function updatePreview() {
+            // Remove old particle system
+            if (particleSystem) {
+                scene.remove(particleSystem);
+                if (particleSystem.geometry) particleSystem.geometry.dispose();
+                if (particleSystem.material) particleSystem.material.dispose();
+            }
+
+            particleCountEl.textContent = particleData.length.toLocaleString();
+
+            if (particleData.length === 0) return;
+
+            // Get current scale settings
+            const outputWidth = parseFloat(outputWidthInput.value) || 8;
+            const outputHeight = parseFloat(outputHeightInput.value) || 8;
+            let particleScale = parseFloat(particleScaleInput.value) || 1;
+            
+            // Clamp particle scale to Minecraft's maximum of 5
+            if (particleScale > 5) {
+                particleScale = 5;
+                particleScaleInput.value = 5;
+            }
+
+            // Update grid - GridHelper is always square, so use max dimension but adjust position
+            const maxDimension = Math.max(outputWidth, outputHeight);
+            const gridSize = maxDimension * 10;
+            const gridDivisions = maxDimension;
+            if (gridHelper) {
+                scene.remove(gridHelper);
+                if (gridHelper.geometry) gridHelper.geometry.dispose();
+                if (gridHelper.material) gridHelper.material.dispose();
+            }
+            gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0xa0a0a0, 0x3c3c3c);
+            scene.add(gridHelper);
+            
+            // Update axis helper size
+            const axisToggle = document.getElementById('axis-toggle');
+            if (window.axisHelper) {
+                scene.remove(window.axisHelper);
+            }
+            window.axisHelper = new THREE.AxesHelper(maxDimension * 5);
+            window.axisHelper.visible = axisToggle ? axisToggle.checked : true;
+            scene.add(window.axisHelper);
+
+            // Create new particle system
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleData.length * 3);
+            const colors = new Float32Array(particleData.length * 3);
+
+            particleData.forEach((p, i) => {
+                positions[i * 3] = p.x;
+                positions[i * 3 + 1] = p.y;
+                positions[i * 3 + 2] = p.z;
+                colors[i * 3] = p.r;
+                colors[i * 3 + 1] = p.g;
+                colors[i * 3 + 2] = p.b;
+            });
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const materialSize = Math.max(0.5, 2 * particleScale);
+            const material = new THREE.PointsMaterial({
+                size: materialSize,
+                vertexColors: true,
+                sizeAttenuation: true
+            });
+
+            particleSystem = new THREE.Points(geometry, material);
+            scene.add(particleSystem);
+        }
+
+        // Event listeners
+        generateBtn.addEventListener('click', generateParticles);
+        downloadMcfunctionBtn.addEventListener('click', downloadMcfunction);
+        downloadJsonBtn.addEventListener('click', downloadJson);
+        
+        // Output display copy buttons
+        copyOutputBtn.addEventListener('click', () => {
+            const text = outputCodeEl.textContent;
+            if (!text || text.startsWith('Awaiting')) {
+                alert('Please generate some particles first!');
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                copyOutputBtn.textContent = 'Copied!';
+                setTimeout(() => { copyOutputBtn.textContent = 'Copy'; }, 2000);
+            });
+        });
+
+        copyJsonOutputBtn.addEventListener('click', () => {
+            const jsonData = generateJsonData();
+            if (!jsonData) {
+                alert('Please generate some particles first!');
+                return;
+            }
+            const jsonString = formatJsonCompact(jsonData);
+            navigator.clipboard.writeText(jsonString).then(() => {
+                copyJsonOutputBtn.textContent = 'Copied!';
+                setTimeout(() => { copyJsonOutputBtn.textContent = 'Copy JSON'; }, 2000);
+            });
+        });
+
+        // Toggle controls
+        delayToggle.addEventListener('change', () => {
+            delayControls.classList.toggle('hidden', !delayToggle.checked);
+        });
+
+        axisToggle.addEventListener('change', () => {
+            if (window.axisHelper) {
+                window.axisHelper.visible = axisToggle.checked;
+            }
+        });
+
+        colorFixerToggle.addEventListener('change', () => {
+            colorFixerControls.classList.toggle('hidden', !colorFixerToggle.checked);
+            if (colorFixerToggle.checked && particleData.length > 0) {
+                generateParticles(); // Regenerate with new colors
+            }
+        });
+
+        colorModeSelect.addEventListener('change', () => {
+            const isSolid = colorModeSelect.value === 'solid';
+            solidColorControls.classList.toggle('hidden', !isSolid);
+            gradientControls.classList.toggle('hidden', isSolid);
+            if (colorFixerToggle.checked && particleData.length > 0) {
+                generateParticles(); // Regenerate with new colors
+            }
+        });
+
+        // Update output when settings change
+        [coordModeSelect, versionSelector].forEach(el => {
+            el.addEventListener('input', () => {
+                if (particleData.length > 0) {
+                    updateOutputDisplay();
+                }
+            });
+        });
+
+        // Update preview when scale/size settings change
+        [outputWidthInput, outputHeightInput, particleScaleInput].forEach(el => {
+            el.addEventListener('input', () => {
+                if (particleData.length > 0) {
+                    updatePreview();
+                    updateOutputDisplay();
+                }
+            });
+        });
+
+        // Sync color pickers with hex inputs
+        colorFixerPicker.addEventListener('input', () => {
+            colorFixerHex.value = colorFixerPicker.value;
+            if (colorFixerToggle.checked && particleData.length > 0) {
+                generateParticles();
+            }
+        });
+
+        colorFixerHex.addEventListener('input', () => {
+            if (/^#[0-9A-F]{6}$/i.test(colorFixerHex.value)) {
+                colorFixerPicker.value = colorFixerHex.value;
+                if (colorFixerToggle.checked && particleData.length > 0) {
+                    generateParticles();
+                }
+            }
+        });
+
+        gradientStartPicker.addEventListener('input', () => {
+            gradientStartHex.value = gradientStartPicker.value;
+            if (colorFixerToggle.checked && particleData.length > 0) {
+                generateParticles();
+            }
+        });
+
+        gradientStartHex.addEventListener('input', () => {
+            if (/^#[0-9A-F]{6}$/i.test(gradientStartHex.value)) {
+                gradientStartPicker.value = gradientStartHex.value;
+                if (colorFixerToggle.checked && particleData.length > 0) {
+                    generateParticles();
+                }
+            }
+        });
+
+        gradientEndPicker.addEventListener('input', () => {
+            gradientEndHex.value = gradientEndPicker.value;
+            if (colorFixerToggle.checked && particleData.length > 0) {
+                generateParticles();
+            }
+        });
+
+        gradientEndHex.addEventListener('input', () => {
+            if (/^#[0-9A-F]{6}$/i.test(gradientEndHex.value)) {
+                gradientEndPicker.value = gradientEndHex.value;
+                if (colorFixerToggle.checked && particleData.length > 0) {
+                    generateParticles();
+                }
+            }
+        });
+
+        gradientDirection.addEventListener('change', () => {
+            if (colorFixerToggle.checked && particleData.length > 0) {
+                generateParticles();
+            }
+        });
+
+        // Allow enter key in inputs
+        [xEqInput, yEqInput, zEqInput, tMinInput, tMaxInput, pointCountInput].forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') generateParticles();
+            });
+        });
+
+        // Auto-update preview as user types (with debouncing)
+        let autoUpdateTimeout = null;
+        const autoUpdate = () => {
+            clearTimeout(autoUpdateTimeout);
+            autoUpdateTimeout = setTimeout(() => {
+                generateParticles();
+            }, 500); // Wait 500ms after user stops typing
+        };
+
+        [xEqInput, yEqInput, zEqInput, tMinInput, tMaxInput, pointCountInput].forEach(input => {
+            input.addEventListener('input', autoUpdate);
+        });
+
+        // Initialize
+        initScene();
+        loadRandomPreset(); // Load random preset
+        generateParticles(); // Generate it
+    </script>
+</body>
+</html>
