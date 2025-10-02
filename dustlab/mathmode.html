@@ -953,7 +953,6 @@
         const colorFixerPicker = document.getElementById('color-fixer-picker');
         const gradientDirection = document.getElementById('gradient-direction');
         
-        // Gradient stops management
         let gradientStops = [
             '#FF0099',
             '#00FFFF'
@@ -1065,7 +1064,6 @@
                 ${gradientStops.length > 2 ? '<button class="remove-gradient-stop" style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;">×</button>' : ''}
             `;
 
-            // Color inputs
             const hexInput = stopDiv.querySelector('.gradient-stop-hex');
             const colorPicker = stopDiv.querySelector('.gradient-stop-picker');
             
@@ -1081,7 +1079,6 @@
                 updatePreview();
             });
 
-            // Move buttons
             const moveUpBtn = stopDiv.querySelector('.move-up');
             const moveDownBtn = stopDiv.querySelector('.move-down');
             
@@ -1101,7 +1098,6 @@
                 }
             });
 
-            // Remove button
             const removeBtn = stopDiv.querySelector('.remove-gradient-stop');
             if (removeBtn) {
                 removeBtn.addEventListener('click', () => {
@@ -1126,7 +1122,6 @@
             updateGradientStopsUI();
             if (addGradientStopBtn) {
                 addGradientStopBtn.addEventListener('click', () => {
-                    // Add a new random color
                     const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
                     gradientStops.push(randomColor);
                     updateGradientStopsUI();
@@ -1870,6 +1865,12 @@
         });
 
         gradientDirection.addEventListener('change', () => {
+            if (particleData.length > 0) {
+                updatePreview();
+            }
+        });
+
+        gradientDirection.addEventListener('change', () => {
             if (colorFixerToggle.checked && particleData.length > 0) {
                 generateParticles();
             }
@@ -1886,18 +1887,31 @@
             clearTimeout(autoUpdateTimeout);
             autoUpdateTimeout = setTimeout(() => {
                 generateParticles();
-            }, 500);
+            }, 200);
         };
 
-        [xEqInput, yEqInput, zEqInput, tMinInput, tMaxInput, pointCountInput].forEach(input => {
+        [xEqInput, yEqInput, zEqInput, tMinInput, tMaxInput, uMinInput, uMaxInput, pointCountInput].forEach(input => {
             input.addEventListener('input', autoUpdate);
         });
 
         // Initialize
         initializeGradientStops();
         initScene();
-        loadRandomPreset();
+        
+        xEqInput.value = 'cos(t)';
+        yEqInput.value = 'sin(t)';
+        zEqInput.value = 't * 0.1';
+        tMinInput.value = '-10';
+        tMaxInput.value = '10';
+        pointCountInput.value = '200';
+        uParamToggle.checked = false;
+        uParamControls.classList.add('hidden');
         generateParticles();
+        
+        setTimeout(() => {
+            loadRandomPreset();
+            generateParticles();
+        }, 100);
     </script>
 </body>
 </html>
