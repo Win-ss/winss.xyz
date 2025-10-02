@@ -292,7 +292,7 @@
         .video-wrapper {
             position: relative;
             width: 100%;
-            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            padding-bottom: 56.25%; 
             background: #000;
             overflow: hidden;
         }
@@ -1019,7 +1019,6 @@
                     if (!lastTimestamp) lastTimestamp = timestamp;
                     const deltaTime = (timestamp - lastTimestamp) / 1000; 
                     lastTimestamp = timestamp;
-                    // Clear the full backing store regardless of current transform
                     ctx.save();
                     ctx.setTransform(1, 0, 0, 1, 0, 0);
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1147,7 +1146,6 @@
             }
         })();
 
-        // Set playback speed for example video 1 (20% faster)
         document.addEventListener('DOMContentLoaded', function() {
             const exampleVideo1 = document.getElementById('example-video-1');
             if (exampleVideo1) {
