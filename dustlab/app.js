@@ -202,6 +202,92 @@
         let currentFileName = 'N/A'; 
         let particlesHaveBeenCounted = false;
 
+        let gradientStops = [
+            '#FF0000',
+            '#0000FF'
+        ];
+        const gradientStopsContainer = document.getElementById('gradient-stops-container');
+        const addGradientStopBtn = document.getElementById('add-gradient-stop');
+
+        function createGradientStopElement(color, index) {
+            const stopDiv = document.createElement('div');
+            stopDiv.className = 'gradient-stop flex items-center gap-2 mb-2 p-2 border rounded';
+            stopDiv.innerHTML = `
+                <div class="flex items-center gap-1">
+                    <button class="move-up px-1 py-0.5 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 ${index === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="move-down px-1 py-0.5 bg-gray-500 text-white text-xs rounded hover:bg-gray-600 ${index === gradientStops.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}" ${index === gradientStops.length - 1 ? 'disabled' : ''}>↓</button>
+                </div>
+                <input type="text" class="gradient-stop-hex p-1 w-20 text-center text-xs flex-1" value="${color}">
+                <input type="color" class="gradient-stop-picker w-8 h-6 rounded cursor-pointer" value="${color}">
+                ${gradientStops.length > 2 ? '<button class="remove-gradient-stop px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">×</button>' : ''}
+            `;
+
+            const hexInput = stopDiv.querySelector('.gradient-stop-hex');
+            const colorPicker = stopDiv.querySelector('.gradient-stop-picker');
+            
+            hexInput.addEventListener('input', () => {
+                colorPicker.value = hexInput.value;
+                gradientStops[index] = hexInput.value;
+                debouncedTriggerGeneration();
+            });
+            
+            colorPicker.addEventListener('input', () => {
+                hexInput.value = colorPicker.value;
+                gradientStops[index] = colorPicker.value;
+                debouncedTriggerGeneration();
+            });
+
+            const moveUpBtn = stopDiv.querySelector('.move-up');
+            const moveDownBtn = stopDiv.querySelector('.move-down');
+            
+            moveUpBtn.addEventListener('click', () => {
+                if (index > 0) {
+                    [gradientStops[index], gradientStops[index - 1]] = [gradientStops[index - 1], gradientStops[index]];
+                    updateGradientStopsUI();
+                    debouncedTriggerGeneration();
+                }
+            });
+            
+            moveDownBtn.addEventListener('click', () => {
+                if (index < gradientStops.length - 1) {
+                    [gradientStops[index], gradientStops[index + 1]] = [gradientStops[index + 1], gradientStops[index]];
+                    updateGradientStopsUI();
+                    debouncedTriggerGeneration();
+                }
+            });
+
+            const removeBtn = stopDiv.querySelector('.remove-gradient-stop');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    gradientStops.splice(index, 1);
+                    updateGradientStopsUI();
+                    debouncedTriggerGeneration();
+                });
+            }
+
+            return stopDiv;
+        }
+
+        function updateGradientStopsUI() {
+            if (!gradientStopsContainer) return;
+            gradientStopsContainer.innerHTML = '';
+            gradientStops.forEach((color, index) => {
+                gradientStopsContainer.appendChild(createGradientStopElement(color, index));
+            });
+        }
+
+        function initializeGradientStops() {
+            updateGradientStopsUI();
+            if (addGradientStopBtn) {
+                addGradientStopBtn.addEventListener('click', () => {
+                    const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+                    gradientStops.push(randomColor);
+                    updateGradientStopsUI();
+                    debouncedTriggerGeneration();
+                });
+            }
+        }
+
         function debounce(func, wait) {
             let timeout;
             return function(...args) {
@@ -265,7 +351,7 @@
         setupEditableSlider(masterResolutionSlider, masterResolutionValueEl);
         setupEditableSlider(scaleSlider, particleScaleValueEl, true);
         
-        [densitySlider, masterResolutionSlider, particlesPerBlockInput, resolutionWidthPxInput, resolutionHeightPxInput, colorFixerToggle, colorFixerHexInput, gradientStartHex, gradientEndHex, gradientDirection].forEach(el => el && el.addEventListener('input', debouncedTriggerGeneration));
+        [densitySlider, masterResolutionSlider, particlesPerBlockInput, resolutionWidthPxInput, resolutionHeightPxInput, colorFixerToggle, colorFixerHexInput, gradientDirection].forEach(el => el && el.addEventListener('input', debouncedTriggerGeneration));
         // Delay controls only affect JSON output, not preview - so only regenerate mcfunction content
         [delayToggle, delayValueInput, delayMaxTimeInput, delayStartPointSelect].forEach(el => el && el.addEventListener('input', generateMcfunctionContent));
         scaleSlider && scaleSlider.addEventListener('input', () => { updatePreviewAppearance(); generateMcfunctionContent(); });
@@ -277,7 +363,7 @@
         delayToggle && delayToggle.addEventListener('change', (e) => delayControls.classList.toggle('hidden', !e.target.checked));
         colorModeSelect && colorModeSelect.addEventListener('change', updateColorModeUI);
         colorModeSelect && colorModeSelect.addEventListener('change', debouncedTriggerGeneration);
-        [colorFixerHexInput, gradientStartHex, gradientEndHex].filter(input => input).forEach(input => {
+        [colorFixerHexInput].filter(input => input).forEach(input => {
             input.addEventListener('change', (e) => {
                 // Validate hex color
                 let value = e.target.value;
@@ -311,18 +397,15 @@
             gradientControls && gradientControls.classList.toggle('hidden', isSolid);
         }
 
-        // Resource tracking to avoid revoking blob URLs before textures finish loading
         let modelResourceURLs = [];
         function registerModelResource(url){ modelResourceURLs.push(url); }
         function clearPreviousModelResources(){
             if (!modelResourceURLs.length) return;
-            // Defer revocation slightly to avoid interfering with in-flight GPU uploads
             const urlsToRevoke = modelResourceURLs.slice();
             modelResourceURLs = [];
             setTimeout(()=>{ urlsToRevoke.forEach(u=>{ try { URL.revokeObjectURL(u); } catch(_){} }); }, 5000);
         }
 
-        // Custom Color Picker Implementation BAD
         function handleFileUpload(event) {
             const files = Array.from(event.target.files || []);
             if (!files.length) return;
@@ -670,13 +753,11 @@
                 const fixedColor = hexToRgb(colorFixerHexInput.value);
                 return { r: fixedColor.r, g: fixedColor.g, b: fixedColor.b };
             } else {
-                // Gradient mode
-                if (!gradientStartHex || !gradientEndHex || !gradientDirection) {
+                // Gradient mode with multiple colors evenly distributed
+                if (!gradientDirection || gradientStops.length < 2) {
                     return { r: originalR, g: originalG, b: originalB };
                 }
                 
-                const startColor = hexToRgb(gradientStartHex.value);
-                const endColor = hexToRgb(gradientEndHex.value);
                 const direction = gradientDirection.value;
                 
                 let factor = 0;
@@ -702,10 +783,18 @@
                 
                 factor = Math.max(0, Math.min(1, factor));
                 
+                // Find the two colors to interpolate between based on even distribution
+                const numSegments = gradientStops.length - 1;
+                const segmentIndex = Math.min(Math.floor(factor * numSegments), numSegments - 1);
+                const segmentFactor = (factor * numSegments) - segmentIndex;
+                
+                const startColor = hexToRgb(gradientStops[segmentIndex]);
+                const endColor = hexToRgb(gradientStops[segmentIndex + 1]);
+                
                 return {
-                    r: startColor.r + (endColor.r - startColor.r) * factor,
-                    g: startColor.g + (endColor.g - startColor.g) * factor,
-                    b: startColor.b + (endColor.b - startColor.b) * factor
+                    r: startColor.r + (endColor.r - startColor.r) * segmentFactor,
+                    g: startColor.g + (endColor.g - startColor.g) * segmentFactor,
+                    b: startColor.b + (endColor.b - startColor.b) * segmentFactor
                 };
             }
         }
@@ -1463,11 +1552,10 @@
         // UI setup
         updateSizingModeUI();
         updateColorModeUI();
+        initializeGradientStops();
         
         // Initialize native color pickers
         const colorFixerPicker = document.getElementById('color-fixer-picker');
-        const gradientStartPicker = document.getElementById('gradient-start-picker');
-        const gradientEndPicker = document.getElementById('gradient-end-picker');
         
         // Sync color picker with hex input
         colorFixerPicker && colorFixerPicker.addEventListener('input', (e) => {
@@ -1478,28 +1566,6 @@
         colorFixerHexInput && colorFixerHexInput.addEventListener('input', (e) => {
             if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
                 colorFixerPicker && (colorFixerPicker.value = e.target.value);
-            }
-        });
-        
-        gradientStartPicker && gradientStartPicker.addEventListener('input', (e) => {
-            gradientStartHex && (gradientStartHex.value = e.target.value.toUpperCase());
-            gradientStartHex && gradientStartHex.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-        
-        gradientStartHex && gradientStartHex.addEventListener('input', (e) => {
-            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                gradientStartPicker && (gradientStartPicker.value = e.target.value);
-            }
-        });
-        
-        gradientEndPicker && gradientEndPicker.addEventListener('input', (e) => {
-            gradientEndHex && (gradientEndHex.value = e.target.value.toUpperCase());
-            gradientEndHex && gradientEndHex.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-        
-        gradientEndHex && gradientEndHex.addEventListener('input', (e) => {
-            if (/^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                gradientEndPicker && (gradientEndPicker.value = e.target.value);
             }
         });
         

@@ -291,18 +291,11 @@
                             </div>
                             <div id="gradient-controls" class="hidden">
                                 <div class="mb-3">
-                                    <label class="block text-sm font-medium mb-2">Start Color</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="text" id="gradient-start-hex" value="#FF0000" class="p-1 w-24 text-center">
-                                        <input type="color" id="gradient-start-picker" value="#FF0000" class="w-10 h-8 rounded cursor-pointer">
+                                    <label class="block text-sm font-medium mb-2">Gradient Colors</label>
+                                    <div id="gradient-stops-container">
+                                        <!-- Color stops will be dynamically added here -->
                                     </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="block text-sm font-medium mb-2">End Color</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="text" id="gradient-end-hex" value="#0000FF" class="p-1 w-24 text-center">
-                                        <input type="color" id="gradient-end-picker" value="#0000FF" class="w-10 h-8 rounded cursor-pointer">
-                                    </div>
+                                    <button id="add-gradient-stop" class="mt-2 px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">Add Color</button>
                                 </div>
                                 <div>
                                     <label for="gradient-direction" class="block text-sm font-medium">Direction</label>
@@ -332,7 +325,7 @@
                      <button id="copy-json-btn" class="btn-secondary font-bold py-1 px-3 rounded-lg text-sm">Copy JSON</button>
                  </div>
             </div>
-            <pre id="output-code" class="text-sm p-4 rounded-md overflow-x-auto h-96">Awaiting file...</pre> <!-- Height changed to h-96 -->
+            <pre id="output-code" class="text-sm p-4 rounded-md overflow-x-auto h-96">Awaiting file...</pre>
         </div>
 
         <div class="mobile-warning">

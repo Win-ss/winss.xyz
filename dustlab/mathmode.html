@@ -180,6 +180,12 @@
             padding: 0.5rem;
             width: 100%;
             cursor: pointer;
+            font-family: 'Monocraft', monospace;
+            font-size: 0.875rem;
+        }
+        
+        option {
+            font-family: 'Monocraft', monospace;
         }
 
         select:focus {
@@ -401,7 +407,7 @@
             <!-- Controls -->
             <div class="control-panel">
                 <div class="hint">Use 't' as your parameter</div>
-                
+
                 <div class="form-section">
                     <label for="x-equation">X Equation</label>
                     <input type="text" id="x-equation" value="cos(t)" placeholder="e.g., cos(t)">
@@ -430,20 +436,47 @@
                     </div>
                 </div>
 
+                <div id="u-param-controls" class="form-section hidden">
+                    <div class="grid-2">
+                        <div>
+                            <label for="u-min">U Min</label>
+                            <input type="number" id="u-min" value="0" step="0.1">
+                        </div>
+                        <div>
+                            <label for="u-max">U Max</label>
+                            <input type="number" id="u-max" value="3.14" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-section">
                     <label for="point-count">Point Count</label>
                     <input type="number" id="point-count" value="100" min="1" max="10000">
                 </div>
 
+                <div class="form-section">
+                    <div class="toggle-section">
+                        <span class="toggle-label">Show Axis</span>
+                        <label class="switch">
+                            <input type="checkbox" id="axis-toggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="toggle-section">
+                        <span class="toggle-label">Enable U Parameter</span>
+                        <label class="switch">
+                            <input type="checkbox" id="u-param-toggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
                 <button id="generate-btn">Generate Particles</button>
 
                 <div id="status" class="status info" style="display: none;">Ready</div>
-
-                <div class="section-divider"></div>
-
-                <!-- Download Buttons -->
-                <button id="download-mcfunction-btn" style="width: 100%; margin-bottom: 0.5rem;">Download .mcfunction</button>
-                <button id="download-json-btn" style="width: 100%; background-color: var(--color-input-bg); color: var(--color-text-main);">Download JSON</button>
             </div>
 
             <!-- Preview -->
@@ -490,16 +523,6 @@
                             <option value="local" selected>Local (^ ^ ^)</option>
                             <option value="relative">Relative (~ ~ ~)</option>
                         </select>
-                    </div>
-
-                    <div class="form-section">
-                        <div class="toggle-section">
-                            <span class="toggle-label">Show Axis</span>
-                            <label class="switch">
-                                <input type="checkbox" id="axis-toggle" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </div>
                     </div>
 
                 <!-- Delay Controls -->
@@ -563,18 +586,11 @@
                         </div>
                         <div id="gradient-controls">
                             <div style="margin-bottom: 1rem;">
-                                <label>Start Color</label>
-                                <div class="color-picker-group" style="margin-top: 0.5rem;">
-                                    <input type="text" id="gradient-start-hex" value="#FF0099" style="width: 100px;">
-                                    <input type="color" id="gradient-start-picker" value="#FF0099">
+                                <label>Gradient Colors</label>
+                                <div id="gradient-stops-container" style="margin-top: 0.5rem;">
+                                    <!-- Color stops will be dynamically added here -->
                                 </div>
-                            </div>
-                            <div style="margin-bottom: 1rem;">
-                                <label>End Color</label>
-                                <div class="color-picker-group" style="margin-top: 0.5rem;">
-                                    <input type="text" id="gradient-end-hex" value="#00FFFF" style="width: 100px;">
-                                    <input type="color" id="gradient-end-picker" value="#00FFFF">
-                                </div>
+                                <button id="add-gradient-stop" style="margin-top: 0.5rem; padding: 0.25rem 0.5rem; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Add Color</button>
                             </div>
                             <div>
                                 <label for="gradient-direction">Direction</label>
@@ -599,6 +615,8 @@
                 <div class="output-buttons">
                     <button id="copy-output-btn" class="btn-small btn-primary-small">Copy</button>
                     <button id="copy-json-output-btn" class="btn-small btn-secondary-small">Copy JSON</button>
+                    <button id="download-mcfunction-btn" class="btn-small btn-primary-small">Download .mcfunction</button>
+                    <button id="download-json-btn" class="btn-small btn-secondary-small">Download JSON</button>
                 </div>
             </div>
             <pre id="output-code" class="output-code">Awaiting particle generation...</pre>
@@ -606,7 +624,6 @@
     </div>
 
     <script>
-        // Math utilities (embedded from math-utils.js)
         const DustlabMath = (function () {
             "use strict";
 
@@ -814,12 +831,18 @@
                 const centerX = (minX + maxX) / 2;
                 const centerY = (minY + maxY) / 2;
                 const centerZ = (minZ + maxZ) / 2;
-                return points.map(point => ({
-                    x: (point.x - centerX) * scaleFactor,
-                    y: (point.y - centerY) * scaleFactor,
-                    z: (point.z - centerZ) * scaleFactor,
-                    t: point.t
-                }));
+                return points.map(point => {
+                    const normalized = {
+                        x: (point.x - centerX) * scaleFactor,
+                        y: (point.y - centerY) * scaleFactor,
+                        z: (point.z - centerZ) * scaleFactor,
+                        t: point.t
+                    };
+                    if (point.u !== undefined) {
+                        normalized.u = point.u;
+                    }
+                    return normalized;
+                });
             }
 
             function safeProgress(t, tMin, tMax) {
@@ -836,11 +859,37 @@
             };
         })();
 
-        // Main application
         let scene, camera, renderer, controls, particleSystem, gridHelper;
         let particleData = [];
 
-        // Presets from mathmodetest.html
+        const gradientPresets = [
+            { name: "Sunset", start: "#FF6B6B", end: "#FFD93D", direction: "vertical" },
+            { name: "Ocean", start: "#4ECDC4", end: "#44A08D", direction: "horizontal" },
+            { name: "Purple Dream", start: "#A8EDEA", end: "#FED6E3", direction: "diagonal" },
+            { name: "Fire", start: "#F2994A", end: "#F2C94C", direction: "vertical" },
+            { name: "Arctic", start: "#E0EAFC", end: "#CFDEF3", direction: "horizontal" },
+            { name: "Lava", start: "#FF0000", end: "#FFAA00", direction: "radial" },
+            { name: "Forest", start: "#0F9D58", end: "#87CEEB", direction: "vertical" },
+            { name: "Neon Nights", start: "#FF00FF", end: "#00FFFF", direction: "diagonal" },
+            { name: "Gold Rush", start: "#FFD700", end: "#FFA500", direction: "horizontal" },
+            { name: "Deep Sea", start: "#000428", end: "#004e92", direction: "vertical" },
+            { name: "Rose", start: "#ED4264", end: "#FFEDBC", direction: "radial" },
+            { name: "Mint", start: "#00F260", end: "#0575E6", direction: "diagonal" },
+            { name: "Cotton Candy", start: "#FFA6C9", end: "#B4E1FF", direction: "vertical" },
+            { name: "Matrix", start: "#00FF00", end: "#003300", direction: "horizontal" },
+            { name: "Aurora", start: "#00D9FF", end: "#B537F2", direction: "diagonal" },
+            { name: "Volcano", start: "#FF0000", end: "#330000", direction: "radial" },
+            { name: "Tropical", start: "#FF6B9D", end: "#C06C84", direction: "vertical" },
+            { name: "Electric", start: "#00FFF0", end: "#0077FF", direction: "horizontal" },
+            { name: "Peachy", start: "#FFEAA7", end: "#FDCB6E", direction: "diagonal" },
+            { name: "Cherry Blossom", start: "#FFC0CB", end: "#FF69B4", direction: "vertical" },
+            { name: "Northern Lights", start: "#667EEA", end: "#764BA2", direction: "radial" },
+            { name: "Desert", start: "#EDC967", end: "#C89B3C", direction: "horizontal" },
+            { name: "Bubblegum", start: "#FE5196", end: "#F77062", direction: "diagonal" },
+            { name: "Galaxy", start: "#2E0854", end: "#8E2DE2", direction: "radial" },
+            { name: "Lime Splash", start: "#32CD32", end: "#ADFF2F", direction: "vertical" }
+        ];
+
         const presets = [
             { name: "Lissajous Knot", x: "cos(3*t + 0.7)", y: "cos(2*t)", z: "cos(7*t + 0.2)", tMin: 0, tMax: 6.28, points: 2000 },
             { name: "3D Hypotrochoid", x: "2*cos(t) + 5*cos(t*2/3)", y: "2*sin(t) - 5*sin(t*2/3)", z: "2*sin(t*4/3)", tMin: 0, tMax: 18.85, points: 2500 },
@@ -853,7 +902,20 @@
             { name: "Granny Knot", x: "-0.22*cos(t) - 1.28*sin(t) - 0.44*cos(3*t) - 0.78*sin(3*t)", y: "-0.1*cos(2*t) - 0.27*sin(2*t) + 0.38*cos(4*t) + 0.46*sin(4*t)", z: "0.7*cos(3*t) - 0.4*sin(3*t)", tMin: 0, tMax: 6.28, points: 1500 },
             { name: "Torus Knot (5,3)", x: "(2 + cos(3*t)) * cos(5*t)", y: "(2 + cos(3*t)) * sin(5*t)", z: "sin(3*t)", tMin: 0, tMax: 6.28, points: 2000 },
             { name: "Chain Link", x: "cos(t) + 0.5 * cos(5*t)", y: "sin(t) + 0.5 * sin(5*t)", z: "cos(2*t)", tMin: 0, tMax: 6.28, points: 1000 },
-            { name: "Trefoil Knot", x: "sin(t) + 2*sin(2*t)", y: "cos(t) - 2*cos(2*t)", z: "-sin(3*t)", tMin: 0, tMax: 6.28, points: 1000 }
+            { name: "Trefoil Knot", x: "sin(t) + 2*sin(2*t)", y: "cos(t) - 2*cos(2*t)", z: "-sin(3*t)", tMin: 0, tMax: 6.28, points: 1000 },
+            { name: "Figure Eight Knot", x: "(2 + cos(2*t)) * cos(3*t)", y: "(2 + cos(2*t)) * sin(3*t)", z: "sin(4*t)", tMin: 0, tMax: 6.28, points: 2000 },
+            { name: "Cinquefoil Knot", x: "cos(2*t) * (3 + cos(5*t))", y: "sin(2*t) * (3 + cos(5*t))", z: "sin(5*t)", tMin: 0, tMax: 6.28, points: 2500 },
+            { name: "Viviani Curve", x: "cos(t)**2", y: "cos(t)*sin(t)", z: "sin(t)", tMin: 0, tMax: 6.28, points: 1000 },
+            { name: "Butterfly Curve", x: "sin(t)*(exp(cos(t)) - 2*cos(4*t) - sin(t/12)**5)", y: "cos(t)*(exp(cos(t)) - 2*cos(4*t) - sin(t/12)**5)", z: "t/5", tMin: 0, tMax: 37.7, points: 3000 },
+            
+            { name: "Sphere", x: "sin(u)*cos(t)", y: "sin(u)*sin(t)", z: "cos(u)", tMin: 0, tMax: 6.28, uMin: 0, uMax: 3.14, points: 2000, useU: true },
+            { name: "Torus", x: "(2+cos(u))*cos(t)", y: "(2+cos(u))*sin(t)", z: "sin(u)", tMin: 0, tMax: 6.28, uMin: 0, uMax: 6.28, points: 2000, useU: true },
+            { name: "Möbius Strip", x: "(1 + u/2 * cos(t/2)) * cos(t)", y: "(1 + u/2 * cos(t/2)) * sin(t)", z: "u/2 * sin(t/2)", tMin: 0, tMax: 6.28, uMin: -1, uMax: 1, points: 2000, useU: true },
+            { name: "Klein Bottle", x: "(2 + cos(u/2)*sin(t) - sin(u/2)*sin(2*t)) * cos(u)", y: "(2 + cos(u/2)*sin(t) - sin(u/2)*sin(2*t)) * sin(u)", z: "sin(u/2)*sin(t) + cos(u/2)*sin(2*t)", tMin: 0, tMax: 6.28, uMin: 0, uMax: 6.28, points: 3000, useU: true },
+            { name: "Helicoid", x: "u*cos(t)", y: "u*sin(t)", z: "t", tMin: 0, tMax: 6.28, uMin: -2, uMax: 2, points: 2000, useU: true },
+            { name: "Hyperboloid", x: "sqrt(1+u**2)*cos(t)", y: "sqrt(1+u**2)*sin(t)", z: "u", tMin: 0, tMax: 6.28, uMin: -2, uMax: 2, points: 2000, useU: true },
+            { name: "Catenoid", x: "cosh(u)*cos(t)", y: "cosh(u)*sin(t)", z: "u", tMin: 0, tMax: 6.28, uMin: -2, uMax: 2, points: 2000, useU: true },
+            { name: "Paraboloid", x: "u*cos(t)", y: "u*sin(t)", z: "u**2", tMin: 0, tMax: 6.28, uMin: 0, uMax: 2, points: 2000, useU: true }
         ];
 
         // DOM elements
@@ -863,10 +925,16 @@
         const zEqInput = document.getElementById('z-equation');
         const tMinInput = document.getElementById('t-min');
         const tMaxInput = document.getElementById('t-max');
+        const uMinInput = document.getElementById('u-min');
+        const uMaxInput = document.getElementById('u-max');
         const pointCountInput = document.getElementById('point-count');
         const generateBtn = document.getElementById('generate-btn');
         const statusEl = document.getElementById('status');
         const particleCountEl = document.getElementById('particle-count');
+        
+        // U parameter controls
+        const uParamToggle = document.getElementById('u-param-toggle');
+        const uParamControls = document.getElementById('u-param-controls');
         
         // Delay controls
         const delayToggle = document.getElementById('delay-toggle');
@@ -883,11 +951,15 @@
         const gradientControls = document.getElementById('gradient-controls');
         const colorFixerHex = document.getElementById('color-fixer-hex');
         const colorFixerPicker = document.getElementById('color-fixer-picker');
-        const gradientStartHex = document.getElementById('gradient-start-hex');
-        const gradientStartPicker = document.getElementById('gradient-start-picker');
-        const gradientEndHex = document.getElementById('gradient-end-hex');
-        const gradientEndPicker = document.getElementById('gradient-end-picker');
         const gradientDirection = document.getElementById('gradient-direction');
+        
+        // Gradient stops management
+        let gradientStops = [
+            '#FF0099',
+            '#00FFFF'
+        ];
+        const gradientStopsContainer = document.getElementById('gradient-stops-container');
+        const addGradientStopBtn = document.getElementById('add-gradient-stop');
         
         // Output controls
         const outputWidthInput = document.getElementById('output-width');
@@ -926,11 +998,9 @@
             directionalLight.position.set(10, 20, 10);
             scene.add(directionalLight);
 
-            // Initial grid for default 8x8 size (8 blocks * 10 = 80 units)
             gridHelper = new THREE.GridHelper(80, 8, 0xa0a0a0, 0x3c3c3c);
             scene.add(gridHelper);
             
-            // Add axis helper (X=red, Y=green, Z=blue)
             window.axisHelper = new THREE.AxesHelper(40);
             scene.add(window.axisHelper);
 
@@ -967,7 +1037,6 @@
             statusEl.style.display = 'none';
         }
 
-        // Color utility functions
         function hexToRgb(hex) {
             let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
             return result ? {
@@ -977,9 +1046,97 @@
             } : {r: 1, g: 1, b: 1};
         }
 
+        function createGradientStopElement(color, index) {
+            const stopDiv = document.createElement('div');
+            stopDiv.style.display = 'flex';
+            stopDiv.style.alignItems = 'center';
+            stopDiv.style.gap = '0.5rem';
+            stopDiv.style.marginBottom = '0.5rem';
+            stopDiv.style.padding = '0.5rem';
+            stopDiv.style.border = '1px solid #ccc';
+            stopDiv.style.borderRadius = '3px';
+            stopDiv.innerHTML = `
+                <div style="display: flex; gap: 0.25rem;">
+                    <button class="move-up" style="padding: 0.125rem 0.25rem; background: #6c757d; color: white; border: none; border-radius: 2px; cursor: pointer; font-size: 0.75rem; ${index === 0 ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${index === 0 ? 'disabled' : ''}>↑</button>
+                    <button class="move-down" style="padding: 0.125rem 0.25rem; background: #6c757d; color: white; border: none; border-radius: 2px; cursor: pointer; font-size: 0.75rem; ${index === gradientStops.length - 1 ? 'opacity: 0.5; cursor: not-allowed;' : ''}" ${index === gradientStops.length - 1 ? 'disabled' : ''}>↓</button>
+                </div>
+                <input type="text" class="gradient-stop-hex" value="${color}" style="width: 80px; padding: 0.25rem; text-align: center; font-size: 0.75rem; flex: 1;">
+                <input type="color" class="gradient-stop-picker" value="${color}" style="width: 30px; height: 20px; border: none; cursor: pointer;">
+                ${gradientStops.length > 2 ? '<button class="remove-gradient-stop" style="padding: 0.25rem 0.5rem; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 0.75rem;">×</button>' : ''}
+            `;
+
+            // Color inputs
+            const hexInput = stopDiv.querySelector('.gradient-stop-hex');
+            const colorPicker = stopDiv.querySelector('.gradient-stop-picker');
+            
+            hexInput.addEventListener('input', () => {
+                colorPicker.value = hexInput.value;
+                gradientStops[index] = hexInput.value;
+                updatePreview();
+            });
+            
+            colorPicker.addEventListener('input', () => {
+                hexInput.value = colorPicker.value;
+                gradientStops[index] = colorPicker.value;
+                updatePreview();
+            });
+
+            // Move buttons
+            const moveUpBtn = stopDiv.querySelector('.move-up');
+            const moveDownBtn = stopDiv.querySelector('.move-down');
+            
+            moveUpBtn.addEventListener('click', () => {
+                if (index > 0) {
+                    [gradientStops[index], gradientStops[index - 1]] = [gradientStops[index - 1], gradientStops[index]];
+                    updateGradientStopsUI();
+                    updatePreview();
+                }
+            });
+            
+            moveDownBtn.addEventListener('click', () => {
+                if (index < gradientStops.length - 1) {
+                    [gradientStops[index], gradientStops[index + 1]] = [gradientStops[index + 1], gradientStops[index]];
+                    updateGradientStopsUI();
+                    updatePreview();
+                }
+            });
+
+            // Remove button
+            const removeBtn = stopDiv.querySelector('.remove-gradient-stop');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', () => {
+                    gradientStops.splice(index, 1);
+                    updateGradientStopsUI();
+                    updatePreview();
+                });
+            }
+
+            return stopDiv;
+        }
+
+        function updateGradientStopsUI() {
+            if (!gradientStopsContainer) return;
+            gradientStopsContainer.innerHTML = '';
+            gradientStops.forEach((color, index) => {
+                gradientStopsContainer.appendChild(createGradientStopElement(color, index));
+            });
+        }
+
+        function initializeGradientStops() {
+            updateGradientStopsUI();
+            if (addGradientStopBtn) {
+                addGradientStopBtn.addEventListener('click', () => {
+                    // Add a new random color
+                    const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+                    gradientStops.push(randomColor);
+                    updateGradientStopsUI();
+                    updatePreview();
+                });
+            }
+        }
+
         function getFixedColor(normalizedX, normalizedY, normalizedT) {
             if (!colorFixerToggle.checked) {
-                // Default gradient based on position
                 return {
                     r: 0.5 + 0.5 * normalizedX,
                     g: 0.4 + 0.4 * normalizedY,
@@ -991,9 +1148,15 @@
                 const fixedColor = hexToRgb(colorFixerHex.value);
                 return fixedColor;
             } else {
-                // Gradient mode
-                const startColor = hexToRgb(gradientStartHex.value);
-                const endColor = hexToRgb(gradientEndHex.value);
+                // Gradient mode with multiple colors evenly distributed
+                if (!gradientDirection || gradientStops.length < 2) {
+                    return {
+                        r: 0.5 + 0.5 * normalizedX,
+                        g: 0.4 + 0.4 * normalizedY,
+                        b: 0.7 + 0.3 * normalizedT
+                    };
+                }
+                
                 const direction = gradientDirection.value;
                 
                 let factor = 0;
@@ -1017,15 +1180,39 @@
                 
                 factor = Math.max(0, Math.min(1, factor));
                 
+                // Find the two colors to interpolate between based on even distribution
+                const numSegments = gradientStops.length - 1;
+                const segmentIndex = Math.min(Math.floor(factor * numSegments), numSegments - 1);
+                const segmentFactor = (factor * numSegments) - segmentIndex;
+                
+                const startColor = hexToRgb(gradientStops[segmentIndex]);
+                const endColor = hexToRgb(gradientStops[segmentIndex + 1]);
+                
                 return {
-                    r: startColor.r + (endColor.r - startColor.r) * factor,
-                    g: startColor.g + (endColor.g - startColor.g) * factor,
-                    b: startColor.b + (endColor.b - startColor.b) * factor
+                    r: startColor.r + (endColor.r - startColor.r) * segmentFactor,
+                    g: startColor.g + (endColor.g - startColor.g) * segmentFactor,
+                    b: startColor.b + (endColor.b - startColor.b) * segmentFactor
                 };
             }
         }
 
-        // Load random preset on page load
+        function loadRandomGradient() {
+            const randomGradient = gradientPresets[Math.floor(Math.random() * gradientPresets.length)];
+            
+            colorFixerToggle.checked = true;
+            colorFixerControls.classList.remove('hidden');
+            colorModeSelect.value = 'gradient';
+            
+            gradientControls.classList.remove('hidden');
+            solidColorControls.classList.add('hidden');
+            
+            gradientStartHex.value = randomGradient.start;
+            gradientStartPicker.value = randomGradient.start;
+            gradientEndHex.value = randomGradient.end;
+            gradientEndPicker.value = randomGradient.end;
+            gradientDirection.value = randomGradient.direction;
+        }
+
         function loadRandomPreset() {
             const randomPreset = presets[Math.floor(Math.random() * presets.length)];
             xEqInput.value = randomPreset.x;
@@ -1034,6 +1221,26 @@
             tMinInput.value = randomPreset.tMin;
             tMaxInput.value = randomPreset.tMax;
             pointCountInput.value = randomPreset.points;
+            
+            if (randomPreset.useU) {
+                uParamToggle.checked = true;
+                uParamControls.classList.remove('hidden');
+                uMinInput.value = randomPreset.uMin;
+                uMaxInput.value = randomPreset.uMax;
+                const hint = document.querySelector('.hint');
+                if (hint) {
+                    hint.textContent = "Use 't' and 'u' as parameters";
+                }
+            } else {
+                uParamToggle.checked = false;
+                uParamControls.classList.add('hidden');
+                const hint = document.querySelector('.hint');
+                if (hint) {
+                    hint.textContent = "Use 't' as your parameter";
+                }
+            }
+            
+            loadRandomGradient();
         }
 
         // Generate mcfunction content
@@ -1066,7 +1273,6 @@
             const outWidth = parseFloat(outputWidthInput.value) || 16;
             const outHeight = parseFloat(outputHeightInput.value) || 16;
 
-            // Calculate scale factor
             let scaleFactor;
             const aspect = pWidth / pHeight;
             const targetAspect = outWidth / outHeight;
@@ -1076,7 +1282,6 @@
                 scaleFactor = outHeight / pHeight;
             }
 
-            // Generate commands
             particleData.forEach(p => {
                 const x_norm = (p.x - minX) / pWidth - 0.5;
                 const y_norm = (p.y - minY) / pHeight - 0.5;
@@ -1100,13 +1305,11 @@
             return commands;
         }
 
-        // Generate JSON data
         function generateJsonData() {
             if (particleData.length === 0) return null;
 
             const particleScale = parseFloat(particleScaleInput.value);
 
-            // Calculate bounds
             let minX = Infinity, maxX = -Infinity;
             let minY = Infinity, maxY = -Infinity;
             let minZ = Infinity, maxZ = -Infinity;
@@ -1136,7 +1339,6 @@
                 scaleFactor = outHeight / pHeight;
             }
 
-            // Generate particles array with delay if enabled
             let finalParticles = particleData.map((p, index) => {
                 const x_norm = (p.x - minX) / pWidth - 0.5;
                 const y_norm = (p.y - minY) / pHeight - 0.5;
@@ -1160,7 +1362,6 @@
                 return particle;
             });
 
-            // Apply delay if enabled
             if (delayToggle.checked) {
                 const delayValue = parseInt(delayValueInput.value) || 2;
                 const maxTime = parseInt(delayMaxTimeInput.value) || 30;
@@ -1254,7 +1455,6 @@
             return `{\n  "duration": ${duration},\n  "metadata": ${metadata},\n  "particles": [\n${particles}\n  ]\n}`;
         }
 
-        // Download/Copy functions
         function downloadMcfunction() {
             const commands = generateMcfunctionContent();
             if (!commands) {
@@ -1321,51 +1521,127 @@
             const zEq = zEqInput.value.trim();
             const tMin = parseFloat(tMinInput.value);
             const tMax = parseFloat(tMaxInput.value);
-            const pointCount = parseInt(pointCountInput.value);
+            const uEnabled = uParamToggle.checked;
+            let pointCount = parseInt(pointCountInput.value);
+            let uMin, uMax;
 
-            // Validation
             if (!xEq || !yEq || !zEq) {
                 showStatus('Please provide equations for X, Y, and Z.', 'error');
+                setTimeout(hideStatus, 3000);
                 return;
             }
 
             if (!Number.isFinite(tMin) || !Number.isFinite(tMax) || tMin >= tMax) {
                 showStatus('T min must be less than T max.', 'error');
+                setTimeout(hideStatus, 3000);
                 return;
             }
 
             if (!Number.isInteger(pointCount) || pointCount < 1 || pointCount > 10000) {
                 showStatus('Point count must be between 1 and 10000.', 'error');
+                setTimeout(hideStatus, 3000);
                 return;
             }
 
             try {
-                const equations = DustlabMath.compileEquationSet(xEq, yEq, zEq);
-                let rawPoints = DustlabMath.generateAdaptivePoints(equations, tMin, tMax, pointCount);
+                let rawPoints = [];
                 
-                // Ensure we have exactly the requested number of points
-                if (rawPoints.length > pointCount) {
-                    rawPoints = rawPoints.slice(0, pointCount);
+                if (uEnabled) {
+                    // 2D parameter space (t and u)
+                    uMin = parseFloat(uMinInput.value);
+                    uMax = parseFloat(uMaxInput.value);
+                    
+                    if (!Number.isFinite(uMin) || !Number.isFinite(uMax) || uMin >= uMax) {
+                        showStatus('U min must be less than U max.', 'error');
+                        setTimeout(hideStatus, 3000);
+                        return;
+                    }
+                    
+                    const stepsT = Math.ceil(Math.sqrt(pointCount));
+                    const stepsU = Math.ceil(pointCount / stepsT);
+                    
+                    const uniquePoints = new Map();
+                    const epsilon = 0.0001;
+                    
+                    for (let i = 0; i < stepsT; i++) {
+                        for (let j = 0; j < stepsU; j++) {
+                            const tNorm = stepsT > 1 ? i / (stepsT - 1) : 0.5;
+                            const uNorm = stepsU > 1 ? j / (stepsU - 1) : 0.5;
+                            
+                            const t = tMin + (tMax - tMin) * tNorm;
+                            const u = uMin + (uMax - uMin) * uNorm;
+                            
+                            try {
+                                const x = Function('t', 'u', `with(Math) { return ${xEq}; }`)(t, u);
+                                const y = Function('t', 'u', `with(Math) { return ${yEq}; }`)(t, u);
+                                const z = Function('t', 'u', `with(Math) { return ${zEq}; }`)(t, u);
+                                
+                                if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+                                    const key = `${Math.round(x/epsilon)},${Math.round(y/epsilon)},${Math.round(z/epsilon)}`;
+                                    
+                                    if (!uniquePoints.has(key)) {
+                                        uniquePoints.set(key, { x, y, z, t, u });
+                                        rawPoints.push({ x, y, z, t, u });
+                                    }
+                                }
+                            } catch (evalError) {
+                                console.warn(`Skipping point at t=${t}, u=${u}:`, evalError);
+                            }
+                        }
+                    }
+                    
+                    if (rawPoints.length > pointCount) {
+                        rawPoints = rawPoints.slice(0, pointCount);
+                    }
+                    
+                    if (rawPoints.length < pointCount * 0.8) {
+                        console.warn(`Generated ${rawPoints.length} unique points (requested ${pointCount}). Surface may have singularities at poles.`);
+                    }
+                } else {
+                    const equations = DustlabMath.compileEquationSet(xEq, yEq, zEq);
+                    rawPoints = DustlabMath.generateAdaptivePoints(equations, tMin, tMax, pointCount);
+                    
+                    if (rawPoints.length > pointCount) {
+                        rawPoints = rawPoints.slice(0, pointCount);
+                    }
                 }
                 
+                if (rawPoints.length === 0) {
+                    showStatus('No valid points generated.', 'error');
+                    setTimeout(hideStatus, 3000);
+                    return;
+                }
+                    
                 const normalizedPoints = DustlabMath.normalizePoints(rawPoints);
 
-                // Calculate bounds for color generation
                 let minX = Infinity, maxX = -Infinity;
                 let minY = Infinity, maxY = -Infinity;
+                let minZ = Infinity, maxZ = -Infinity;
                 normalizedPoints.forEach(point => {
                     if (point.x < minX) minX = point.x;
                     if (point.x > maxX) maxX = point.x;
                     if (point.y < minY) minY = point.y;
                     if (point.y > maxY) maxY = point.y;
+                    if (point.z < minZ) minZ = point.z;
+                    if (point.z > maxZ) maxZ = point.z;
                 });
                 const rangeX = maxX - minX || 1;
                 const rangeY = maxY - minY || 1;
+                const rangeZ = maxZ - minZ || 1;
 
                 particleData = normalizedPoints.map((point, index) => {
-                    const normalizedX = (point.x - minX) / rangeX;
-                    const normalizedY = (point.y - minY) / rangeY;
-                    const normalizedT = index / (normalizedPoints.length - 1);
+                    let normalizedX, normalizedY, normalizedT;
+                    
+                    if (uEnabled && point.u !== undefined) {
+                        normalizedX = (point.t - tMin) / (tMax - tMin);
+                        normalizedY = (point.u - uMin) / (uMax - uMin);
+                        normalizedT = (normalizedX + normalizedY) / 2;
+                    } else {
+                        normalizedX = (point.x - minX) / rangeX;
+                        normalizedY = (point.y - minY) / rangeY;
+                        normalizedT = index / (normalizedPoints.length - 1 || 1);
+                    }
+                    
                     const color = getFixedColor(normalizedX, normalizedY, normalizedT);
                     
                     return {
@@ -1397,7 +1673,6 @@
         }
 
         function updatePreview() {
-            // Remove old particle system
             if (particleSystem) {
                 scene.remove(particleSystem);
                 if (particleSystem.geometry) particleSystem.geometry.dispose();
@@ -1408,18 +1683,15 @@
 
             if (particleData.length === 0) return;
 
-            // Get current scale settings
             const outputWidth = parseFloat(outputWidthInput.value) || 8;
             const outputHeight = parseFloat(outputHeightInput.value) || 8;
             let particleScale = parseFloat(particleScaleInput.value) || 1;
             
-            // Clamp particle scale to Minecraft's maximum of 5
             if (particleScale > 5) {
                 particleScale = 5;
                 particleScaleInput.value = 5;
             }
 
-            // Update grid - GridHelper is always square, so use max dimension but adjust position
             const maxDimension = Math.max(outputWidth, outputHeight);
             const gridSize = maxDimension * 10;
             const gridDivisions = maxDimension;
@@ -1431,7 +1703,6 @@
             gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0xa0a0a0, 0x3c3c3c);
             scene.add(gridHelper);
             
-            // Update axis helper size
             const axisToggle = document.getElementById('axis-toggle');
             if (window.axisHelper) {
                 scene.remove(window.axisHelper);
@@ -1440,7 +1711,6 @@
             window.axisHelper.visible = axisToggle ? axisToggle.checked : true;
             scene.add(window.axisHelper);
 
-            // Create new particle system
             const geometry = new THREE.BufferGeometry();
             const positions = new Float32Array(particleData.length * 3);
             const colors = new Float32Array(particleData.length * 3);
@@ -1468,12 +1738,10 @@
             scene.add(particleSystem);
         }
 
-        // Event listeners
         generateBtn.addEventListener('click', generateParticles);
         downloadMcfunctionBtn.addEventListener('click', downloadMcfunction);
         downloadJsonBtn.addEventListener('click', downloadJson);
         
-        // Output display copy buttons
         copyOutputBtn.addEventListener('click', () => {
             const text = outputCodeEl.textContent;
             if (!text || text.startsWith('Awaiting')) {
@@ -1500,6 +1768,48 @@
         });
 
         // Toggle controls
+        uParamToggle.addEventListener('change', () => {
+            const isEnabled = uParamToggle.checked;
+            uParamControls.classList.toggle('hidden', !isEnabled);
+            
+            const hint = document.querySelector('.hint');
+            if (hint) {
+                hint.textContent = isEnabled ? "Use 't' and 'u' as parameters" : "Use 't' as your parameter";
+            }
+            
+            // When enabling U parameter, load a random 2D surface preset
+            if (isEnabled) {
+                const surfacePresets = presets.filter(p => p.useU === true);
+                if (surfacePresets.length > 0) {
+                    const randomSurface = surfacePresets[Math.floor(Math.random() * surfacePresets.length)];
+                    xEqInput.value = randomSurface.x;
+                    yEqInput.value = randomSurface.y;
+                    zEqInput.value = randomSurface.z;
+                    tMinInput.value = randomSurface.tMin;
+                    tMaxInput.value = randomSurface.tMax;
+                    uMinInput.value = randomSurface.uMin;
+                    uMaxInput.value = randomSurface.uMax;
+                    pointCountInput.value = randomSurface.points;
+                    loadRandomGradient();
+                    generateParticles();
+                }
+            } else {
+                // When disabling U parameter, load a random 1D curve preset
+                const curvePresets = presets.filter(p => !p.useU);
+                if (curvePresets.length > 0) {
+                    const randomCurve = curvePresets[Math.floor(Math.random() * curvePresets.length)];
+                    xEqInput.value = randomCurve.x;
+                    yEqInput.value = randomCurve.y;
+                    zEqInput.value = randomCurve.z;
+                    tMinInput.value = randomCurve.tMin;
+                    tMaxInput.value = randomCurve.tMax;
+                    pointCountInput.value = randomCurve.points;
+                    loadRandomGradient();
+                    generateParticles();
+                }
+            }
+        });
+
         delayToggle.addEventListener('change', () => {
             delayControls.classList.toggle('hidden', !delayToggle.checked);
         });
@@ -1513,7 +1823,7 @@
         colorFixerToggle.addEventListener('change', () => {
             colorFixerControls.classList.toggle('hidden', !colorFixerToggle.checked);
             if (colorFixerToggle.checked && particleData.length > 0) {
-                generateParticles(); // Regenerate with new colors
+                generateParticles();
             }
         });
 
@@ -1522,11 +1832,10 @@
             solidColorControls.classList.toggle('hidden', !isSolid);
             gradientControls.classList.toggle('hidden', isSolid);
             if (colorFixerToggle.checked && particleData.length > 0) {
-                generateParticles(); // Regenerate with new colors
+                generateParticles();
             }
         });
 
-        // Update output when settings change
         [coordModeSelect, versionSelector].forEach(el => {
             el.addEventListener('input', () => {
                 if (particleData.length > 0) {
@@ -1535,7 +1844,6 @@
             });
         });
 
-        // Update preview when scale/size settings change
         [outputWidthInput, outputHeightInput, particleScaleInput].forEach(el => {
             el.addEventListener('input', () => {
                 if (particleData.length > 0) {
@@ -1545,7 +1853,6 @@
             });
         });
 
-        // Sync color pickers with hex inputs
         colorFixerPicker.addEventListener('input', () => {
             colorFixerHex.value = colorFixerPicker.value;
             if (colorFixerToggle.checked && particleData.length > 0) {
@@ -1562,58 +1869,24 @@
             }
         });
 
-        gradientStartPicker.addEventListener('input', () => {
-            gradientStartHex.value = gradientStartPicker.value;
-            if (colorFixerToggle.checked && particleData.length > 0) {
-                generateParticles();
-            }
-        });
-
-        gradientStartHex.addEventListener('input', () => {
-            if (/^#[0-9A-F]{6}$/i.test(gradientStartHex.value)) {
-                gradientStartPicker.value = gradientStartHex.value;
-                if (colorFixerToggle.checked && particleData.length > 0) {
-                    generateParticles();
-                }
-            }
-        });
-
-        gradientEndPicker.addEventListener('input', () => {
-            gradientEndHex.value = gradientEndPicker.value;
-            if (colorFixerToggle.checked && particleData.length > 0) {
-                generateParticles();
-            }
-        });
-
-        gradientEndHex.addEventListener('input', () => {
-            if (/^#[0-9A-F]{6}$/i.test(gradientEndHex.value)) {
-                gradientEndPicker.value = gradientEndHex.value;
-                if (colorFixerToggle.checked && particleData.length > 0) {
-                    generateParticles();
-                }
-            }
-        });
-
         gradientDirection.addEventListener('change', () => {
             if (colorFixerToggle.checked && particleData.length > 0) {
                 generateParticles();
             }
         });
 
-        // Allow enter key in inputs
         [xEqInput, yEqInput, zEqInput, tMinInput, tMaxInput, pointCountInput].forEach(input => {
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') generateParticles();
             });
         });
 
-        // Auto-update preview as user types (with debouncing)
         let autoUpdateTimeout = null;
         const autoUpdate = () => {
             clearTimeout(autoUpdateTimeout);
             autoUpdateTimeout = setTimeout(() => {
                 generateParticles();
-            }, 500); // Wait 500ms after user stops typing
+            }, 500);
         };
 
         [xEqInput, yEqInput, zEqInput, tMinInput, tMaxInput, pointCountInput].forEach(input => {
@@ -1621,9 +1894,10 @@
         });
 
         // Initialize
+        initializeGradientStops();
         initScene();
-        loadRandomPreset(); // Load random preset
-        generateParticles(); // Generate it
+        loadRandomPreset();
+        generateParticles();
     </script>
 </body>
 </html>
