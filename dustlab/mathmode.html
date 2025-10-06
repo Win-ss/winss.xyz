@@ -563,7 +563,10 @@
                 <!-- Color Fixer Controls -->
                 <div class="form-section">
                     <div class="toggle-section">
-                        <span class="toggle-label">Color Fixer</span>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <button id="color-fixer-collapse-btn" class="btn-small btn-secondary-small" style="width: 30px; height: 30px; border-radius: 0; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 1rem;" hidden>−</button>
+                            <span class="toggle-label">Color Fixer</span>
+                        </div>
                         <label class="switch">
                             <input type="checkbox" id="color-fixer-toggle" checked>
                             <span class="slider"></span>
@@ -957,6 +960,7 @@
             '#FF0099',
             '#00FFFF'
         ];
+        let colorFixerCollapsed = true;
         const gradientStopsContainer = document.getElementById('gradient-stops-container');
         const addGradientStopBtn = document.getElementById('add-gradient-stop');
         
@@ -1201,10 +1205,9 @@
             gradientControls.classList.remove('hidden');
             solidColorControls.classList.add('hidden');
             
-            gradientStartHex.value = randomGradient.start;
-            gradientStartPicker.value = randomGradient.start;
-            gradientEndHex.value = randomGradient.end;
-            gradientEndPicker.value = randomGradient.end;
+            // Update the new multi-stop gradient system
+            gradientStops = [randomGradient.start, randomGradient.end];
+            updateGradientStopsUI();
             gradientDirection.value = randomGradient.direction;
         }
 
@@ -1816,9 +1819,29 @@
         });
 
         colorFixerToggle.addEventListener('change', () => {
-            colorFixerControls.classList.toggle('hidden', !colorFixerToggle.checked);
-            if (colorFixerToggle.checked && particleData.length > 0) {
+            const isEnabled = colorFixerToggle.checked;
+            document.getElementById('color-fixer-collapse-btn').style.display = isEnabled ? 'block' : 'none';
+            if (isEnabled) {
+                if (!colorFixerCollapsed) {
+                    colorFixerControls.classList.remove('hidden');
+                }
+            } else {
+                colorFixerControls.classList.add('hidden');
+                colorFixerCollapsed = false;
+            }
+            if (isEnabled && particleData.length > 0) {
                 generateParticles();
+            }
+        });
+
+        document.getElementById('color-fixer-collapse-btn').addEventListener('click', () => {
+            colorFixerCollapsed = !colorFixerCollapsed;
+            if (colorFixerCollapsed) {
+                colorFixerControls.classList.add('hidden');
+                document.getElementById('color-fixer-collapse-btn').textContent = '+';
+            } else {
+                colorFixerControls.classList.remove('hidden');
+                document.getElementById('color-fixer-collapse-btn').textContent = '−';
             }
         });
 
@@ -1906,10 +1929,19 @@
         pointCountInput.value = '200';
         uParamToggle.checked = false;
         uParamControls.classList.add('hidden');
+        
+        // Color fixer with a random gradient
+        loadRandomGradient();
+        document.getElementById('color-fixer-collapse-btn').style.display = 'block';
+        document.getElementById('color-fixer-collapse-btn').textContent = '+';
+        colorFixerControls.classList.add('hidden');
         generateParticles();
         
         setTimeout(() => {
             loadRandomPreset();
+            loadRandomGradient();
+            document.getElementById('color-fixer-collapse-btn').textContent = '+';
+            colorFixerControls.classList.add('hidden');
             generateParticles();
         }, 100);
     </script>
