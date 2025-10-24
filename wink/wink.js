@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvasContainer = document.getElementById('canvas-container');
     const notificationContainer = document.getElementById('notification-container');
     const pasteHint = document.querySelector('.paste-hint');
+    const searchInput = document.getElementById('effect-search');
+    const searchClear = document.getElementById('search-clear');
 
     function updatePasteHintVisibility(hasImage) {
         if (pasteHint) {
@@ -160,6 +162,120 @@ document.addEventListener('DOMContentLoaded', () => {
     let processingCtx = null;
     let recordingTimeoutId = null;
     let isFallbackCapturing = false;
+
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    }
+
+    const debouncedApplyEffects = debounce(() => {
+        applyAllEffects();
+        captureFrame();
+    }, 100);
+
+    const throttledApplyEffects = throttle(() => {
+        applyAllEffects();
+    }, 50);
+
+    function fuzzyMatch(searchTerm, targetText) {
+        searchTerm = searchTerm.toLowerCase().trim();
+        targetText = targetText.toLowerCase();
+        
+        if (searchTerm === '') return true;
+        
+        if (targetText.includes(searchTerm)) return true;
+        
+        let searchIndex = 0;
+        for (let i = 0; i < targetText.length && searchIndex < searchTerm.length; i++) {
+            if (targetText[i] === searchTerm[searchIndex]) {
+                searchIndex++;
+            }
+        }
+        if (searchIndex === searchTerm.length) return true;
+        
+        const words = targetText.split(/\s+/);
+        for (let word of words) {
+            if (word.startsWith(searchTerm)) return true;
+        }
+        
+        const acronym = targetText.split(/\s+/).map(w => w[0]).join('');
+        if (acronym.includes(searchTerm)) return true;
+        
+        return false;
+    }
+
+    function filterEffects(searchTerm) {
+        const effectItems = effectsContainer.querySelectorAll('.effect-item');
+        let visibleCount = 0;
+        
+        effectItems.forEach(item => {
+            const effectName = item.dataset.effectName;
+            if (fuzzyMatch(searchTerm, effectName)) {
+                item.classList.remove('hidden-by-search');
+                visibleCount++;
+            } else {
+                item.classList.add('hidden-by-search');
+            }
+        });
+        
+        let noResultsMsg = effectsContainer.querySelector('.no-results-message');
+        if (visibleCount === 0 && searchTerm.trim() !== '') {
+            if (!noResultsMsg) {
+                noResultsMsg = document.createElement('div');
+                noResultsMsg.className = 'no-results-message';
+                noResultsMsg.textContent = 'No effects found. Try a different search term!';
+                effectsContainer.appendChild(noResultsMsg);
+            }
+        } else if (noResultsMsg) {
+            noResultsMsg.remove();
+        }
+        
+        if (searchTerm.trim() !== '') {
+            searchClear.style.display = 'block';
+        } else {
+            searchClear.style.display = 'none';
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            filterEffects(e.target.value);
+        });
+        
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                searchInput.value = '';
+                filterEffects('');
+                searchInput.blur();
+            }
+        });
+    }
+
+    if (searchClear) {
+        searchClear.addEventListener('click', () => {
+            searchInput.value = '';
+            filterEffects('');
+            searchInput.focus();
+        });
+    }
 
     function animate(currentTime = 0) {
         if (hasAnimatedEffects()) {
@@ -638,6 +754,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const config = effects[name];
             const container = document.createElement('div');
             container.className = 'effect-item';
+            container.dataset.effectName = name; // Add data attribute for search
             if (effectStages[name] === 'animated') {
                 container.classList.add('animated-glow');
             }
@@ -1048,7 +1165,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const colorInput = document.createElement('input');
         colorInput.type = 'color';
         colorInput.value = value;
-        colorInput.className = 'color-input';        colorInput.addEventListener('input', () => {
+        colorInput.className = 'color-input';        
+        
+        // Use throttled updates for live preview
+        colorInput.addEventListener('input', () => {
+            effects[name][colorKey] = colorInput.value;
+            throttledApplyEffects();
+        });
+        
+        // Use change event for final capture
+        colorInput.addEventListener('change', () => {
             effects[name][colorKey] = colorInput.value;
             applyAllEffects();
             captureFrame();
@@ -1111,13 +1237,27 @@ document.addEventListener('DOMContentLoaded', () => {
         controlGroup.appendChild(color1Container);
         controlGroup.appendChild(color2Container);
         
+        // Use throttled updates for live preview
         color1Input.addEventListener('input', () => {
+            effects[name].color1 = color1Input.value;
+            throttledApplyEffects();
+        });
+        
+        // Use change event for final capture
+        color1Input.addEventListener('change', () => {
             effects[name].color1 = color1Input.value;
             applyAllEffects();
             captureFrame();
         });
         
+        // Use throttled updates for live preview
         color2Input.addEventListener('input', () => {
+            effects[name].color2 = color2Input.value;
+            throttledApplyEffects();
+        });
+        
+        // Use change event for final capture
+        color2Input.addEventListener('change', () => {
             effects[name].color2 = color2Input.value;
             applyAllEffects();
             captureFrame();
@@ -1183,6 +1323,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         
         colorInput.addEventListener('input', () => {
+            effects[name].backgroundColor = colorInput.value;
+            throttledApplyEffects();
+        });
+        
+        colorInput.addEventListener('change', () => {
             effects[name].backgroundColor = colorInput.value;
             applyAllEffects();
             captureFrame();
@@ -1283,11 +1428,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Event listeners
         lineColorInput.addEventListener('input', () => {
             effects[name].lineColor = lineColorInput.value;
+            throttledApplyEffects();
+        });
+        
+        lineColorInput.addEventListener('change', () => {
+            effects[name].lineColor = lineColorInput.value;
             applyAllEffects();
             captureFrame();
         });
         
         bgColorInput.addEventListener('input', () => {
+            effects[name].backgroundColor = bgColorInput.value;
+            throttledApplyEffects();
+        });
+        
+        bgColorInput.addEventListener('change', () => {
             effects[name].backgroundColor = bgColorInput.value;
             applyAllEffects();
             captureFrame();
@@ -2065,17 +2220,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         colorInput.addEventListener('input', () => {
             effects[name].color = colorInput.value;
-            if (colorUpdateFrameId !== null) {
-                cancelAnimationFrame(colorUpdateFrameId);
+            throttledApplyEffects();
+        });
+        
+        colorInput.addEventListener('change', () => {
+            effects[name].color = colorInput.value;
+            applyAllEffects();
+            captureFrame();
+            if (hasAnimatedEffects() && !animationFrameId) {
+                animate();
             }
-            colorUpdateFrameId = requestAnimationFrame(() => {
-                colorUpdateFrameId = null;
-                applyAllEffects();
-                captureFrame();
-                if (hasAnimatedEffects() && !animationFrameId) {
-                    animate();
-                }
-            });
         });
 
         colorInput.addEventListener('change', () => {
@@ -2211,6 +2365,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         colorInput.addEventListener('input', () => {
             effects[name].color = colorInput.value;
+            throttledApplyEffects();
+        });
+        
+        colorInput.addEventListener('change', () => {
+            effects[name].color = colorInput.value;
+            applyAllEffects();
+            captureFrame();
         });
 
         container.appendChild(controlGroup);
@@ -4188,7 +4349,7 @@ upload.addEventListener('change', (e) => {
         recordedChunks = [];
         fallbackFrames = [];
 
-        blinkBtn.textContent = 'BLINK (HD Video)';
+        blinkBtn.textContent = 'BLINK (Video)';
         blinkBtn.disabled = false;
         blinkBtn.style.backgroundColor = '';
     }
