@@ -116,11 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const BLINK_DURATION_MS = 5000;
-    const BLINK_TARGET_FPS = 30;
-    const BLINK_FALLBACK_CAPTURE_FPS = 6;
+    const BLINK_TARGET_FPS = 60;
+    const BLINK_FALLBACK_CAPTURE_FPS = 15;
     const BLINK_MIN_BITRATE = 3000000;
-    const BLINK_MAX_BITRATE = 12000000;
-    const BLINK_BITS_PER_PIXEL = 0.16;
+    const BLINK_MAX_BITRATE = 20000000;
+    const BLINK_BITS_PER_PIXEL = 0.2;
     const BLINK_MIME_CANDIDATES = [
         'video/webm;codecs=vp09.00.10.08',
         'video/webm;codecs=vp9',
@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function animate(currentTime = 0) {
         if (hasAnimatedEffects()) {
-            const targetFPS = isRecording ? 10 : 30;
+            const targetFPS = isRecording ? 60 : 30;
             const frameInterval = 1000 / targetFPS;
 
             if (currentTime - lastAnimationTime >= frameInterval) {
@@ -4158,7 +4158,7 @@ upload.addEventListener('change', (e) => {
             animate();
         }
 
-        const streamFps = Math.max(BLINK_TARGET_FPS, 10);
+        const streamFps = BLINK_TARGET_FPS;
 
         try {
             recordingStream = canvas.captureStream(streamFps);
