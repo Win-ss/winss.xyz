@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Viewport Info</title>
+<style>
+  body {
+    background:#000;
+    color:#fff;
+    font-family: monospace;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    height:100vh;
+    text-align:center;
+    font-size:18px;
+  }
+</style>
+</head>
+<body>
+<div id="info">Loading...</div>
+<script>
+function update() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  const physW = Math.round(w * dpr);
+  const physH = Math.round(h * dpr);
+  document.getElementById("info").innerHTML = `
+    Viewport: ${w} × ${h}<br>
+    DPR: ${dpr}<br>
+    Rendered (physical): ${physW} × ${physH}
+  `;
+}
+update();
+window.addEventListener("resize", update);
+</script>
+</body>
+</html>
