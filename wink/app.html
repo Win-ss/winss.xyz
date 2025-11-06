@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Wink v1.3 - Image Effects</title>
+    <title>Wink v1.3 - Image & Video Effects</title>
     <link rel="stylesheet" href="wink.css">
     
-    <meta name="description" content="Wink - Image Effects">
-    <meta property="og:title" content="Wink v1.3 - Image Effects App">
-    <meta property="og:description" content="image effects!!! wowww">
+    <meta name="description" content="Wink - Image & Video Effects">
+    <meta property="og:title" content="Wink v1.3 - Image & Video Effects App">
+    <meta property="og:description" content="image & video effects!!! wowww">
     <meta property="og:image" content="https://winss.xyz/assets/wink/winkwhite.png">
     <meta property="og:url" content="https://winss.xyz/wink/app.html">
     <meta property="og:type" content="website">
@@ -48,8 +48,8 @@
                         </div>
                     </div>
                 </div>
-                <input type="file" id="upload" class="input-file w-full text-sm"/>
-                <p class="paste-hint">Or paste an image!</p>
+                <input type="file" id="upload" accept="image/*,video/webm,.webm,.gif" class="input-file w-full text-sm"/>
+                <p class="paste-hint">Or paste an image/video!</p>
             </div>
 
             <div class="search-container">
@@ -78,6 +78,8 @@
                         <option>PNG</option>
                         <option>JPEG</option>
                         <option>WEBP</option>
+                        <option>WEBM</option>
+                        <option>GIF</option>
                     </select>
                 </div>
             </div>
@@ -92,6 +94,7 @@
                         <div class="custom-tooltip">Takes a 5s timelapse of the image (go wild! change the effects while recording!)</div>
                     </span>
                 </button>
+                <button id="export-video-btn" class="btn btn-secondary">Export Video</button>
                 <button id="download-btn" class="btn btn-primary">Download</button>
             </div>
             

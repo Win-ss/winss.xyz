@@ -1,0 +1,268 @@
+@font-face {
+    font-family: 'Monocraft';
+    src: url('../assets/Monocraft.woff2') format('woff2'),
+         url('../assets/Monocraft.woff') format('woff'),
+         url('../assets/Monocraft.ttc') format('truetype-collection');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Monocraft', monospace;
+    background: #000000;
+    color: #ffffff;
+    overflow-x: hidden;
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 60px 40px;
+    position: relative;
+    z-index: 1;
+}
+
+.main-header {
+    text-align: center;
+    margin-bottom: 80px;
+    animation: fadeInDown 0.8s ease;
+}
+
+.title {
+    font-size: 4rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+    letter-spacing: -2px;
+    user-select: none;
+    cursor: default;
+}
+
+.subtitle {
+    font-size: 1.2rem;
+    opacity: 0.6;
+    user-select: none;
+    cursor: default;
+}
+
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+    margin-bottom: 60px;
+    animation: fadeInUp 0.8s ease 0.2s both;
+}
+
+.tool-card {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    padding: 40px 30px;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 200px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px 0 rgba(255, 255, 255, 0.05);
+}
+
+.tool-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 0;
+}
+
+.tool-card:hover::before {
+    transform: scaleX(1);
+}
+
+.tool-card:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tool-card:hover .tool-title,
+.tool-card:hover .tool-description {
+    color: #ffffff;
+}
+
+.tool-content {
+    position: relative;
+    z-index: 1;
+}
+
+.tool-title {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 12px;
+    transition: color 0.3s ease;
+}
+
+.tool-description {
+    font-size: 0.95rem;
+    opacity: 0.8;
+    line-height: 1.5;
+    transition: color 0.3s ease;
+}
+
+.tool-card.placeholder {
+    background: #1a1a1a;
+    color: #666666;
+    border-color: #333333;
+    cursor: default;
+}
+
+.tool-card.placeholder:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.tool-card.placeholder::before {
+    display: none;
+}
+
+.tool-card.placeholder .tool-title,
+.tool-card.placeholder .tool-description {
+    color: #666666;
+}
+
+.back-link-container {
+    text-align: center;
+    animation: fadeInUp 0.8s ease 0.4s both;
+}
+
+.back-link {
+    display: inline-block;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 1.1rem;
+    padding: 12px 24px;
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.back-link:hover {
+    background: #ffffff;
+    color: #000000;
+    transform: translateY(-2px);
+}
+
+.version-text {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-size: 0.75rem;
+    opacity: 0.3;
+    user-select: none;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 1200px) {
+    .tools-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 25px;
+    }
+}
+
+@media (max-width: 900px) {
+    .tools-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    
+    .title {
+        font-size: 3rem;
+    }
+    
+    .tool-card {
+        min-height: 180px;
+        padding: 30px 25px;
+    }
+    
+    .tool-title {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .content {
+        padding: 40px 20px;
+    }
+    
+    .main-header {
+        margin-bottom: 50px;
+    }
+    
+    .title {
+        font-size: 2.5rem;
+    }
+    
+    .subtitle {
+        font-size: 1rem;
+    }
+    
+    .tools-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .tool-card {
+        min-height: 150px;
+        padding: 25px 20px;
+    }
+    
+    .tool-title {
+        font-size: 1.3rem;
+    }
+    
+    .tool-description {
+        font-size: 0.85rem;
+    }
+}

@@ -1058,3 +1058,26 @@ input:checked + .toggle-slider:before {
         transform: translateX(0);
     }
 }
+
+#export-video-btn {
+    display: none;
+    background-color: var(--button-secondary-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-right: 8px;
+}
+
+#export-video-btn:hover:not(:disabled) {
+    background-color: var(--button-secondary-hover-bg);
+}
+
+#export-video-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
