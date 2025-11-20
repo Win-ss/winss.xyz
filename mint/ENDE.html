@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENDE - Universal Translator</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
+    
+    <meta name="description" content="Translate between multiple languages and encodings">
+    <meta property="og:title" content="ENDE">
+    <meta property="og:description" content="Universal translator for text, encoding, and fun languages">
+    <meta property="og:image" content="https://winss.xyz/assets/favicon.png">
+    <meta property="og:url" content="https://winss.xyz/mint/ENDE.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#000000">
+    
+    <link rel="stylesheet" href="mint.css">
+    <style>
+        .title {
+            transition: all 0.5s ease;
+            cursor: pointer;
+            padding: 10px 30px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .title:hover {
+            animation: titleGlow 1s ease forwards;
+        }
+
+        @keyframes titleGlow {
+            0% {
+                filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+                color: #ffffff;
+                background: transparent;
+            }
+            30% {
+                filter: drop-shadow(0 0 30px rgba(255, 255, 255, 1)) drop-shadow(0 0 60px rgba(255, 255, 255, 0.8));
+                color: #ffffff;
+                background: transparent;
+            }
+            100% {
+                filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+                color: #000000;
+                background: #ffffff;
+            }
+        }
+
+        .translator-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .translation-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            opacity: 0.8;
+        }
+
+        .custom-select {
+            position: relative;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        .select-button {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 8px 35px 8px 12px;
+            font-family: 'Monocraft', monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-align: left;
+            position: relative;
+            user-select: none;
+        }
+
+        .select-button::after {
+            content: '▼';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            transition: transform 0.3s ease;
+        }
+
+        .select-button.open::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        .select-button:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .select-dropdown {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .select-dropdown.open {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .select-option {
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: 'Monocraft', monospace;
+            font-size: 0.9rem;
+        }
+
+        .select-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .select-option.selected {
+            background: rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+        }
+
+        .select-option:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .text-area {
+            width: 100%;
+            min-height: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Monocraft', monospace;
+            font-size: 1rem;
+            resize: vertical;
+            transition: all 0.3s ease;
+        }
+
+        .text-area:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .text-area::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .swap-button {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .swap-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translate(-50%, -50%) rotate(180deg);
+        }
+
+        .char-count {
+            text-align: right;
+            opacity: 0.5;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-button {
+            background: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-family: 'Monocraft', monospace;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .back-link-container {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .back-link {
+            color: #ffffff;
+            text-decoration: none;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+        }
+
+        .panel-wrapper {
+            position: relative;
+        }
+
+        @media (max-width: 968px) {
+            .translation-panel {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .swap-button {
+                position: static;
+                transform: none;
+                margin: 20px auto;
+                display: block;
+            }
+
+            .swap-button:hover {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <header class="main-header">
+            <h1 class="title">ENDE</h1>
+            <p class="subtitle">Useful translator</p>
+        </header>
+
+        <div class="translator-container">
+            <div class="panel-wrapper">
+                <div class="translation-panel">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Input</span>
+                            <div class="custom-select" id="inputSelect">
+                                <div class="select-button" data-value="auto">Auto-Detect</div>
+                                <div class="select-dropdown">
+                                    <div class="select-option selected" data-value="auto">Auto-Detect</div>
+                                    <div class="select-option" data-value="english">English</div>
+                                    <div class="select-option" data-value="galactic">Galactic (Minecraft)</div>
+                                    <div class="select-option" data-value="hieroglyphics">Egyptian Hieroglyphics</div>
+                                    <div class="select-option" data-value="mockery">MoCKeRy</div>
+                                    <div class="select-option" data-value="base64">Base64</div>
+                                    <div class="select-option" data-value="morse">Morse Code</div>
+                                    <div class="select-option" data-value="upsidedown">Upside Down</div>
+                                    <div class="select-option" data-value="leet">1337 Speak</div>
+                                    <div class="select-option" data-value="zalgo">Zalgo</div>
+                                    <div class="select-option" data-value="reverse">Reverse Text</div>
+                                </div>
+                            </div>
+                        </div>
+                        <textarea 
+                            class="text-area" 
+                            id="inputText" 
+                            placeholder="Type or paste text here..."
+                            spellcheck="false"
+                        ></textarea>
+                        <div class="char-count" id="inputCount">0 characters</div>
+                        <div class="quick-actions">
+                            <button class="action-button" id="clearInput">Clear</button>
+                            <button class="action-button" id="copyInput">Copy</button>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span class="panel-title">Output</span>
+                            <div class="custom-select" id="outputSelect">
+                                <div class="select-button" data-value="english">English</div>
+                                <div class="select-dropdown">
+                                    <div class="select-option selected" data-value="english">English</div>
+                                    <div class="select-option" data-value="galactic">Galactic (Minecraft)</div>
+                                    <div class="select-option" data-value="hieroglyphics">Egyptian Hieroglyphics</div>
+                                    <div class="select-option" data-value="mockery">MoCKeRy</div>
+                                    <div class="select-option" data-value="base64">Base64</div>
+                                    <div class="select-option" data-value="morse">Morse Code</div>
+                                    <div class="select-option" data-value="upsidedown">Upside Down</div>
+                                    <div class="select-option" data-value="leet">1337 Speak</div>
+                                    <div class="select-option" data-value="zalgo">Zalgo</div>
+                                    <div class="select-option" data-value="reverse">Reverse Text</div>
+                                </div>
+                            </div>
+                        </div>
+                        <textarea 
+                            class="text-area" 
+                            id="outputText" 
+                            placeholder="Translation appears here..."
+                            readonly
+                            spellcheck="false"
+                        ></textarea>
+                        <div class="char-count" id="outputCount">0 characters</div>
+                        <div class="quick-actions">
+                            <button class="action-button" id="copyOutput">Copy</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="swap-button" id="swapBtn" title="Swap languages">⇄</button>
+            </div>
+        </div>
+
+        <div class="back-link-container">
+            <a href="index.html" class="back-link">← Back to Mint</a>
+        </div>
+    </div>
+
+    <div class="version-text">v 1.0</div>
+
+    <script>
+        const galacticMap = {
+            'a': 'ᔑ', 'b': 'ʖ', 'c': 'ᓵ', 'd': '↸', 'e': 'ᒷ', 'f': '⎓', 'g': '⊣', 'h': '⍑',
+            'i': '╎', 'j': '⋮', 'k': 'ꖌ', 'l': 'ꖎ', 'm': 'ᒲ', 'n': 'リ', 'o': '𝙹', 'p': '!¡',
+            'q': 'ᑑ', 'r': '∷', 's': 'ᓭ', 't': 'ℸ', 'u': '⚍', 'v': '⍊', 'w': '∴', 'x': '̇/',
+            'y': '||', 'z': '⨅'
+        };
+
+        const hieroglyphicsMap = {
+            'a': '𓄿', 'b': '𓃀', 'c': '𓍿', 'd': '𓂧', 'e': '𓇌', 'f': '𓆑', 'g': '𓎼', 'h': '𓉔',
+            'i': '𓇋', 'j': '𓆓', 'k': '𓎡', 'l': '𓃭', 'm': '𓅓', 'n': '𓈖', 'o': '𓍯', 'p': '𓊪',
+            'q': '𓈎', 'r': '𓂋', 's': '𓋴', 't': '𓏏', 'u': '𓅱', 'v': '�', 'w': '𓅳', 'x': '𓐍',
+            'y': '𓇋𓇌', 'z': '𓊃'
+        };
+
+        const inputText = document.getElementById('inputText');
+        const outputText = document.getElementById('outputText');
+        const inputCount = document.getElementById('inputCount');
+        const outputCount = document.getElementById('outputCount');
+        const swapBtn = document.getElementById('swapBtn');
+
+        let inputLangValue = 'auto';
+        let outputLangValue = 'english';
+
+        class CustomSelect {
+            constructor(element) {
+                this.element = element;
+                this.button = element.querySelector('.select-button');
+                this.dropdown = element.querySelector('.select-dropdown');
+                this.options = element.querySelectorAll('.select-option');
+                this.value = this.button.dataset.value;
+                this.onChangeCallback = null;
+
+                this.init();
+            }
+
+            init() {
+                this.button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggle();
+                });
+
+                this.options.forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.selectOption(option);
+                    });
+                });
+
+                document.addEventListener('click', () => {
+                    this.close();
+                });
+
+                this.dropdown.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+            }
+
+            toggle() {
+                const wasOpen = this.dropdown.classList.contains('open');
+                document.querySelectorAll('.select-dropdown').forEach(dd => {
+                    dd.classList.remove('open');
+                });
+                document.querySelectorAll('.select-button').forEach(btn => {
+                    btn.classList.remove('open');
+                });
+
+                if (!wasOpen) {
+                    this.dropdown.classList.add('open');
+                    this.button.classList.add('open');
+                }
+            }
+
+            close() {
+                this.dropdown.classList.remove('open');
+                this.button.classList.remove('open');
+            }
+
+            selectOption(option) {
+                this.options.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                
+                this.value = option.dataset.value;
+                this.button.textContent = option.textContent;
+                this.button.dataset.value = this.value;
+                
+                this.close();
+
+                if (this.onChangeCallback) {
+                    this.onChangeCallback(this.value);
+                }
+            }
+
+            setValue(value) {
+                const option = Array.from(this.options).find(opt => opt.dataset.value === value);
+                if (option) {
+                    this.selectOption(option);
+                }
+            }
+
+            onChange(callback) {
+                this.onChangeCallback = callback;
+            }
+        }
+
+        const inputSelect = new CustomSelect(document.getElementById('inputSelect'));
+        const outputSelect = new CustomSelect(document.getElementById('outputSelect'));
+
+        inputSelect.onChange((value) => {
+            inputLangValue = value;
+            updateTranslation();
+        });
+
+        outputSelect.onChange((value) => {
+            outputLangValue = value;
+            updateTranslation();
+        });
+
+        function createReverseMap(map) {
+            const reverse = {};
+            for (const [key, value] of Object.entries(map)) {
+                reverse[value] = key;
+            }
+            return reverse;
+        }
+
+        const reverseGalactic = createReverseMap(galacticMap);
+        const reverseHieroglyphics = createReverseMap(hieroglyphicsMap);
+
+        const morseMap = {
+            'a': '.-', 'b': '-...', 'c': '-.-.', 'd': '-..', 'e': '.', 'f': '..-.',
+            'g': '--.', 'h': '....', 'i': '..', 'j': '.---', 'k': '-.-', 'l': '.-..',
+            'm': '--', 'n': '-.', 'o': '---', 'p': '.--.', 'q': '--.-', 'r': '.-.',
+            's': '...', 't': '-', 'u': '..-', 'v': '...-', 'w': '.--', 'x': '-..-',
+            'y': '-.--', 'z': '--..', '1': '.----', '2': '..---', '3': '...--',
+            '4': '....-', '5': '.....', '6': '-....', '7': '--...', '8': '---..',
+            '9': '----.', '0': '-----', ' ': '/'
+        };
+        const reverseMorse = Object.fromEntries(Object.entries(morseMap).map(([k, v]) => [v, k]));
+
+        const normalChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?";
+        const upsideChars = "ɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇnʌʍxʎz∀qƆpƎℲפHIſʞ˥WNOԀQɹS┴∩ΛMX⅄Z0123456789˙'¡¿";
+        const upsideMap = {};
+        const reverseUpsideMap = {};
+        for (let i = 0; i < normalChars.length; i++) {
+            upsideMap[normalChars[i]] = upsideChars[i] || normalChars[i];
+            reverseUpsideMap[upsideChars[i]] = normalChars[i];
+        }
+
+        const leetMap = {
+            'a': '4', 'b': '8', 'e': '3', 'g': '9', 'l': '1', 'o': '0', 's': '5', 't': '7', 'z': '2'
+        };
+        const reverseLeetMap = Object.fromEntries(Object.entries(leetMap).map(([k, v]) => [v, k]));
+
+        function toMorse(text) {
+            return text.toLowerCase().split('').map(char => morseMap[char] || char).join(' ');
+        }
+
+        function fromMorse(text) {
+            return text.split(' ').map(code => reverseMorse[code] || code).join('');
+        }
+
+        function toUpsideDown(text) {
+            return text.split('').reverse().map(char => upsideMap[char] || char).join('');
+        }
+
+        function fromUpsideDown(text) {
+            return text.split('').reverse().map(char => reverseUpsideMap[char] || char).join('');
+        }
+
+        function toLeet(text) {
+            return text.toLowerCase().split('').map(char => leetMap[char] || char).join('');
+        }
+
+        function fromLeet(text) {
+            return text.toLowerCase().split('').map(char => reverseLeetMap[char] || char).join('');
+        }
+
+        function toZalgo(text) {
+            const chars = text.split('');
+            return chars.map(char => {
+                if (char === ' ') return char;
+                let newChar = char;
+                const count = Math.floor(Math.random() * 5) + 1;
+                for(let i=0; i<count; i++) {
+                     newChar += String.fromCharCode(0x0300 + Math.floor(Math.random() * 112));
+                }
+                return newChar;
+            }).join('');
+        }
+
+        function removeZalgo(text) {
+            return text.replace(/[\u0300-\u036F]/g, '');
+        }
+
+        function reverseText(text) {
+            return text.split('').reverse().join('');
+        }
+
+        function toMockery(text) {
+            return text.split('').map((char, i) => {
+                if (char.match(/[a-zA-Z]/)) {
+                    return Math.random() > 0.5 ? char.toUpperCase() : char.toLowerCase();
+                }
+                return char;
+            }).join('');
+        }
+
+        function toGalactic(text) {
+            return text.toLowerCase().split('').map(char => 
+                galacticMap[char] || char
+            ).join('');
+        }
+
+        function fromGalactic(text) {
+            let result = '';
+            let i = 0;
+            const chars = Array.from(text);
+            
+            while (i < chars.length) {
+                let found = false;
+                
+                for (let len = 2; len >= 1; len--) {
+                    const substr = chars.slice(i, i + len).join('');
+                    if (reverseGalactic[substr]) {
+                        result += reverseGalactic[substr];
+                        i += len;
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (!found) {
+                    result += chars[i];
+                    i++;
+                }
+            }
+            
+            return result;
+        }
+
+        function toHieroglyphics(text) {
+            return text.toLowerCase().split('').map(char => 
+                hieroglyphicsMap[char] || char
+            ).join('');
+        }
+
+        function fromHieroglyphics(text) {
+            let result = '';
+            let i = 0;
+            const chars = Array.from(text);
+            
+            while (i < chars.length) {
+                let found = false;
+                
+                for (let len = 2; len >= 1; len--) {
+                    const substr = chars.slice(i, i + len).join('');
+                    if (reverseHieroglyphics[substr]) {
+                        result += reverseHieroglyphics[substr];
+                        i += len;
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if (!found) {
+                    result += chars[i];
+                    i++;
+                }
+            }
+            
+            return result;
+        }
+
+        function toBase64(text) {
+            try {
+                return btoa(unescape(encodeURIComponent(text)));
+            } catch (e) {
+                return text;
+            }
+        }
+
+        function fromBase64(text) {
+            try {
+                return decodeURIComponent(escape(atob(text)));
+            } catch (e) {
+                return text;
+            }
+        }
+
+        function detectLanguage(text) {
+            if (!text.trim()) return 'english';
+
+            const hasGalactic = Object.values(galacticMap).some(char => text.includes(char));
+            if (hasGalactic) return 'galactic';
+
+            const hasHieroglyphics = Object.values(hieroglyphicsMap).some(char => text.includes(char));
+            if (hasHieroglyphics) return 'hieroglyphics';
+
+            if (/^[\.\-\s\/]+$/.test(text.trim()) && (text.includes('.') || text.includes('-'))) {
+                return 'morse';
+            }
+            
+            if (/[ɐɔǝɟƃɥᴉɾʞɯuɹʇʌʍʎ]/.test(text)) {
+                return 'upsidedown';
+            }
+
+            if (/^[A-Za-z0-9+/=]+$/.test(text.trim()) && text.length % 4 === 0) {
+                try {
+                    fromBase64(text);
+                    return 'base64';
+                } catch (e) {}
+            }
+
+            return 'english';
+        }
+
+        function translate(text, fromLang, toLang) {
+            if (!text) return '';
+
+            if (fromLang === 'auto') {
+                fromLang = detectLanguage(text);
+            }
+
+            if (fromLang === toLang) {
+                return text;
+            }
+
+            let englishText = text;
+
+            if (fromLang !== 'english') {
+                if (fromLang === 'galactic') {
+                    englishText = fromGalactic(text);
+                } else if (fromLang === 'hieroglyphics') {
+                    englishText = fromHieroglyphics(text);
+                } else if (fromLang === 'base64') {
+                    englishText = fromBase64(text);
+                } else if (fromLang === 'mockery') {
+                    englishText = text.toLowerCase();
+                } else if (fromLang === 'morse') {
+                    englishText = fromMorse(text);
+                } else if (fromLang === 'upsidedown') {
+                    englishText = fromUpsideDown(text);
+                } else if (fromLang === 'leet') {
+                    englishText = fromLeet(text);
+                } else if (fromLang === 'zalgo') {
+                    englishText = removeZalgo(text);
+                } else if (fromLang === 'reverse') {
+                    englishText = reverseText(text);
+                }
+            }
+
+            if (toLang === 'english') {
+                return englishText;
+            }
+
+            if (toLang === 'galactic') {
+                return toGalactic(englishText);
+            } else if (toLang === 'hieroglyphics') {
+                return toHieroglyphics(englishText);
+            } else if (toLang === 'mockery') {
+                return toMockery(englishText);
+            } else if (toLang === 'base64') {
+                return toBase64(englishText);
+            } else if (toLang === 'morse') {
+                return toMorse(englishText);
+            } else if (toLang === 'upsidedown') {
+                return toUpsideDown(englishText);
+            } else if (toLang === 'leet') {
+                return toLeet(englishText);
+            } else if (toLang === 'zalgo') {
+                return toZalgo(englishText);
+            } else if (toLang === 'reverse') {
+                return reverseText(englishText);
+            }
+
+            return englishText;
+        }
+
+        function updateTranslation() {
+            const input = inputText.value;
+            const fromLang = inputLangValue;
+            const toLang = outputLangValue;
+
+            const result = translate(input, fromLang, toLang);
+            outputText.value = result;
+
+            inputCount.textContent = `${input.length} characters`;
+            outputCount.textContent = `${result.length} characters`;
+        }
+
+        inputText.addEventListener('input', updateTranslation);
+
+        swapBtn.addEventListener('click', () => {
+            const tempText = inputText.value;
+            const tempLang = inputLangValue === 'auto' ? detectLanguage(tempText) : inputLangValue;
+
+            inputText.value = outputText.value;
+            outputText.value = tempText;
+
+            const tempInputValue = outputLangValue;
+            inputSelect.setValue(tempInputValue);
+            outputSelect.setValue(tempLang);
+
+            updateTranslation();
+        });
+
+        document.getElementById('clearInput').addEventListener('click', () => {
+            inputText.value = '';
+            updateTranslation();
+        });
+
+        document.getElementById('copyInput').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(inputText.value);
+                const btn = document.getElementById('copyInput');
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy', 1500);
+            } catch (e) {
+                console.error('Copy failed:', e);
+            }
+        });
+
+        document.getElementById('copyOutput').addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(outputText.value);
+                const btn = document.getElementById('copyOutput');
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy', 1500);
+            } catch (e) {
+                console.error('Copy failed:', e);
+            }
+        });
+    </script>
+</body>
+</html>

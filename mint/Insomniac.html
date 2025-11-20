@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insomniac - Keep Screen Awake</title>
+    <link rel="icon" type="image/png" href="../assets/insomniac.png">
+    <link rel="shortcut icon" type="image/png" href="../assets/insomniac.png">
+    <link rel="apple-touch-icon" href="../assets/insomniac.png">
+    
+    <meta name="description" content="Keep your screen awake and prevent device sleep">
+    <meta property="og:title" content="Insomniac">
+    <meta property="og:description" content="Keep your screen awake and prevent device sleep">
+    <meta property="og:image" content="https://winss.xyz/assets/insomniac.png">
+    <meta property="og:url" content="https://winss.xyz/mint/Insomniac.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Insomniac">
+    <link rel="manifest" href="manifest.json">
+    
+    <link rel="stylesheet" href="mint.css">
+    <style>
+        body {
+            background: #000000;
+        }
+
+        .content {
+            padding: 0;
+            max-width: none;
+        }
+
+        .main-header {
+            display: none;
+        }
+
+        .black-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3rem;
+            z-index: 2;
+            user-select: none;
+            pointer-events: none;
+        }
+
+        .sleeping {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .awake {
+            animation: glow 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
+            50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
+        }
+
+        @keyframes glow {
+            0%, 100% { opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)); }
+            50% { opacity: 0.8; filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)); }
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .popup-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .popup-container {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 40px 35px;
+            max-width: 500px;
+            width: 85%;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: popupSlide 0.4s ease;
+        }
+
+        @keyframes popupSlide {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .popup-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+
+        .popup-title {
+            font-size: 1.75rem;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .popup-subtitle {
+            font-size: 0.95rem;
+            opacity: 0.6;
+            margin-bottom: 20px;
+        }
+
+        .popup-description {
+            opacity: 0.8;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            font-size: 0.9rem;
+        }
+
+        .popup-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .popup-button {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 14px 25px;
+            font-family: 'Monocraft', monospace;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .popup-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .popup-button.primary {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .popup-button.secondary {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            padding: 12px 20px;
+        }
+
+        .back-link {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #ffffff;
+            text-decoration: none;
+            opacity: 0.3;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            font-size: 1rem;
+            z-index: 2;
+        }
+
+        .back-link:hover {
+            opacity: 0.7;
+            transform: translateX(-50%);
+        }
+
+        .blackout-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            z-index: 9999;
+            display: none;
+        }
+
+        .blackout-mode.active {
+            display: block;
+        }
+
+        /* Tablet landscape */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .status-indicator {
+                font-size: 2.2rem;
+                top: 20px;
+            }
+
+            .popup-container {
+                padding: 35px 30px;
+                max-width: 480px;
+                width: 80%;
+            }
+
+            .popup-icon {
+                font-size: 3.5rem;
+                margin-bottom: 12px;
+            }
+
+            .popup-title {
+                font-size: 1.5rem;
+                margin-bottom: 8px;
+            }
+
+            .popup-subtitle {
+                font-size: 0.85rem;
+                margin-bottom: 18px;
+            }
+
+            .popup-description {
+                font-size: 0.8rem;
+                line-height: 1.5;
+                margin-bottom: 20px;
+            }
+
+            .popup-button {
+                padding: 12px 22px;
+                font-size: 0.85rem;
+                letter-spacing: 0.5px;
+            }
+
+            .popup-button.secondary {
+                font-size: 0.75rem;
+                padding: 10px 18px;
+            }
+
+            .back-link {
+                font-size: 0.9rem;
+                bottom: 20px;
+            }
+        }
+
+        /* Mobile and small tablets */
+        @media (max-width: 768px) {
+            .status-indicator {
+                font-size: 1.8rem;
+                top: 15px;
+            }
+
+            .popup-container {
+                padding: 30px 25px;
+                width: 88%;
+            }
+
+            .popup-icon {
+                font-size: 3rem;
+                margin-bottom: 10px;
+            }
+
+            .popup-title {
+                font-size: 1.3rem;
+                margin-bottom: 8px;
+            }
+
+            .popup-subtitle {
+                font-size: 0.8rem;
+                margin-bottom: 15px;
+            }
+
+            .popup-description {
+                font-size: 0.75rem;
+                margin-bottom: 18px;
+            }
+
+            .popup-button {
+                padding: 11px 20px;
+                font-size: 0.8rem;
+            }
+
+            .popup-button.secondary {
+                font-size: 0.7rem;
+                padding: 9px 16px;
+            }
+        }
+
+        /* Small phones */
+        @media (max-width: 480px) {
+            .status-indicator {
+                font-size: 1.5rem;
+                top: 10px;
+            }
+
+            .popup-container {
+                padding: 25px 20px;
+                width: 92%;
+            }
+
+            .popup-icon {
+                font-size: 2.5rem;
+                margin-bottom: 8px;
+            }
+
+            .popup-title {
+                font-size: 1.1rem;
+                margin-bottom: 6px;
+            }
+
+            .popup-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 12px;
+            }
+
+            .popup-description {
+                font-size: 0.7rem;
+                margin-bottom: 15px;
+                line-height: 1.4;
+            }
+
+            .popup-button {
+                padding: 10px 18px;
+                font-size: 0.75rem;
+            }
+
+            .popup-button.secondary {
+                font-size: 0.65rem;
+                padding: 8px 14px;
+            }
+
+            .back-link {
+                font-size: 0.85rem;
+                bottom: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div class="black-screen">
+            <div class="status-indicator sleeping" id="statusIcon">💤</div>
+        </div>
+
+        <div class="blackout-mode" id="blackoutMode"></div>
+
+        <div class="popup-overlay show" id="popupOverlay">
+            <div class="popup-container" id="popupContainer">
+                <div class="popup-icon">💤</div>
+                <h1 class="popup-title">Insomniac</h1>
+                <p class="popup-subtitle">Keep Your Screen Awake</p>
+                <p class="popup-description">
+                    This page prevents your device from sleeping while it's open. 
+                    <br><br>
+                    Your screen will stay awake automatically. Close this tab to allow normal sleep behavior.
+                </p>
+                <div class="popup-buttons">
+                    <button class="popup-button primary" id="continueButton">Continue</button>
+                    <button class="popup-button" id="pipButton">Enable Pip</button>
+                    <button class="popup-button" id="installButton" style="display: none;">📱 Install as App?</button>
+                    <button class="popup-button secondary" id="neverShowButton">Never Show This Again</button>
+                </div>
+            </div>
+        </div>
+
+        <a href="index.html" class="back-link">← Back to Mint</a>
+    </div>
+
+    <script>
+        let wakeLock = null;
+        let videoElement = null;
+        let fallbackInterval = null;
+        let deferredPrompt = null;
+        let pipVideo = null;
+
+        const statusIcon = document.getElementById('statusIcon');
+        const popupOverlay = document.getElementById('popupOverlay');
+        const popupContainer = document.getElementById('popupContainer');
+        const continueButton = document.getElementById('continueButton');
+        const pipButton = document.getElementById('pipButton');
+        const installButton = document.getElementById('installButton');
+        const neverShowButton = document.getElementById('neverShowButton');
+        const blackoutMode = document.getElementById('blackoutMode');
+
+        const STORAGE_KEY = 'insomniac_hide_popup';
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                e.preventDefault();
+                blackoutMode.classList.toggle('active');
+            }
+        });
+
+        function checkPopupPreference() {
+            return localStorage.getItem(STORAGE_KEY) === 'true';
+        }
+
+        function hidePopup() {
+            popupOverlay.classList.remove('show');
+        }
+
+        function hidePopupForever() {
+            localStorage.setItem(STORAGE_KEY, 'true');
+            hidePopup();
+        }
+
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock released');
+                    });
+                    return true;
+                }
+                return false;
+            } catch (err) {
+                console.log('Wake Lock API not available:', err);
+                return false;
+            }
+        }
+
+        function createVideoFallback() {
+            if (!videoElement) {
+                videoElement = document.createElement('video');
+                videoElement.style.position = 'fixed';
+                videoElement.style.opacity = '0';
+                videoElement.style.pointerEvents = 'none';
+                videoElement.style.width = '1px';
+                videoElement.style.height = '1px';
+                videoElement.setAttribute('playsinline', '');
+                videoElement.setAttribute('muted', '');
+                videoElement.loop = true;
+                
+                const source = document.createElement('source');
+                source.src = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAu1tZGF0AAACrgYF//+q3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0OCByMjc0MyA1Yzg1ZTA0IC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNSAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTI1IHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAA';
+                source.type = 'video/mp4';
+                videoElement.appendChild(source);
+                
+                document.body.appendChild(videoElement);
+            }
+            
+            videoElement.play().catch(() => {
+                console.log('Video fallback failed');
+            });
+        }
+
+        function startNoSleepFallback() {
+            createVideoFallback();
+            
+            fallbackInterval = setInterval(() => {
+                document.dispatchEvent(new Event('mousemove'));
+                document.dispatchEvent(new Event('keypress'));
+            }, 15000);
+        }
+
+        async function activate() {
+            const wakeLockSuccess = await requestWakeLock();
+            
+            if (!wakeLockSuccess) {
+                startNoSleepFallback();
+            }
+            
+            statusIcon.textContent = '💤';
+            statusIcon.className = 'status-indicator awake';
+        }
+
+        async function enterPiPMode() {
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 360;
+                const ctx = canvas.getContext('2d');
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.01)'; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.fillRect(canvas.width - 10, canvas.height - 10, 5, 5);
+                
+                pipVideo = document.createElement('video');
+                pipVideo.style.position = 'fixed';
+                pipVideo.style.opacity = '0';
+                pipVideo.style.pointerEvents = 'none';
+                pipVideo.style.width = '640px';
+                pipVideo.style.height = '360px';
+                pipVideo.setAttribute('playsinline', '');
+                pipVideo.setAttribute('muted', '');
+                pipVideo.loop = true;
+                pipVideo.muted = true;
+                
+                const stream = canvas.captureStream(1);
+                pipVideo.srcObject = stream;
+                
+                document.body.appendChild(pipVideo);
+                
+                await pipVideo.play();
+                
+                if (document.pictureInPictureEnabled) {
+                    await pipVideo.requestPictureInPicture();
+                    
+                    hidePopup();
+                    statusIcon.textContent = '🎬';
+                    statusIcon.className = 'status-indicator awake';
+                    
+                    pipVideo.addEventListener('leavepictureinpicture', () => {
+                        statusIcon.textContent = '💤';
+                        if (pipVideo) {
+                            pipVideo.srcObject.getTracks().forEach(track => track.stop());
+                            pipVideo.remove();
+                            pipVideo = null;
+                        }
+                    });
+                } else {
+                    alert('Picture-in-Picture is not supported in your browser. Try using Chrome, Edge, or Safari.');
+                    if (pipVideo) {
+                        pipVideo.remove();
+                        pipVideo = null;
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to enter PiP mode:', err);
+                alert('Could not enable floating mode. Make sure you allow Picture-in-Picture in your browser settings.');
+                if (pipVideo) {
+                    pipVideo.remove();
+                    pipVideo = null;
+                }
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            
+            if (isMobile || isTouchDevice) {
+                installButton.style.display = 'block';
+            }
+        });
+
+        installButton.addEventListener('click', async () => {
+            if (!deferredPrompt) {
+                alert('To install this app:\n\n' +
+                      'Android/Chrome: Tap the menu (⋮) and select "Install app" or "Add to Home screen"\n\n' +
+                      'iOS/Safari: Tap the Share button (⬆️) and select "Add to Home Screen"');
+                return;
+            }
+            
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                installButton.style.display = 'none';
+            }
+            
+            deferredPrompt = null;
+        });
+
+        continueButton.addEventListener('click', () => {
+            hidePopup();
+        });
+
+        pipButton.addEventListener('click', async () => {
+            await enterPiPMode();
+        });
+
+        neverShowButton.addEventListener('click', () => {
+            hidePopupForever();
+        });
+
+        popupOverlay.addEventListener('click', (e) => {
+            if (e.target === popupOverlay) {
+                hidePopup();
+            }
+        });
+
+        if (checkPopupPreference()) {
+            hidePopup();
+        }
+
+        activate();
+
+        setTimeout(() => {
+            if (installButton.style.display === 'none' && !deferredPrompt) {
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                                   window.navigator.standalone || 
+                                   document.referrer.includes('android-app://');
+                
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                
+                if (!isStandalone && (isMobile || isTouchDevice)) {
+                    installButton.style.display = 'block';
+                }
+            }
+        }, 2000);
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+    </script>
+</body>
+</html>

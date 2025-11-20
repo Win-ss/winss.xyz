@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mazeify</title>
+    <link rel="icon" type="image/png" href="../assets/mazeify.png">
+    <link rel="shortcut icon" type="image/png" href="../assets/mazeify.png">
+    
+    <meta name="description" content="Mazeify - Explore infinite mazes, collect coins, and upgrade your gear!">
+    <meta property="og:title" content="Mazeify">
+    <meta property="og:description" content="Explore infinite mazes, collect coins, and upgrade your gear in this endless maze adventure.">
+    <meta property="og:image" content="https://winss.xyz/assets/mazeify.png">
+    <meta property="og:url" content="https://winss.xyz/mint/mazeify.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#9e59d6">
+
+    <link rel="stylesheet" href="mint.css">
+    <style>
+        .bottom-controls {
+            margin-top: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        .control-btn {
+            background: #333;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            flex: 1;
+            transition: all 0.2s;
+            font-family: 'Monocraft', monospace;
+        }
+        .control-btn:hover { background: #444; }
+        .control-btn.muted { color: #ff6666; border-color: #ff6666; }
+        
+        .quick-info {
+            position: relative;
+            cursor: help;
+        }
+        .info-icon {
+            background: #2a2a2a;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            border: 1px solid #444;
+            display: inline-block;
+        }
+        .info-content {
+            display: none;
+            position: absolute;
+            bottom: 120%;
+            right: -10px;
+            width: 280px;
+            background: rgba(15, 15, 20, 0.98);
+            border: 1px solid #00ffff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.9);
+            z-index: 1000;
+            font-size: 0.85rem;
+            color: #ccc;
+            pointer-events: none;
+        }
+        .quick-info:hover .info-content {
+            display: block;
+        }
+        .info-content h3 { margin: 0 0 10px 0; color: #00ffff; font-family: 'Monocraft', monospace; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .info-content ul { padding-left: 20px; margin: 0; }
+        .info-content li { margin-bottom: 6px; line-height: 1.3; }
+        .info-highlight { color: #ffd700; }
+
+        .mobile-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .mobile-warning-content {
+            background-color: #111;
+            border: 1px solid #333;
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 0 50px rgba(158, 89, 214, 0.2);
+        }
+
+        .mobile-warning-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .mobile-warning-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: #fff;
+        }
+
+        .mobile-warning-text {
+            color: #aaa;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .mobile-warning-button {
+            background-color: #9e59d6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        .mobile-warning-button:hover {
+            background-color: #b275e6;
+            transform: translateY(-2px);
+        }
+        
+        .mobile-warning-button.secondary {
+            background-color: transparent;
+            border: 1px solid #555;
+            color: #aaa;
+        }
+        
+        .mobile-warning-button.secondary:hover {
+            background-color: #222;
+            border-color: #777;
+            color: #fff;
+        }
+
+        .main-content {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-warning {
+                display: flex;
+            }
+            
+            .main-content {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="maze-page">
+    <div class="mobile-warning">
+        <div class="mobile-warning-content">
+            <div class="mobile-warning-icon">💻</div>
+            <h2 class="mobile-warning-title">Desktop Required</h2>
+            <p class="mobile-warning-text">
+                Mazeify requires a keyboard (WASD/Arrows) and is best experienced on a desktop.
+            </p>
+            <a href="../index.html" class="mobile-warning-button">← Back to Home</a>
+            <button id="close-warning" class="mobile-warning-button secondary">I have a keyboard</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+    <div class="maze-container">
+        <h1>Mazeify</h1>
+        <div id="stats">
+            <span id="stage">Stage: 1</span>
+            <span id="moves">Moves: 0</span>
+            <span id="time">Time: 0s</span>
+            <span id="coins" class="currency-display">Coins: 0</span>
+            <span id="visionLvl">Vision: 1</span>
+            <span id="pickaxes" style="color: #ff4444; display: none;">⛏️: 0</span>
+        </div>
+        <canvas id="mazeCanvas"></canvas>
+    </div>
+
+    <!-- Sidebar Shop -->
+    <div class="shop-sidebar">
+        <h2>Shop</h2>
+        <div id="gameLog" class="game-log">
+            <div class="log-entry">The maze, is mazing.</div>
+        </div>
+        <div class="shop-grid">
+            <div class="shop-item" onclick="buyUpgrade('vision')">
+                <div class="shop-item-icon">👀</div>
+                <div class="shop-item-details">
+                    <div class="shop-item-name">Vision +1</div>
+                    <div class="shop-item-cost" id="visionCost">50 Coins</div>
+                </div>
+            </div>
+            <div class="shop-item" onclick="buyUpgrade('reveal')">
+                <div class="shop-item-icon">🗺️</div>
+                <div class="shop-item-details">
+                    <div class="shop-item-name">Reveal Map</div>
+                    <div class="shop-item-cost">100 Coins</div>
+                </div>
+            </div>
+            <div class="shop-item" id="btnPickaxe" onclick="buyUpgrade('pickaxe')">
+                <div class="shop-item-icon">⛏️</div>
+                <div class="shop-item-details">
+                    <div class="shop-item-name">Pickaxe x2</div>
+                    <div class="shop-item-cost">150 Coins</div>
+                </div>
+            </div>
+            <div class="shop-item" id="btnBreadcrumbs" onclick="buyUpgrade('breadcrumbs')">
+                <div class="shop-item-icon">🍞</div>
+                <div class="shop-item-details">
+                    <div class="shop-item-name">Crumbs</div>
+                    <div class="shop-item-cost">200 Coins</div>
+                </div>
+            </div>
+            <div class="shop-item locked" id="btnCompass" onclick="buyUpgrade('compass')">
+                <div class="shop-item-icon">🧭</div>
+                <div class="shop-item-details">
+                    <div class="shop-item-name">Compass</div>
+                    <div class="shop-item-cost">500 Coins</div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top: 20px; font-size: 0.8rem; color: #888; text-align: center;">
+            Controls: WASD/Arrows to Move<br>SPACE to use Pickaxe
+        </div>
+        
+        <div class="bottom-controls">
+            <button id="muteBtn" class="control-btn">Music On</button>
+            <button id="resetBtn" class="control-btn" style="border-color: #ff4444; color: #ff4444;">Reset</button>
+            <div class="quick-info">
+                <span class="info-icon">Guide</span>
+                <div class="info-content">
+                    <h3>Guide</h3>
+                    <ul>
+                        <li><strong>Goal:</strong> Reach the <span style="color: #ff4444">Red</span>/<span style="color: #00ff00">Green</span> Diamond.</li>
+                        <li><strong>Key:</strong> Find 🔑 to unlock the goal.</li>
+                        <li><strong>Mining:</strong> Use Pickaxe (Space) on walls to break them.
+                            <ul style="margin-top: 5px; font-size: 0.8em; color: #aaa;">
+                                <li>🟡 +50 Coins</li>
+                                <li>🔵 Temp Speed Boost</li>
+                                <li>🟣 Temp Vision Boost</li>
+                            </ul>
+                        </li>
+                        <li><strong>Hazards:</strong>
+                            <ul style="margin-top: 5px; font-size: 0.8em; color: #aaa;">
+                                <li>Ice: You slide until you hit something.</li>
+                                <li>Cracks: Floor breaks behind you.</li>
+                                <li>Darkness: Vision fades temporarily. (Hopefully, maybe??)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        document.getElementById('close-warning').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelector('.mobile-warning').style.display = 'none';
+            document.querySelector('.main-content').style.display = 'flex';
+        });
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (!audioCtx) return;
+            
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            switch (type) {
+                case 'bump':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(100, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                    break;
+                case 'break':
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(100, now);
+                    osc.frequency.exponentialRampToValueAtTime(20, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                    break;
+                case 'buy':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.linearRampToValueAtTime(800, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                    break;
+                case 'key':
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1000, now);
+                    osc.frequency.exponentialRampToValueAtTime(2000, now + 0.2);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                    break;
+                case 'win':
+                    [440, 554, 659, 880].forEach((freq, i) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        o.type = 'triangle';
+                        o.frequency.value = freq;
+                        g.gain.setValueAtTime(0.1, now + i*0.1);
+                        g.gain.exponentialRampToValueAtTime(0.01, now + i*0.1 + 0.2);
+                        o.start(now + i*0.1);
+                        o.stop(now + i*0.1 + 0.2);
+                    });
+                    break;
+            }
+        }
+
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const stageEl = document.getElementById('stage');
+        const movesEl = document.getElementById('moves');
+        const timeEl = document.getElementById('time');
+        const coinsEl = document.getElementById('coins');
+        const visionLvlEl = document.getElementById('visionLvl');
+        const pickaxesEl = document.getElementById('pickaxes');
+        const visionCostEl = document.getElementById('visionCost');
+        const btnCompass = document.getElementById('btnCompass');
+
+        const bgMusic = new Audio('../assets/maze_theme.mp3');
+        bgMusic.loop = true;
+        bgMusic.volume = 0.4;
+
+        const muteBtn = document.getElementById('muteBtn');
+        let isMuted = false;
+
+        muteBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            isMuted = !isMuted;
+            if (isMuted) {
+                bgMusic.volume = 0;
+                muteBtn.textContent = 'Music Off';
+                muteBtn.classList.add('muted');
+            } else {
+                bgMusic.volume = 0.4;
+                muteBtn.textContent = 'Music On';
+                muteBtn.classList.remove('muted');
+                
+                if (bgMusic.paused && !document.hidden) bgMusic.play();
+            }
+        });
+
+        let audioInitialized = false;
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                bgMusic.pause();
+            } else if (audioInitialized && !isMuted) {
+                bgMusic.play().catch(e => console.log("Audio resume failed:", e));
+            }
+        });
+
+        function initAudio() {
+            if (audioInitialized) return;
+            audioInitialized = true;
+            
+            if (!isMuted) {
+                bgMusic.play().catch(e => console.log("Audio play failed:", e));
+            }
+            
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        let level = 1;
+        let moves = 0;
+        let time = 0;
+        let coins = 0;
+        let timer;
+        let maze, player, goal;
+        let teleporters = [];
+        let iceTiles = [];
+        let crumblingTiles = [];
+        let ores = [];
+        let breadcrumbs = [];
+        let key = null;
+        let hasKey = false;
+        
+        
+        let viewRadius = 6;
+        let visionLevel = 1;
+        let visionCost = 50;
+        let pickaxeCount = 0;
+        let hasCompass = false;
+        let hasBreadcrumbs = false;
+        let activeBuffs = { speed: 0, vision: 0 };
+        
+        const cellSize = 20;
+        let isGameActive = true;
+        let isSliding = false;
+        let lastMoveTime = 0;
+        const BASE_MOVE_COOLDOWN = 75;
+        let darknessTimer = 0;
+        let isDarknessActive = false;
+
+        // --- Persistence & Reset Logic ---
+        function saveGame() {
+            const state = {
+                level,
+                coins,
+                visionLevel,
+                visionCost,
+                pickaxeCount,
+                hasCompass,
+                hasBreadcrumbs,
+                viewRadius: Math.max(6, viewRadius) 
+            };
+            localStorage.setItem('mazeify_save', JSON.stringify(state));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('mazeify_save');
+            if (saved) {
+                try {
+                    const state = JSON.parse(saved);
+                    level = state.level || 1;
+                    coins = state.coins || 0;
+                    visionLevel = state.visionLevel || 1;
+                    visionCost = state.visionCost || 50;
+                    pickaxeCount = state.pickaxeCount || 0;
+                    hasCompass = state.hasCompass || false;
+                    hasBreadcrumbs = state.hasBreadcrumbs || false;
+                    viewRadius = state.viewRadius || 6;
+                    
+                    visionLvlEl.textContent = `Vision: ${visionLevel}`;
+                    document.getElementById('visionCost').textContent = `${visionCost} Coins`;
+                    updateCoinsDisplay();
+                    updatePickaxeDisplay();
+                    if (hasBreadcrumbs) {
+                        document.getElementById('btnBreadcrumbs').classList.add('locked');
+                        document.getElementById('btnBreadcrumbs').style.opacity = '0.5';
+                    }
+                    if (hasCompass) {
+                        document.getElementById('btnCompass').classList.add('locked');
+                        document.getElementById('btnCompass').style.opacity = '0.5';
+                    }
+                    logMessage("Welcome back! Progress loaded.", "highlight");
+                } catch (e) {
+                    console.error("Failed to load save:", e);
+                }
+            }
+        }
+
+        const resetBtn = document.getElementById('resetBtn');
+        let resetTimeout;
+        resetBtn.addEventListener('click', () => {
+            initAudio();
+            if (resetBtn.classList.contains('confirm-reset')) {
+                localStorage.removeItem('mazeify_save');
+                location.reload();
+            } else {
+                resetBtn.textContent = "Confirm?";
+                resetBtn.classList.add('confirm-reset');
+                resetBtn.style.backgroundColor = "#500";
+                resetTimeout = setTimeout(() => {
+                    resetBtn.textContent = "Reset";
+                    resetBtn.classList.remove('confirm-reset');
+                    resetBtn.style.backgroundColor = "";
+                }, 2000);
+            }
+        });
+
+        function setup() {
+            isGameActive = true;
+            isSliding = false;
+            moves = 0;
+            time = 0;
+            hasKey = false;
+            breadcrumbs = [];
+            isDarknessActive = false;
+            darknessTimer = Math.floor(Math.random() * 60) + 60; 
+            
+            
+            if (activeBuffs.speed > 0) activeBuffs.speed--;
+            if (activeBuffs.vision > 0) activeBuffs.vision--;
+
+            clearInterval(timer);
+            stageEl.textContent = `Stage: ${level}`;
+            movesEl.textContent = `Moves: ${moves}`;
+            timeEl.textContent = `Time: ${time}s`;
+            visionLvlEl.textContent = `Vision: ${visionLevel}`;
+            updateCoinsDisplay();
+            updatePickaxeDisplay();
+            checkShopLocks();
+            
+            
+            if (level === 2) logMessage("New: Ores detected! Use pickaxe to mine.", "highlight");
+            if (level === 5) logMessage("Warning: Unstable floors detected.", "warning");
+            if (level === 7) logMessage("Warning: Darkness approaching...", "warning");
+
+            timer = setInterval(() => {
+                if(isGameActive && !document.hidden) {
+                    time++;
+                    timeEl.textContent = `Time: ${time}s`;
+                    
+                    
+                    if (level >= 7) {
+                        if (!isDarknessActive) {
+                            darknessTimer--;
+                            if (darknessTimer <= 0) {
+                                isDarknessActive = true;
+                                darknessTimer = 5; 
+                                playSound('bump'); 
+                                logMessage("Darkness has fallen!", "warning");
+                                draw();
+                            }
+                        } else {
+                            darknessTimer--;
+                            if (darknessTimer <= 0) {
+                                isDarknessActive = false;
+                                darknessTimer = Math.floor(Math.random() * 60) + 60; 
+                                logMessage("The light returns.");
+                                draw();
+                            }
+                        }
+                    }
+                }
+            }, 1000);
+
+            const mazeSize = 6 + level * 2;
+            const containerWidth = document.querySelector('.maze-container').clientWidth;
+            const size = Math.min(containerWidth - 40, 600);
+            canvas.width = size;
+            canvas.height = size;
+
+            maze = generateMaze(mazeSize, mazeSize);
+            generateTeleporters(mazeSize, mazeSize);
+            generateIceTiles(mazeSize, mazeSize);
+            generateCrumblingFloors(mazeSize, mazeSize);
+            generateOres(mazeSize, mazeSize);
+            generateKey(mazeSize, mazeSize);
+
+            player = {
+                x: 0,
+                y: 0,
+                size: cellSize - 4,
+                facing: {x: 0, y: 1} 
+            };
+            
+            if (hasBreadcrumbs) {
+                breadcrumbs.push({x: 0, y: 0});
+            }
+
+            const possibleGoals = [];
+            for (let y = 0; y < maze.length; y++) {
+                for (let x = 0; x < maze[y].length; x++) {
+                    if (maze[y][x] === 0 && (x !== player.x || y !== player.y)) {
+                        const distance = Math.sqrt(Math.pow(x - player.x, 2) + Math.pow(y - player.y, 2));
+                        if (distance > mazeSize / 2) {
+                            possibleGoals.push({x, y});
+                        }
+                    }
+                }
+            }
+            
+            const randomGoal = possibleGoals[Math.floor(Math.random() * possibleGoals.length)];
+            goal = {
+                x: randomGoal.x,
+                y: randomGoal.y,
+                size: cellSize - 4
+            };
+
+            draw();
+        }
+
+        function checkShopLocks() {
+            if (level >= 10) {
+                btnCompass.classList.remove('locked');
+            } else {
+                btnCompass.classList.add('locked');
+            }
+        }
+
+        function generateCrumblingFloors(width, height) {
+            crumblingTiles = [];
+            if (level >= 5) {
+                const numTiles = Math.floor(level * 1.5);
+                for(let i=0; i<numTiles; i++) {
+                    let x, y;
+                    do {
+                        x = Math.floor(Math.random() * (width - 2)) + 1;
+                        y = Math.floor(Math.random() * (height - 2)) + 1;
+                    } while(maze[y][x] !== 0 || (x === 0 && y === 0));
+                    
+                    
+                    if (!iceTiles.some(t => t.x === x && t.y === y) && 
+                        !teleporters.some(t => t.x === x && t.y === y)) {
+                        crumblingTiles.push({x, y});
+                    }
+                }
+            }
+        }
+
+        function generateOres(width, height) {
+            ores = [];
+            if (level >= 2) {
+                const numOres = Math.floor(level / 2) + 2;
+                const types = ['gold', 'gold', 'gold', 'speed', 'vision'];
+                
+                for(let i=0; i<numOres; i++) {
+                    let x, y;
+                    do {
+                        x = Math.floor(Math.random() * (width - 2)) + 1;
+                        y = Math.floor(Math.random() * (height - 2)) + 1;
+                    } while(maze[y][x] !== 1); 
+                    
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    ores.push({x, y, type});
+                }
+            }
+        }
+
+        function generateIceTiles(width, height) {
+            iceTiles = [];
+            if (level >= 3) { 
+                const numPatches = Math.floor(level / 2) + 1;
+                for(let i=0; i<numPatches; i++) {
+                    const patchX = Math.floor(Math.random() * (width - 2)) + 1;
+                    const patchY = Math.floor(Math.random() * (height - 2)) + 1;
+                    
+                    
+                    for(let dy=-1; dy<=1; dy++) {
+                        for(let dx=-1; dx<=1; dx++) {
+                            const nx = patchX + dx;
+                            const ny = patchY + dy;
+                            if(nx > 0 && nx < width-1 && ny > 0 && ny < height-1 && maze[ny][nx] === 0) {
+                                if(Math.random() > 0.3) { 
+                                    iceTiles.push({x: nx, y: ny});
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function generateKey(width, height) {
+            key = null;
+            if (level >= 6) {
+                let valid = false;
+                let attempts = 0;
+                while(!valid && attempts < 1000) {
+                    attempts++;
+                    const kx = Math.floor(Math.random() * width);
+                    const ky = Math.floor(Math.random() * height);
+                    if(maze[ky][kx] === 0 && (kx !== 0 || ky !== 0)) {
+                        const dist = Math.sqrt(Math.pow(kx, 2) + Math.pow(ky, 2));
+                        if(dist > width/3) {
+                            key = {x: kx, y: ky};
+                            valid = true;
+                        }
+                    }
+                }
+                
+                if (!valid) {
+                     for(let y=0; y<height; y++) {
+                         for(let x=0; x<width; x++) {
+                             if(maze[y][x] === 0 && (x!==0 || y!==0)) {
+                                 key = {x, y};
+                                 valid = true;
+                                 break;
+                             }
+                         }
+                         if(valid) break;
+                     }
+                }
+            } else {
+                hasKey = true; 
+            }
+        }
+
+        function generateTeleporters(width, height) {
+            teleporters = [];
+            if (level >= 4) {
+                const numPairs = Math.floor((level - 1) / 2); 
+                
+                for(let i=0; i<numPairs; i++) {
+                    let p1, p2;
+                    do {
+                        p1 = {x: Math.floor(Math.random() * width), y: Math.floor(Math.random() * height)};
+                    } while(maze[p1.y][p1.x] !== 0 || (p1.x === 0 && p1.y === 0));
+                    
+                    do {
+                        p2 = {x: Math.floor(Math.random() * width), y: Math.floor(Math.random() * height)};
+                    } while(maze[p2.y][p2.x] !== 0 || (p2.x === p1.x && p2.y === p1.y) || (p2.x === 0 && p2.y === 0));
+
+                    teleporters.push({x: p1.x, y: p1.y, targetX: p2.x, targetY: p2.y, color: `hsl(${i * 60 + 280}, 100%, 50%)`});
+                    teleporters.push({x: p2.x, y: p2.y, targetX: p1.x, targetY: p1.y, color: `hsl(${i * 60 + 280}, 100%, 50%)`});
+                }
+            }
+        }
+
+        function generateMaze(width, height) {
+            const maze = Array.from({ length: height }, () => Array(width).fill(1));
+            const stack = [];
+            let currentX = 0;
+            let currentY = 0;
+            maze[currentY][currentX] = 0;
+            stack.push([currentX, currentY]);
+
+            while (stack.length > 0) {
+                [currentX, currentY] = stack[stack.length - 1];
+                const neighbors = [];
+
+                if (currentX > 1 && maze[currentY][currentX - 2] === 1) neighbors.push([currentX - 2, currentY, currentX - 1, currentY]);
+                if (currentX < width - 2 && maze[currentY][currentX + 2] === 1) neighbors.push([currentX + 2, currentY, currentX + 1, currentY]);
+                if (currentY > 1 && maze[currentY - 2][currentX] === 1) neighbors.push([currentX, currentY - 2, currentX, currentY - 1]);
+                if (currentY < height - 2 && maze[currentY + 2][currentX] === 1) neighbors.push([currentX, currentY + 2, currentX, currentY + 1]);
+
+                if (neighbors.length > 0) {
+                    const [nextX, nextY, wallX, wallY] = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    maze[nextY][nextX] = 0;
+                    maze[wallY][wallX] = 0;
+                    stack.push([nextX, nextY]);
+                } else {
+                    stack.pop();
+                }
+            }
+            
+            const loopsToCreate = Math.min(level * 5, (width * height) / 5);
+            let loopsCreated = 0;
+            let attempts = 0;
+            while (loopsCreated < loopsToCreate && attempts < loopsToCreate * 10) {
+                attempts++;
+                const x = Math.floor(Math.random() * (width - 2)) + 1;
+                const y = Math.floor(Math.random() * (height - 2)) + 1;
+                if(maze[y][x] === 1) {
+                    
+                    const hasOpenNeighbor = 
+                        (maze[y-1] && maze[y-1][x] === 0) ||
+                        (maze[y+1] && maze[y+1][x] === 0) ||
+                        (maze[y][x-1] === 0) ||
+                        (maze[y][x+1] === 0);
+                    
+                    if (hasOpenNeighbor) {
+                        maze[y][x] = 0;
+                        loopsCreated++;
+                    }
+                }
+            }
+
+            return maze;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const totalMazeWidth = maze[0].length * cellSize;
+            const totalMazeHeight = maze.length * cellSize;
+            
+            let camX, camY;
+
+            // Horizontal Camera Logic
+            if (totalMazeWidth <= canvas.width) {
+                camX = Math.floor((canvas.width - totalMazeWidth) / 2);
+            } else {
+
+                camX = Math.floor(canvas.width / 2 - player.x * cellSize - cellSize / 2);
+                camX = Math.min(0, Math.max(canvas.width - totalMazeWidth, camX));
+            }
+
+            // Vertical Camera Logic
+            if (totalMazeHeight <= canvas.height) {
+                camY = Math.floor((canvas.height - totalMazeHeight) / 2);
+            } else {
+
+                camY = Math.floor(canvas.height / 2 - player.y * cellSize - cellSize / 2);
+                camY = Math.min(0, Math.max(canvas.height - totalMazeHeight, camY));
+            }
+            
+            ctx.save();
+            ctx.translate(camX, camY);
+
+            let currentViewRadius = viewRadius;
+            if (isDarknessActive) currentViewRadius = 2;
+            if (activeBuffs.vision > 0) currentViewRadius += 3;
+
+            const startX = Math.max(0, player.x - currentViewRadius);
+            const endX = Math.min(maze[0].length, player.x + currentViewRadius + 1);
+            const startY = Math.max(0, player.y - currentViewRadius);
+            const endY = Math.min(maze.length, player.y + currentViewRadius + 1);
+
+            for (let y = startY; y < endY; y++) {
+                for (let x = startX; x < endX; x++) {
+                    const dist = Math.sqrt(Math.pow(x - player.x, 2) + Math.pow(y - player.y, 2));
+                    
+                    if (dist > currentViewRadius) continue;
+                    
+                    const alpha = Math.max(0, 1 - (dist / currentViewRadius));
+                    
+                    const isIce = iceTiles.some(t => t.x === x && t.y === y);
+                    const isCrumbling = crumblingTiles.some(t => t.x === x && t.y === y);
+                    const ore = ores.find(o => o.x === x && o.y === y);
+
+                    if (maze[y][x] === 1) {
+                        ctx.fillStyle = `rgba(40, 40, 40, ${alpha})`;
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                        ctx.strokeStyle = `rgba(60, 60, 60, ${alpha * 0.5})`;
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                        
+                        if (ore) {
+                            ctx.save();
+                            if (ore.type === 'gold') ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+                            else if (ore.type === 'speed') ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+                            else if (ore.type === 'vision') ctx.fillStyle = `rgba(138, 43, 226, ${alpha})`;
+                            
+                            ctx.beginPath();
+                            ctx.arc(x * cellSize + cellSize/2, y * cellSize + cellSize/2, 3, 0, Math.PI*2);
+                            ctx.fill();
+                            ctx.restore();
+                        }
+                    } else {
+                        if (isIce) {
+                            ctx.fillStyle = `rgba(100, 200, 255, ${alpha * 0.6})`;
+                        } else if (isCrumbling) {
+                            ctx.fillStyle = `rgba(100, 100, 100, ${alpha})`; 
+                            
+                            ctx.strokeStyle = `rgba(0, 0, 0, ${alpha * 0.5})`;
+                            ctx.beginPath();
+                            ctx.moveTo(x * cellSize + 5, y * cellSize + 5);
+                            ctx.lineTo(x * cellSize + 15, y * cellSize + 15);
+                            ctx.stroke();
+                        } else {
+                            ctx.fillStyle = `rgba(20, 20, 20, ${alpha})`;
+                        }
+                        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+                    }
+
+                    
+                    const crumb = breadcrumbs.find(b => b.x === x && b.y === y);
+                    if (crumb) {
+                        ctx.fillStyle = `rgba(100, 100, 100, ${alpha * 0.5})`;
+                        ctx.beginPath();
+                        ctx.arc(x * cellSize + cellSize/2, y * cellSize + cellSize/2, 2, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+
+                    
+                    if (key && key.x === x && key.y === y) {
+                        ctx.save();
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = '#ffd700';
+                        ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+                        ctx.font = `${cellSize-4}px Monocraft`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText('🔑', x * cellSize + cellSize/2, y * cellSize + cellSize/2);
+                        ctx.restore();
+                    }
+
+                    
+                    if (Math.abs(goal.x - player.x) <= currentViewRadius && Math.abs(goal.y - player.y) <= currentViewRadius) {
+                        const distToGoal = Math.sqrt(Math.pow(goal.x - player.x, 2) + Math.pow(goal.y - player.y, 2));
+                        if (distToGoal <= currentViewRadius) {
+                            const goalAlpha = Math.max(0, 1 - (distToGoal / currentViewRadius));
+                            ctx.save();
+                            ctx.shadowBlur = 5;
+                            
+                            if (hasKey) {
+                                ctx.shadowColor = '#00ff00';
+                                ctx.fillStyle = `rgba(0, 255, 0, ${goalAlpha})`;
+                            } else {
+                                ctx.shadowColor = '#ff0000';
+                                ctx.fillStyle = `rgba(255, 0, 0, ${goalAlpha})`;
+                            }
+
+                            
+                            ctx.beginPath();
+                            const cx = goal.x * cellSize + cellSize / 2;
+                            const cy = goal.y * cellSize + cellSize / 2;
+                            const size = goal.size / 2;
+                            ctx.moveTo(cx, cy - size);
+                            ctx.lineTo(cx + size, cy);
+                            ctx.lineTo(cx, cy + size);
+                            ctx.lineTo(cx - size, cy);
+                            ctx.closePath();
+                            ctx.fill();
+                            
+                            
+                            if (!hasKey) {
+                                ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                                ctx.font = '10px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillText('🔒', cx, cy);
+                            }
+                            
+                            ctx.restore();
+                        }
+                    }
+                }
+            }
+
+            
+            for(const tp of teleporters) {
+                const dist = Math.sqrt(Math.pow(tp.x - player.x, 2) + Math.pow(tp.y - player.y, 2));
+                if (dist <= currentViewRadius) {
+                    const alpha = Math.max(0, 1 - (dist / currentViewRadius));
+                    ctx.save();
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = tp.color;
+                    ctx.strokeStyle = tp.color;
+                    ctx.globalAlpha = alpha;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(tp.x * cellSize + cellSize/2, tp.y * cellSize + cellSize/2, cellSize/3, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.fillStyle = tp.color;
+                    ctx.beginPath();
+                    ctx.arc(tp.x * cellSize + cellSize/2, tp.y * cellSize + cellSize/2, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            
+            ctx.save();
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#00ffff';
+            ctx.fillStyle = '#00ffff';
+            const px = player.x * cellSize + cellSize / 2;
+            const py = player.y * cellSize + cellSize / 2;
+            
+            ctx.beginPath();
+            ctx.arc(px, py, player.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            
+            if (pickaxeCount > 0) {
+                ctx.save();
+                ctx.translate(px + 6, py - 6);
+                ctx.scale(-1, 1);
+                ctx.font = '12px Arial';
+                ctx.fillText('⛏️', 0, 0);
+                ctx.restore();
+            }
+
+            
+            if (hasCompass) {
+                const angle = Math.atan2(goal.y - player.y, goal.x - player.x);
+                const arrowDist = cellSize;
+                const ax = px + Math.cos(angle) * arrowDist;
+                const ay = py + Math.sin(angle) * arrowDist;
+                
+                ctx.shadowColor = '#ff00ff';
+                ctx.strokeStyle = '#ff00ff';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(px, py);
+                ctx.lineTo(ax, ay);
+                ctx.stroke();
+                
+                
+                ctx.beginPath();
+                ctx.moveTo(ax, ay);
+                ctx.lineTo(ax - 5 * Math.cos(angle - Math.PI/6), ay - 5 * Math.sin(angle - Math.PI/6));
+                ctx.lineTo(ax - 5 * Math.cos(angle + Math.PI/6), ay - 5 * Math.sin(angle + Math.PI/6));
+                ctx.closePath();
+                ctx.fillStyle = '#ff00ff';
+                ctx.fill();
+            }
+
+            ctx.restore();
+            ctx.restore();
+        }
+
+        function movePlayer(dx, dy) {
+            if(!isGameActive || isSliding) return;
+
+            
+            const now = Date.now();
+            let currentCooldown = BASE_MOVE_COOLDOWN;
+            if (activeBuffs.speed > 0) currentCooldown = 50; 
+            
+            if (now - lastMoveTime < currentCooldown) return;
+            lastMoveTime = now;
+
+            
+            player.facing = {x: dx, y: dy};
+
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+
+            
+            if (newX < 0 || newX >= maze[0].length || newY < 0 || newY >= maze.length) {
+                
+                const iceIndex = iceTiles.findIndex(t => t.x === player.x && t.y === player.y);
+                if (iceIndex !== -1) {
+                    iceTiles.splice(iceIndex, 1);
+                    draw();
+                }
+                shakeScreen();
+                return;
+            }
+
+            
+            if (maze[newY][newX] === 1) {
+                
+                const iceIndex = iceTiles.findIndex(t => t.x === player.x && t.y === player.y);
+                if (iceIndex !== -1) {
+                    iceTiles.splice(iceIndex, 1);
+                    draw();
+                }
+                shakeScreen();
+                return;
+            }
+
+            
+            const prevX = player.x;
+            const prevY = player.y;
+            const crumblingIndex = crumblingTiles.findIndex(t => t.x === prevX && t.y === prevY);
+            if (crumblingIndex !== -1) {
+                maze[prevY][prevX] = 1; 
+                crumblingTiles.splice(crumblingIndex, 1);
+                playSound('break'); 
+            }
+
+            player.x = newX;
+            player.y = newY;
+            moves++;
+            movesEl.textContent = `Moves: ${moves}`;
+            
+            if (hasBreadcrumbs && !breadcrumbs.some(b => b.x === player.x && b.y === player.y)) {
+                breadcrumbs.push({x: player.x, y: player.y});
+                if (breadcrumbs.length > 50) {
+                    breadcrumbs.shift();
+                }
+            }
+
+            if (key && player.x === key.x && player.y === key.y) {
+                hasKey = true;
+                key = null;
+                playSound('key');
+            }
+
+            const tp = teleporters.find(t => t.x === newX && t.y === newY);
+            if(tp) {
+                player.x = tp.targetX;
+                player.y = tp.targetY;
+            }
+
+            const isIce = iceTiles.some(t => t.x === player.x && t.y === player.y);
+            if (isIce) {
+                slide(dx, dy);
+            }
+
+            draw();
+            checkWin();
+        }
+
+        function slide(dx, dy) {
+            isSliding = true;
+            const slideInterval = setInterval(() => {
+                const nextX = player.x + dx;
+                const nextY = player.y + dy;
+
+                if (
+                    nextX < 0 || nextX >= maze[0].length || 
+                    nextY < 0 || nextY >= maze.length || 
+                    maze[nextY][nextX] === 1
+                ) {
+                    clearInterval(slideInterval);
+                    isSliding = false;
+                    shakeScreen();
+                    draw();
+                    return;
+                }
+
+                player.x = nextX;
+                player.y = nextY;
+                
+                if (key && player.x === key.x && player.y === key.y) {
+                    hasKey = true;
+                    key = null;
+                }
+
+                const tp = teleporters.find(t => t.x === player.x && t.y === player.y);
+                if(tp) {
+                    player.x = tp.targetX;
+                    player.y = tp.targetY;
+                    clearInterval(slideInterval);
+                    isSliding = false;
+                    draw();
+                    return;
+                }
+
+                const stillIce = iceTiles.some(t => t.x === player.x && t.y === player.y);
+                if (!stillIce) {
+                    clearInterval(slideInterval);
+                    isSliding = false;
+                }
+
+                draw();
+                checkWin();
+            }, 100); 
+        }
+
+        function usePickaxe() {
+            if (pickaxeCount <= 0) return;
+
+            const targetX = player.x + player.facing.x;
+            const targetY = player.y + player.facing.y;
+
+            if (
+                targetX >= 0 && targetX < maze[0].length &&
+                targetY >= 0 && targetY < maze.length &&
+                maze[targetY][targetX] === 1
+            ) {
+                
+                const oreIndex = ores.findIndex(o => o.x === targetX && o.y === targetY);
+                if (oreIndex !== -1) {
+                    const ore = ores[oreIndex];
+                    if (ore.type === 'gold') {
+                        coins += 50;
+                        updateCoinsDisplay();
+                        playSound('buy'); 
+                        logMessage("Mined Gold Ore: +50 Coins", "highlight");
+                    } else if (ore.type === 'speed') {
+                        activeBuffs.speed = 2; 
+                        playSound('key'); 
+                        logMessage("Mined Speed Ore: Speed Boost!", "highlight");
+                    } else if (ore.type === 'vision') {
+                        activeBuffs.vision = 2; 
+                        playSound('key'); 
+                        logMessage("Mined Vision Ore: Vision Boost!", "highlight");
+                    }
+                    ores.splice(oreIndex, 1);
+                }
+
+                maze[targetY][targetX] = 0;
+                pickaxeCount--;
+                updatePickaxeDisplay();
+                shakeScreen(); 
+                playSound('break');
+                draw();
+            }
+        }
+
+        function shakeScreen() {
+            playSound('bump');
+            if (Math.random() < 0.125) {
+                const container = document.querySelector('.maze-container');
+                if (container) {
+                    container.classList.add('shake');
+                    setTimeout(() => {
+                        container.classList.remove('shake');
+                    }, 300);
+                }
+            }
+        }
+
+        function logMessage(msg, type = '') {
+            const log = document.getElementById('gameLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = msg;
+            log.prepend(entry); 
+            
+            
+            if (log.children.length > 3) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        function checkWin() {
+            if (player.x === goal.x && player.y === goal.y) {
+                if (!hasKey) {
+                    shakeScreen();
+                    logMessage("You need the key!", "warning");
+                    return;
+                }
+                const baseReward = 50 + (level * 15);
+                const parTime = 30 + (level * 5);
+                const timeBonus = Math.max(0, parTime - time) * 2;
+                
+                const earnedCoins = baseReward + timeBonus;
+                coins += earnedCoins;
+                updateCoinsDisplay();
+                
+                playSound('win');
+                logMessage(`Stage Complete! Earned ${earnedCoins} coins.`, "highlight");
+
+                level++;
+                saveGame();
+                setup();
+            }
+        }
+
+        function updateCoinsDisplay() {
+            coinsEl.textContent = `Coins: ${coins}`;
+        }
+
+        function updatePickaxeDisplay() {
+            pickaxesEl.textContent = `⛏️: ${pickaxeCount}`;
+            pickaxesEl.style.display = pickaxeCount > 0 ? 'inline' : 'none';
+        }
+
+        function buyUpgrade(type) {
+            initAudio();
+            if(type === 'vision') {
+                if(coins >= visionCost) {
+                    coins -= visionCost;
+                    viewRadius += 2;
+                    visionLevel++;
+                    visionLvlEl.textContent = `Vision: ${visionLevel}`;
+                    visionCost = Math.floor(visionCost * 1.5);
+                    document.getElementById('visionCost').textContent = `${visionCost} Coins`;
+                    updateCoinsDisplay();
+                    playSound('buy');
+                    saveGame();
+                }
+            } else if (type === 'reveal') {
+                if(coins >= 100) {
+                    coins -= 100;
+                    updateCoinsDisplay();
+                    playSound('buy');
+                    saveGame();
+                    const originalRadius = viewRadius;
+                    viewRadius = 100;
+                    draw();
+                    setTimeout(() => {
+                        viewRadius = originalRadius;
+                        draw();
+                    }, 5000);
+                }
+            } else if (type === 'pickaxe') {
+                if(coins >= 150) {
+                    coins -= 150;
+                    pickaxeCount += 2;
+                    updateCoinsDisplay();
+                    updatePickaxeDisplay();
+                    playSound('buy');
+                    saveGame();
+                }
+            } else if (type === 'breadcrumbs') {
+                if(coins >= 200 && !hasBreadcrumbs) {
+                    coins -= 200;
+                    hasBreadcrumbs = true;
+                    updateCoinsDisplay();
+                    playSound('buy');
+                    document.getElementById('btnBreadcrumbs').classList.add('locked');
+                    document.getElementById('btnBreadcrumbs').style.opacity = '0.5';
+                    breadcrumbs.push({x: player.x, y: player.y});
+                    draw();
+                    saveGame();
+                }
+            } else if (type === 'compass') {
+                if (level < 10) return; 
+                if(coins >= 500 && !hasCompass) {
+                    coins -= 500;
+                    hasCompass = true;
+                    updateCoinsDisplay();
+                    playSound('buy');
+                    document.getElementById('btnCompass').classList.add('locked');
+                    document.getElementById('btnCompass').style.opacity = '0.5';
+                    draw();
+                    saveGame();
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+                initAudio();
+            }
+            
+            switch (e.key) {
+                case 'ArrowUp':
+                case 'w':
+                    movePlayer(0, -1);
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    movePlayer(0, 1);
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                    movePlayer(-1, 0);
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                    movePlayer(1, 0);
+                    break;
+                case ' ':
+                    usePickaxe();
+                    break;
+            }
+        });
+
+        loadGame();
+        setup();
+    </script>
+    <div class="mobile-warning">
+        <div class="mobile-warning-content">
+            <div class="mobile-warning-icon">⚠️</div>
+            <div class="mobile-warning-title">imagine being on mobile lmaooo</div>
+            <div class="mobile-warning-text">
+                this game is so good to the point where I'm disregarding mobile users, get on a tablet or pc 
+            </div>
+            <a href="https://winss.xyz" class="mobile-warning-button">Go back to Winss.xyz</a>
+            <a href="/mint" class="mobile-warning-button secondary" id="closeWarning">Close</a>
+        </div>
+    </div>
+</body>
+</html>

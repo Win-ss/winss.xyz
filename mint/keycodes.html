@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyCodes - Mint</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
+    
+    <meta name="description" content="JavaScript Event KeyCodes Visualizer">
+    <meta property="og:title" content="KeyCodes">
+    <meta property="og:description" content="Press any key to get the JavaScript event keycode info">
+    <meta property="og:image" content="https://winss.xyz/assets/favicon.png">
+    <meta property="og:url" content="https://winss.xyz/mint/keycodes.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#000000">
+    
+    <link rel="stylesheet" href="mint.css">
+    <style>
+        .keycode-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+            text-align: center;
+            width: 100%;
+        }
+        .main-key {
+            font-size: 8rem;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 2rem;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            font-family: 'Monocraft', monospace;
+        }
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 800px;
+            padding: 20px;
+        }
+        .detail-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 12px;
+            transition: transform 0.2s;
+        }
+        .detail-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .detail-label {
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .detail-value {
+            font-size: 1.5rem;
+            color: #fff;
+            font-family: 'Monocraft', monospace;
+            word-break: break-all;
+        }
+        .press-prompt {
+            font-size: 2rem;
+            color: #666;
+            animation: pulse 2s infinite;
+            font-family: 'Monocraft', monospace;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+        .back-link-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div class="back-link-container">
+            <a href="index.html" class="back-link">← Back to Mint</a>
+        </div>
+        
+        <div class="keycode-display" id="prompt">
+            <div class="press-prompt">Press any key</div>
+        </div>
+
+        <div class="keycode-display" id="result" style="display: none;">
+            <div class="main-key" id="mainKey"></div>
+            <div class="details-grid">
+                <div class="detail-card">
+                    <div class="detail-label">event.key</div>
+                    <div class="detail-value" id="eventKey"></div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">event.code</div>
+                    <div class="detail-value" id="eventCode"></div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">event.which</div>
+                    <div class="detail-value" id="eventWhich"></div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-label">event.location</div>
+                    <div class="detail-value" id="eventLocation"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('keydown', (e) => {
+            e.preventDefault();
+            
+            document.getElementById('prompt').style.display = 'none';
+            document.getElementById('result').style.display = 'flex';
+            
+            let displayKey = e.key;
+            if (e.key === ' ') displayKey = '(Space)';
+            if (e.key === 'Unidentified') displayKey = '(Unidentified)';
+            
+            document.getElementById('mainKey').textContent = e.which || e.keyCode;
+            document.getElementById('eventKey').textContent = displayKey;
+            document.getElementById('eventCode').textContent = e.code;
+            document.getElementById('eventWhich').textContent = e.which || e.keyCode;
+            document.getElementById('eventLocation').textContent = e.location;
+        });
+    </script>
+</body>
+</html>

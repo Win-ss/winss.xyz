@@ -1,0 +1,21 @@
+{
+  "name": "Insomniac",
+  "short_name": "Insomniac",
+  "description": "Keep your screen awake and prevent device sleep",
+  "start_url": "./Insomniac.html",
+  "display": "fullscreen",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "../assets/insomniac.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "../assets/insomniac.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
