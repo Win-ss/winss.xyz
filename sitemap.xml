@@ -3,29 +3,49 @@
   <!-- Main Homepage -->
   <url>
     <loc>https://winss.xyz/</loc>
-    <lastmod>2025-09-18T00:00:00+00:00</lastmod>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
   
+  <!-- Root Pages -->
+  <url>
+    <loc>https://winss.xyz/birbday.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/python.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/troll.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
   <!-- Dust Lab Project -->
   <url>
     <loc>https://winss.xyz/dustlab/</loc>
-    <lastmod>2025-09-18T00:00:00+00:00</lastmod>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   
   <url>
     <loc>https://winss.xyz/dustlab/app.html</loc>
-    <lastmod>2025-09-18T00:00:00+00:00</lastmod>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   
   <url>
     <loc>https://winss.xyz/dustlab/documentation.html</loc>
-    <lastmod>2025-09-18T00:00:00+00:00</lastmod>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
@@ -33,14 +53,14 @@
   <!-- Wink Project -->
   <url>
     <loc>https://winss.xyz/wink/</loc>
-    <lastmod>2025-09-18T00:00:00+00:00</lastmod>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
     <loc>https://winss.xyz/wink/app.html</loc>
-    <lastmod>2025-09-18T00:00:00+00:00</lastmod>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -48,7 +68,7 @@
   <!-- Fall Project -->
   <url>
     <loc>https://winss.xyz/fall/</loc>
-    <lastmod>2025-09-18T00:00:00+00:00</lastmod>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
@@ -56,8 +76,58 @@
   <!-- Rand Project -->
   <url>
     <loc>https://winss.xyz/rand/</loc>
-    <lastmod>2025-09-18T00:00:00+00:00</lastmod>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.2</priority>
+  </url>
+
+  <!-- Mint Project -->
+  <url>
+    <loc>https://winss.xyz/mint/</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/chroma.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/ENDE.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/Insomniac.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/keycodes.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/mazeify.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/qr-generator.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/qr-reader.html</loc>
+    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 </urlset>

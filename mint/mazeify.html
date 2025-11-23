@@ -640,7 +640,7 @@
         function generateOres(width, height) {
             ores = [];
             if (level >= 2) {
-                const numOres = Math.floor(level / 2) + 2;
+                const numOres = Math.floor(level / 4) + 1;
                 const types = ['gold', 'gold', 'gold', 'speed', 'vision'];
                 
                 for(let i=0; i<numOres; i++) {
@@ -1176,7 +1176,9 @@
                 }
 
                 maze[targetY][targetX] = 0;
-                pickaxeCount--;
+                if (oreIndex === -1) {
+                    pickaxeCount--;
+                }
                 updatePickaxeDisplay();
                 shakeScreen(); 
                 playSound('break');

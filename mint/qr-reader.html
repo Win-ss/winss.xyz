@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Reader - Mint</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
+    
+    <meta name="description" content="Scan and Read QR Codes from Camera or Image">
+    <meta property="og:title" content="QR Reader">
+    <meta property="og:description" content="Scan QR codes from your camera, upload images, or paste from clipboard">
+    <meta property="og:image" content="https://winss.xyz/assets/favicon.png">
+    <meta property="og:url" content="https://winss.xyz/mint/qr-reader.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#000000">
+    
+    <link rel="stylesheet" href="mint.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <style>
+        .title {
+            transition: all 0.5s ease;
+            cursor: pointer;
+            padding: 10px 30px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .title:hover {
+            animation: titleGlow 1s ease forwards;
+        }
+
+        @keyframes titleGlow {
+            0% {
+                filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+                color: #ffffff;
+                background: transparent;
+            }
+            30% {
+                filter: drop-shadow(0 0 30px rgba(255, 255, 255, 1)) drop-shadow(0 0 60px rgba(255, 255, 255, 0.8));
+                color: #ffffff;
+                background: transparent;
+            }
+            100% {
+                filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+                color: #000000;
+                background: #ffffff;
+            }
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .panel h2 {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            font-family: 'Monocraft', monospace;
+            width: 100%;
+            text-align: center;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Monocraft', monospace;
+            transition: all 0.3s ease;
+            font-size: 1.1rem;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .file-upload {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .file-upload:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .file-upload p {
+            margin: 0;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .file-upload small {
+            display: block;
+            margin-top: 10px;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        #reader-canvas {
+            width: 100%;
+            max-width: 640px;
+            background: #000;
+            display: none;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        
+        .result-box {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            padding: 20px;
+            border-radius: 8px;
+            word-break: break-all;
+            display: none;
+            margin-top: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .result-box a {
+            color: #4eff4e;
+            text-decoration: underline;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <header class="main-header">
+            <a href="index.html" style="text-decoration: none; color: inherit;">
+                <h1 class="title">QR Reader</h1>
+            </a>
+            <p class="subtitle">Scan from Camera, Upload, or Paste (Ctrl+V)</p>
+        </header>
+
+        <div class="container">
+            <div class="panel">
+                
+                <div class="file-upload" onclick="document.getElementById('qr-file').click()" id="drop-zone">
+                    <p>Click to upload QR Image</p>
+                    <small>or Drag & Drop / Paste (Ctrl+V)</small>
+                    <input type="file" id="qr-file" accept="image/*" style="display: none;" onchange="handleFile(this.files)">
+                </div>
+
+                <div style="text-align: center; margin: 10px 0; opacity: 0.5;">- OR -</div>
+
+                <button id="scan-btn" onclick="toggleCamera()">Start Camera Scan</button>
+                
+                <canvas id="reader-canvas"></canvas>
+                
+                <div id="scan-result" class="result-box"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.createElement('video');
+        const canvasElement = document.getElementById('reader-canvas');
+        const canvas = canvasElement.getContext('2d');
+        const resultBox = document.getElementById('scan-result');
+        const scanBtn = document.getElementById('scan-btn');
+        let scanning = false;
+        let animationFrameId;
+
+        document.addEventListener('paste', function(e) {
+            const items = e.clipboardData.items;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    handleFile([blob]);
+                    break;
+                }
+            }
+        });
+
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#fff';
+            dropZone.style.background = 'rgba(255,255,255,0.1)';
+        });
+        dropZone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            dropZone.style.background = 'transparent';
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+            dropZone.style.background = 'transparent';
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files);
+            }
+        });
+
+        function handleFile(files) {
+            if (files.length === 0) return;
+            const file = files[0];
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    stopCamera(); 
+                    canvasElement.style.display = 'block';
+                    
+                    let width = img.width;
+                    let height = img.height;
+                    const maxWidth = 800;
+                    if (width > maxWidth) {
+                        const ratio = maxWidth / width;
+                        width = maxWidth;
+                        height = height * ratio;
+                    }
+
+                    canvasElement.width = width;
+                    canvasElement.height = height;
+                    canvas.drawImage(img, 0, 0, width, height);
+                    
+                    try {
+                        const imageData = canvas.getImageData(0, 0, width, height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                            inversionAttempts: "dontInvert",
+                        });
+                        if (code) {
+                            showResult(code.data);
+                        } else {
+                            showResult("No QR code found in image.");
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showResult("Error processing image.");
+                    }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function toggleCamera() {
+            if (scanning) {
+                stopCamera();
+            } else {
+                startCamera();
+            }
+        }
+
+        function startCamera() {
+            resultBox.style.display = 'none';
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } }).then(function(stream) {
+                scanning = true;
+                scanBtn.innerText = "Stop Camera";
+                scanBtn.style.background = "rgba(255, 50, 50, 0.3)";
+                video.srcObject = stream;
+                video.setAttribute("playsinline", true);
+                video.play();
+                canvasElement.style.display = 'block';
+                requestAnimationFrame(tick);
+            }).catch(function(err) {
+                console.error(err);
+                alert("Could not access camera. Ensure you are on HTTPS or localhost.");
+            });
+        }
+
+        function stopCamera() {
+            scanning = false;
+            scanBtn.innerText = "Start Camera Scan";
+            scanBtn.style.background = "";
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        function tick() {
+            if (!scanning) return;
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvasElement.height = video.videoHeight;
+                canvasElement.width = video.videoWidth;
+                canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert",
+                });
+                if (code) {
+                    showResult(code.data);
+                }
+            }
+            animationFrameId = requestAnimationFrame(tick);
+        }
+
+        function showResult(text) {
+            resultBox.style.display = 'block';
+            resultBox.innerText = text;
+            if (isValidUrl(text)) {
+                resultBox.innerHTML = `Found URL: <br><a href="${text}" target="_blank">${text}</a>`;
+            }
+        }
+
+        function isValidUrl(string) {
+            try {
+                new URL(string);
+                return true;
+            } catch (_) {
+                return false;  
+            }
+        } 
+    </script>
+</body>
+</html>

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Generator - Mint</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
+    
+    <meta name="description" content="Advanced QR Code Generator with Logo support">
+    <meta property="og:title" content="QR Generator">
+    <meta property="og:description" content="Create custom QR codes with logos and colors">
+    <meta property="og:image" content="https://winss.xyz/assets/favicon.png">
+    <meta property="og:url" content="https://winss.xyz/mint/qr-generator.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#000000">
+    
+    <link rel="stylesheet" href="mint.css">
+    <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+    <style>
+        .title {
+            transition: all 0.5s ease;
+            cursor: pointer;
+            padding: 10px 30px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+
+        .title:hover {
+            animation: titleGlow 1s ease forwards;
+        }
+
+        @keyframes titleGlow {
+            0% {
+                filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+                color: #ffffff;
+                background: transparent;
+            }
+            30% {
+                filter: drop-shadow(0 0 30px rgba(255, 255, 255, 1)) drop-shadow(0 0 60px rgba(255, 255, 255, 0.8));
+                color: #ffffff;
+                background: transparent;
+            }
+            100% {
+                filter: drop-shadow(0 0 0px rgba(255, 255, 255, 0));
+                color: #000000;
+                background: #ffffff;
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            animation: fadeInUp 0.8s ease;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .preview-panel {
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+            align-items: center;
+        }
+
+        .panel h2 {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            font-family: 'Monocraft', monospace;
+        }
+
+        textarea, input[type="text"], input[type="number"], select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Monocraft', monospace;
+            resize: vertical;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Monocraft', monospace;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        #qrcode {
+            background: transparent;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+            width: fit-content;
+        }
+        
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .options-group {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .options-group h3 {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            opacity: 0.8;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        
+        input[type="color"] {
+            background: none;
+            border: none;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-input-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px dashed rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 5px;
+            text-align: center;
+            display: block;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        
+        .control-row label {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        
+        .control-row select, .control-row input {
+            flex: 2;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <header class="main-header">
+            <a href="index.html" style="text-decoration: none; color: inherit;">
+                <h1 class="title">QR Generator</h1>
+            </a>
+            <p class="subtitle">Create Custom QR Codes</p>
+        </header>
+
+        <div class="container">
+            <div class="panel">
+                <textarea id="qr-text" rows="3" placeholder="Enter text or URL here..." oninput="updateQR()">https://winss.xyz</textarea>
+                
+                <div class="options-grid">
+                    <!-- Basic Settings -->
+                    <div class="options-group">
+                        <h3>Basic</h3>
+                        <div class="control-row">
+                            <label>Size (px)</label>
+                            <input type="number" id="qr-size" value="1000" min="100" max="2000" step="50" onchange="updateQR()">
+                        </div>
+                        <div class="control-row">
+                            <label>Margin</label>
+                            <input type="number" id="qr-margin" value="10" min="0" max="100" step="1" onchange="updateQR()">
+                        </div>
+                        <div class="control-row">
+                            <label>Correction</label>
+                            <select id="qr-correct" onchange="updateQR()">
+                                <option value="L">Low (7%)</option>
+                                <option value="M">Medium (15%)</option>
+                                <option value="Q" selected>Quartile (25%)</option>
+                                <option value="H">High (30%)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dots Style -->
+                    <div class="options-group">
+                        <h3>Dots Style</h3>
+                        <div class="control-row">
+                            <label>Style</label>
+                            <select id="dots-style" onchange="updateQR()">
+                                <option value="square">Square</option>
+                                <option value="dots">Dots</option>
+                                <option value="rounded">Rounded</option>
+                                <option value="extra-rounded" selected>Extra Rounded</option>
+                                <option value="classy">Classy</option>
+                                <option value="classy-rounded">Classy Rounded</option>
+                            </select>
+                        </div>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="dots-color" value="#ffffff" onchange="updateQR()">
+                            <label>Color</label>
+                        </div>
+                    </div>
+
+                    <!-- Corners Square Style -->
+                    <div class="options-group">
+                        <h3>Corners Square (Outer Eye)</h3>
+                        <div class="control-row">
+                            <label>Style</label>
+                            <select id="corners-square-style" onchange="updateQR()">
+                                <option value="square">Square</option>
+                                <option value="dot">Dot</option>
+                                <option value="extra-rounded" selected>Extra Rounded</option>
+                            </select>
+                        </div>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="corners-square-color" value="#ffffff" onchange="updateQR()">
+                            <label>Color</label>
+                        </div>
+                    </div>
+
+                    <!-- Corners Dot Style -->
+                    <div class="options-group">
+                        <h3>Corners Dot (Inner Eye)</h3>
+                        <div class="control-row">
+                            <label>Style</label>
+                            <select id="corners-dot-style" onchange="updateQR()">
+                                <option value="square">Square</option>
+                                <option value="dot" selected>Dot</option>
+                            </select>
+                        </div>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="corners-dot-color" value="#ffffff" onchange="updateQR()">
+                            <label>Color</label>
+                        </div>
+                    </div>
+
+                    <!-- Background -->
+                    <div class="options-group">
+                        <h3>Background</h3>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="bg-color" value="#000000" onchange="updateQR()">
+                            <label>Color</label>
+                        </div>
+                        <div style="margin-top: 5px;">
+                            <input type="checkbox" id="bg-transparent" onchange="updateQR()"> <label for="bg-transparent">Transparent</label>
+                        </div>
+                    </div>
+
+                    <!-- Logo -->
+                    <div class="options-group">
+                        <h3>Logo</h3>
+                        <div class="file-input-wrapper">
+                            <div class="file-input-btn" id="logo-btn-text">Upload Logo</div>
+                            <input type="file" id="qr-logo" accept="image/*" onchange="handleLogoUpload(this)">
+                        </div>
+                        <div class="control-row" style="margin-top: 10px;">
+                            <label>Size Scale</label>
+                            <input type="number" id="logo-scale" value="0.4" min="0.1" max="0.5" step="0.05" onchange="updateQR()">
+                        </div>
+                        <div class="control-row">
+                            <label>Margin</label>
+                            <input type="number" id="logo-margin" value="10" min="0" max="50" step="1" onchange="updateQR()">
+                        </div>
+                        <div style="margin-top: 10px; display: none;" id="logo-preview-container">
+                            <button onclick="clearLogo()" style="padding: 5px; font-size: 0.8rem;">Remove Logo</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel preview-panel">
+                <h2>Preview</h2>
+                <div id="qrcode"></div>
+                
+                <div class="control-row" style="width: 100%; margin-top: 20px;">
+                    <select id="download-ext">
+                        <option value="png">PNG</option>
+                        <option value="jpeg">JPEG</option>
+                        <option value="webp">WEBP</option>
+                        <option value="svg">SVG</option>
+                    </select>
+                    <button onclick="downloadQR()" style="margin-top: 0;">Download</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let qrCode;
+        let logoFile = null;
+
+        function initQR() {
+            qrCode = new QRCodeStyling({
+                width: 300,
+                height: 300,
+                type: "svg",
+                data: "https://winss.xyz",
+                image: "",
+                dotsOptions: {
+                    color: "#ffffff",
+                    type: "extra-rounded"
+                },
+                backgroundOptions: {
+                    color: "#000000",
+                },
+                imageOptions: {
+                    crossOrigin: "anonymous",
+                    margin: 10
+                }
+            });
+            
+            qrCode.append(document.getElementById("qrcode"));
+            updateQR();
+        }
+
+        function handleLogoUpload(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    logoFile = e.target.result;
+                    document.getElementById('logo-preview-container').style.display = 'block';
+                    document.getElementById('logo-btn-text').innerText = "Change Logo";
+                    updateQR();
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function clearLogo() {
+            logoFile = null;
+            document.getElementById('qr-logo').value = '';
+            document.getElementById('logo-preview-container').style.display = 'none';
+            document.getElementById('logo-btn-text').innerText = "Upload Logo";
+            updateQR();
+        }
+
+        function updateQR() {
+            if (!qrCode) return;
+
+            const text = document.getElementById('qr-text').value || " ";
+            const size = parseInt(document.getElementById('qr-size').value);
+            const margin = parseInt(document.getElementById('qr-margin').value);
+            const correct = document.getElementById('qr-correct').value;
+            
+            const dotsStyle = document.getElementById('dots-style').value;
+            const dotsColor = document.getElementById('dots-color').value;
+            
+            const cornersSquareStyle = document.getElementById('corners-square-style').value;
+            const cornersSquareColor = document.getElementById('corners-square-color').value;
+            
+            const cornersDotStyle = document.getElementById('corners-dot-style').value;
+            const cornersDotColor = document.getElementById('corners-dot-color').value;
+            
+            const bgColor = document.getElementById('bg-color').value;
+            const bgTransparent = document.getElementById('bg-transparent').checked;
+            
+            const logoScale = parseFloat(document.getElementById('logo-scale').value);
+            const logoMargin = parseInt(document.getElementById('logo-margin').value);
+
+            qrCode.update({
+                width: 300, 
+                height: 300,
+                data: text,
+                margin: margin,
+                qrOptions: {
+                    typeNumber: 0,
+                    mode: "Byte",
+                    errorCorrectionLevel: correct
+                },
+                imageOptions: {
+                    hideBackgroundDots: true,
+                    imageSize: logoScale,
+                    margin: logoMargin,
+                    crossOrigin: "anonymous",
+                },
+                dotsOptions: {
+                    type: dotsStyle,
+                    color: dotsColor
+                },
+                backgroundOptions: {
+                    color: bgTransparent ? "transparent" : bgColor,
+                },
+                image: logoFile,
+                cornersSquareOptions: {
+                    type: cornersSquareStyle,
+                    color: cornersSquareColor
+                },
+                cornersDotOptions: {
+                    type: cornersDotStyle,
+                    color: cornersDotColor
+                }
+            });
+        }
+
+        function downloadQR() {
+            const size = parseInt(document.getElementById('qr-size').value);
+            const ext = document.getElementById('download-ext').value;
+            const name = "qrcode";
+            
+            qrCode.update({
+                width: size,
+                height: size
+            });
+            
+            qrCode.download({ name: name, extension: ext }).then(() => {
+                qrCode.update({
+                    width: 300,
+                    height: 300
+                });
+            });
+        }
+        
+        window.onload = initQR;
+    </script>
+</body>
+</html>
