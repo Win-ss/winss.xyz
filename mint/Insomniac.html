@@ -23,7 +23,15 @@
     
     <link rel="stylesheet" href="mint.css">
     <style>
-        html, body {
+        :root {
+            background-color: #000000;
+        }
+        
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        
+        html {
             background: #000000;
             overflow: hidden;
             height: 100%;
@@ -34,7 +42,15 @@
         
         body {
             background: #000000;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            min-height: 100dvh;
         }
 
         .content {
@@ -574,11 +590,17 @@
             }
         }
 
-        // Check if running as installed PWA
         function isRunningAsApp() {
-            return window.matchMedia('(display-mode: standalone)').matches || 
-                   window.navigator.standalone || 
-                   document.referrer.includes('android-app://');
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
+            const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
+            const isIOSStandalone = window.navigator.standalone === true;
+            const isAndroidTWA = document.referrer.includes('android-app://');
+            
+            const isProbablyInstalled = window.innerHeight === screen.height || 
+                                        window.outerHeight === screen.height;
+            
+            return isStandalone || isFullscreen || isMinimalUI || isIOSStandalone || isAndroidTWA;
         }
 
         window.addEventListener('beforeinstallprompt', (e) => {
@@ -639,22 +661,9 @@
 
         activate();
 
-        setTimeout(() => {
-            // Don't show install button if already running as an app
-            if (isRunningAsApp()) {
-                installButton.style.display = 'none';
-                return;
-            }
-            
-            if (installButton.style.display === 'none' && !deferredPrompt) {
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); // ok who tf still uses opera mini and blackberry??? 
-                const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-                
-                if (isMobile || isTouchDevice) {
-                    installButton.style.display = 'block';
-                }
-            }
-        }, 2000);
+        if (isRunningAsApp()) {
+            installButton.style.display = 'none';
+        }
 
         document.addEventListener('visibilitychange', async () => {
             if (wakeLock !== null && document.visibilityState === 'visible') {
