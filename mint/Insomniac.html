@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Insomniac - Keep Screen Awake</title>
     <link rel="icon" type="image/png" href="../assets/insomniac.png">
     <link rel="shortcut icon" type="image/png" href="../assets/insomniac.png">
@@ -23,8 +23,13 @@
     
     <link rel="stylesheet" href="mint.css">
     <style>
+        html {
+            background: #000000;
+        }
+        
         body {
             background: #000000;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
         .content {
@@ -418,6 +423,13 @@
                 e.preventDefault();
                 blackoutMode.classList.toggle('active');
             }
+            
+            if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'Enter') {
+                if (!popupOverlay.classList.contains('show')) {
+                    e.preventDefault();
+                    popupOverlay.classList.add('show');
+                }
+            }
         });
 
         function checkPopupPreference() {
@@ -557,7 +569,18 @@
             }
         }
 
+        // Check if running as installed PWA
+        function isRunningAsApp() {
+            return window.matchMedia('(display-mode: standalone)').matches || 
+                   window.navigator.standalone || 
+                   document.referrer.includes('android-app://');
+        }
+
         window.addEventListener('beforeinstallprompt', (e) => {
+            if (isRunningAsApp()) {
+                return;
+            }
+            
             e.preventDefault();
             deferredPrompt = e;
             
@@ -612,15 +635,17 @@
         activate();
 
         setTimeout(() => {
+            // Don't show install button if already running as an app
+            if (isRunningAsApp()) {
+                installButton.style.display = 'none';
+                return;
+            }
+            
             if (installButton.style.display === 'none' && !deferredPrompt) {
-                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                                   window.navigator.standalone || 
-                                   document.referrer.includes('android-app://');
-                
-                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); // ok who tf still uses opera mini and blackberry??? 
                 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
                 
-                if (!isStandalone && (isMobile || isTouchDevice)) {
+                if (isMobile || isTouchDevice) {
                     installButton.style.display = 'block';
                 }
             }
