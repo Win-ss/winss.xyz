@@ -801,7 +801,7 @@
                 <div class="example-card">
                     <div class="video-wrapper">
                         <video class="example-video" autoplay loop muted playsinline preload="metadata" id="example-video-1">
-                            <source src="../assets/dustlabexample1.mp4" type="video/mp4">
+                            <source src="../assets/dustlabexample1.webm" type="video/webm">
                             Your browser does not support the video tag.
                         </video>
                     </div>
@@ -811,14 +811,14 @@
                         <p class="example-description">
                             Particle models attached to players, Perfect for items and abilities.
                         </p>
-                        <p class="example-model-name">model name: magic_circle</p>
+                        <p class="example-model-name">model name: prismatic_burst</p>
                     </div>
                 </div>
 
                 <div class="example-card">
                     <div class="video-wrapper">
                         <video class="example-video" autoplay loop muted playsinline preload="metadata">
-                            <source src="../assets/dustlabexample2.mp4" type="video/mp4">
+                            <source src="../assets/dustlabexample2.webm" type="video/webm">
                             Your browser does not support the video tag.
                         </video>
                     </div>
@@ -828,7 +828,7 @@
                         <p class="example-description">
                             Enchance your server or map with dustlab. The plugin has various effects you can apply to models.
                         </p>
-                        <p class="example-model-name">model name: prismatic_burst</p>
+                        <p class="example-model-name">model name: magic_circle</p>
                     </div>
                 </div>
             </div>
@@ -1147,9 +1147,20 @@
         })();
 
         document.addEventListener('DOMContentLoaded', function() {
-            const exampleVideo1 = document.getElementById('example-video-1');
-            if (exampleVideo1) {
-                exampleVideo1.playbackRate = 1.2;
+            const videos = document.querySelectorAll('video');
+            
+            if ('IntersectionObserver' in window) {
+                const videoObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.play().catch(() => {});
+                        } else {
+                            entry.target.pause();
+                        }
+                    });
+                }, { threshold: 0.1 });
+
+                videos.forEach(video => videoObserver.observe(video));
             }
         });
     </script>
