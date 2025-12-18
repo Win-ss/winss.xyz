@@ -66,6 +66,7 @@
         successAuthor: document.getElementById('success-author'),
         successHashtag: document.getElementById('success-hashtag'),
         successExpires: document.getElementById('success-expires'),
+        successPasswordDisplay: document.getElementById('success-password-display'),
         uploadAnother: document.getElementById('upload-another'),
         shareLink: document.getElementById('share-link'),
         copyLinkBtn: document.getElementById('copy-link-btn'),
@@ -85,7 +86,7 @@
         previewDownloads: document.getElementById('preview-downloads'),
         previewDownloadsContainer: document.getElementById('preview-downloads-container'),
         confirmDownload: document.getElementById('confirm-download'),
-        cancelDownload: document.getElementById('cancel-download'),
+        cancelDownloadPreview: document.getElementById('cancel-download'),
         
         // Message
         messageBox: document.getElementById('message-box'),
@@ -154,6 +155,30 @@
         elements.cancelDownload.addEventListener('click', cancelDownloadPreview);
         
         elements.messageClose.addEventListener('click', hideMessage);
+
+        elements.successPasswordDisplay.addEventListener('mouseenter', handlePasswordHover);
+        elements.successPasswordDisplay.addEventListener('mouseleave', handlePasswordLeave);
+    }
+    
+    let passwordRevealTimeout = null;
+
+    function handlePasswordHover() {
+        const password = elements.uploadFilePassword.value;
+        if (!password) return;
+
+        elements.successPasswordDisplay.textContent = "do you really want to see it? fine.. showing password in 3s...";
+        
+        passwordRevealTimeout = setTimeout(() => {
+            elements.successPasswordDisplay.textContent = password;
+        }, 3000);
+    }
+
+    function handlePasswordLeave() {
+        if (passwordRevealTimeout) {
+            clearTimeout(passwordRevealTimeout);
+            passwordRevealTimeout = null;
+        }
+        elements.successPasswordDisplay.textContent = "[share separately]";
     }
     
     // Authentication
@@ -447,6 +472,7 @@
         elements.successAuthor.textContent = '#' + data.author;
         elements.successHashtag.textContent = '#' + data.hashtag;
         elements.successExpires.textContent = formatDate(data.expiresAt);
+        elements.successPasswordDisplay.textContent = "[share separately]";
         
         // Generate shareable link
         const shareUrl = `${window.location.origin}${window.location.pathname}?a=${encodeURIComponent(data.author)}&t=${encodeURIComponent(data.hashtag)}`;
