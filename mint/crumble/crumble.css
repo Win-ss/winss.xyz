@@ -28,6 +28,15 @@
     margin-bottom: 8px;
     letter-spacing: -1px;
     user-select: none;
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+}
+
+.crumble-letter {
+    display: inline-block;
+    opacity: 1;
+    line-height: 1;
 }
 
 .crumble-subtitle {

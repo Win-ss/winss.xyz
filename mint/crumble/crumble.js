@@ -98,6 +98,7 @@
         loadSavedSession();
         setupEventListeners();
         updateUIForAuth();
+        setupCrumbleEffect();
         checkShareLink();
     }
     
@@ -648,6 +649,112 @@
         }
         
         return `in ${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+
+    function setupCrumbleEffect() {
+        const title = document.querySelector('.crumble-title');
+        if (!title) return;
+
+        let isCrumbling = false;
+
+        title.addEventListener('mouseenter', () => {
+            if (isCrumbling) return;
+            isCrumbling = true;
+
+            setTimeout(() => {
+                const letters = title.querySelectorAll('.crumble-letter');
+                const particles = [];
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                canvas.style.position = 'fixed';
+                canvas.style.top = '0';
+                canvas.style.left = '0';
+                canvas.style.pointerEvents = 'none';
+                canvas.style.zIndex = '9999';
+                canvas.style.background = 'transparent';
+                document.body.appendChild(canvas);
+                
+                const ctx = canvas.getContext('2d');
+
+                letters.forEach(letter => {
+                    const rect = letter.getBoundingClientRect();
+                    const style = window.getComputedStyle(letter);
+                    
+                    const tempCanvas = document.createElement('canvas');
+                    const scale = 0.1;
+                    tempCanvas.width = Math.ceil(rect.width * scale);
+                    tempCanvas.height = Math.ceil(rect.height * scale);
+                    const tempCtx = tempCanvas.getContext('2d');
+                    
+                    tempCtx.scale(scale, scale);
+                    tempCtx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+                    tempCtx.fillStyle = style.color;
+                    tempCtx.textBaseline = 'top';
+                    tempCtx.fillText(letter.textContent, 0, 0);
+                    
+                    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+                    const data = imageData.data;
+                    
+                    for (let y = 0; y < tempCanvas.height; y++) {
+                        for (let x = 0; x < tempCanvas.width; x++) {
+                            const index = (y * tempCanvas.width + x) * 4;
+                            if (data[index + 3] > 128) {
+                                particles.push({
+                                    x: rect.left + (x / scale),
+                                    y: rect.top + (y / scale),
+                                    vx: (Math.random() - 0.5) * 0.8, 
+                                    vy: (Math.random() - 0.5) * 0.8, 
+                                    color: style.color,
+                                    size: 1 / scale,
+                                    alpha: 1
+                                });
+                            }
+                        }
+                    }
+                    
+                    letter.style.opacity = '0';
+                });
+
+                let startTime = null;
+                function animate(timestamp) {
+                    if (!startTime) startTime = timestamp;
+                    const progress = timestamp - startTime;
+                    
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    let activeParticles = 0;
+
+                    particles.forEach(p => {
+                        if (p.alpha <= 0) return;
+                        activeParticles++;
+
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.vy += 0.05;
+                        p.alpha -= 0.005;
+                        
+                        ctx.globalAlpha = p.alpha;
+                        ctx.fillStyle = p.color;
+                        ctx.fillRect(p.x, p.y, p.size, p.size);
+                    });
+                    ctx.globalAlpha = 1;
+                    
+                    if (activeParticles > 0 && progress < 5000) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        if (document.body.contains(canvas)) {
+                            document.body.removeChild(canvas);
+                        }
+                        letters.forEach(l => l.style.opacity = '1');
+                        isCrumbling = false;
+                    }
+                }
+                
+                requestAnimationFrame(animate);
+            }, 250); 
+        });
     }
     
     
