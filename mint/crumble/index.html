@@ -87,12 +87,12 @@
                 </div>
 
                 <!-- Upload Form (shown when logged in) -->
-                <form id="upload-form" class="crumble-form" style="display: none;">
+                <form id="upload-form" class="crumble-form" style="display: none;" autocomplete="off">
                     <div class="form-group">
                         <label>Your Tag</label>
                         <div class="input-with-prefix readonly">
                             <span class="input-prefix">#</span>
-                            <input type="text" id="upload-author" readonly>
+                            <input type="text" id="upload-author" readonly autocomplete="off">
                         </div>
                         <span class="form-hint">This is your registered username</span>
                     </div>
@@ -101,7 +101,7 @@
                         <label for="upload-hashtag">File Tag</label>
                         <div class="input-with-prefix">
                             <span class="input-prefix">#</span>
-                            <input type="text" id="upload-hashtag" placeholder="physics" maxlength="50" required>
+                            <input type="text" id="upload-hashtag" placeholder="Boringnameforhashtag" maxlength="50" required autocomplete="off">
                         </div>
                         <span class="form-hint">Unique identifier for this file (2-50 chars)</span>
                     </div>
@@ -109,7 +109,7 @@
                     <div class="form-row">
                         <div class="form-group form-group-wide">
                             <label for="upload-file-password">File Password</label>
-                            <input type="password" id="upload-file-password" placeholder="for receiver" minlength="4" maxlength="100" required>
+                            <input type="password" id="upload-file-password" placeholder="for receiver" minlength="4" maxlength="100" required autocomplete="new-password">
                         </div>
                         <div class="form-group form-group-narrow">
                             <label for="upload-maxdownloads">Max DLs</label>
@@ -188,12 +188,12 @@
 
             <!-- Download Tab -->
             <div class="tab-content" id="download-tab">
-                <form id="download-form" class="crumble-form">                    
+                <form id="download-form" class="crumble-form" autocomplete="off">                    
                     <div class="form-group">
                         <label for="download-author">Author Tag</label>
                         <div class="input-with-prefix">
                             <span class="input-prefix">#</span>
-                            <input type="text" id="download-author" placeholder="winss" maxlength="30" required>
+                            <input type="text" id="download-author" placeholder="winss" maxlength="30" required autocomplete="off">
                         </div>
                     </div>
 
@@ -201,13 +201,13 @@
                         <label for="download-hashtag">File Tag</label>
                         <div class="input-with-prefix">
                             <span class="input-prefix">#</span>
-                            <input type="text" id="download-hashtag" placeholder="physics" maxlength="50" required>
+                            <input type="text" id="download-hashtag" placeholder="physics" maxlength="50" required autocomplete="off">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="download-password">File Password</label>
-                        <input type="password" id="download-password" placeholder="Password from sender" required>
+                        <input type="password" id="download-password" placeholder="Password from sender" required autocomplete="new-password">
                     </div>
 
                     <button type="submit" class="submit-btn" id="download-btn">
