@@ -86,7 +86,7 @@
         previewDownloads: document.getElementById('preview-downloads'),
         previewDownloadsContainer: document.getElementById('preview-downloads-container'),
         confirmDownload: document.getElementById('confirm-download'),
-        cancelDownloadPreview: document.getElementById('cancel-download'),
+        cancelDownload: document.getElementById('cancel-download'),
         
         // Message
         messageBox: document.getElementById('message-box'),
