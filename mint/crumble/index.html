@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crumble - Temporary File Sharing</title>
+    <link rel="stylesheet" href="../mint.css">
+    <link rel="stylesheet" href="crumble.css">
+</head>
+<body>
+    <div class="crumble-page">
+        <div class="crumble-container">
+            <header class="crumble-header">
+                <h1 class="crumble-title">Crumble</h1>
+                <p class="crumble-subtitle">drop it, grab it, gone</p>
+            </header>
+
+            <!-- User Status Bar -->
+            <div class="user-bar" id="user-bar" style="display: none;">
+                <span class="user-info">Logged in as <strong id="logged-username"></strong></span>
+                <button type="button" class="logout-btn" id="logout-btn">Logout</button>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="tab-nav">
+                <button class="tab-btn active" data-tab="upload">Drop</button>
+                <button class="tab-btn" data-tab="download">Grab</button>
+            </div>
+
+            <!-- Upload Tab -->
+            <div class="tab-content active" id="upload-tab">
+                
+                <!-- Login/Register Section (shown when not logged in) -->
+                <div class="auth-section" id="auth-section">
+                    <div class="auth-tabs">
+                        <button class="auth-tab-btn active" data-auth="login">Login</button>
+                        <button class="auth-tab-btn" data-auth="register">Register</button>
+                    </div>
+                    
+                    <!-- Login Form -->
+                    <form id="login-form" class="crumble-form auth-form">
+                        <div class="form-group">
+                            <label for="login-username">Username</label>
+                            <div class="input-with-prefix">
+                                <span class="input-prefix">#</span>
+                                <input type="text" id="login-username" placeholder="winss" maxlength="30" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" placeholder="Your account password" required>
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="remember-login" checked>
+                                <span>Remember me</span>
+                            </label>
+                        </div>
+                        <button type="submit" class="submit-btn" id="login-btn">
+                            <span class="btn-text">Login</span>
+                            <span class="btn-loading" style="display: none;">Logging in...</span>
+                        </button>
+                    </form>
+                    
+                    <!-- Register Form -->
+                    <form id="register-form" class="crumble-form auth-form" style="display: none;">
+                        <div class="form-group">
+                            <label for="register-username">Choose Username</label>
+                            <div class="input-with-prefix">
+                                <span class="input-prefix">#</span>
+                                <input type="text" id="register-username" placeholder="winss" maxlength="30" required>
+                            </div>
+                            <span class="form-hint">Letters, numbers, underscores, hyphens (2-30 chars)</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="register-password">Choose Password</label>
+                            <input type="password" id="register-password" placeholder="Account password" minlength="4" required>
+                            <span class="form-hint">This is YOUR account password (4+ chars)</span>
+                        </div>
+                        <button type="submit" class="submit-btn" id="register-btn">
+                            <span class="btn-text">Create Account</span>
+                            <span class="btn-loading" style="display: none;">Creating...</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Upload Form (shown when logged in) -->
+                <form id="upload-form" class="crumble-form" style="display: none;">
+                    <div class="form-group">
+                        <label>Your Tag</label>
+                        <div class="input-with-prefix readonly">
+                            <span class="input-prefix">#</span>
+                            <input type="text" id="upload-author" readonly>
+                        </div>
+                        <span class="form-hint">This is your registered username</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="upload-hashtag">File Tag</label>
+                        <div class="input-with-prefix">
+                            <span class="input-prefix">#</span>
+                            <input type="text" id="upload-hashtag" placeholder="physics" maxlength="50" required>
+                        </div>
+                        <span class="form-hint">Unique identifier for this file (2-50 chars)</span>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group form-group-wide">
+                            <label for="upload-file-password">File Password</label>
+                            <input type="password" id="upload-file-password" placeholder="for receiver" minlength="4" maxlength="100" required>
+                        </div>
+                        <div class="form-group form-group-narrow">
+                            <label for="upload-maxdownloads">Max DLs</label>
+                            <input type="number" id="upload-maxdownloads" placeholder="∞" min="1" max="1000">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="upload-ttl">Expires In</label>
+                        <div class="input-with-suffix">
+                            <input type="number" id="upload-ttl" value="24" min="1" max="72" required>
+                            <span class="input-suffix">hours</span>
+                        </div>
+                        <span class="form-hint">1-72 hours max</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>File</label>
+                        <div class="file-drop-zone" id="file-drop-zone">
+                            <input type="file" id="upload-file" class="file-input" required>
+                            <div class="file-drop-content">
+                                <span class="file-drop-text">Drop file here or click to browse</span>
+                                <span class="file-drop-limit">Max 100MB</span>
+                            </div>
+                            <div class="file-selected" id="file-selected" style="display: none;">
+                                <span class="file-name" id="selected-file-name"></span>
+                                <span class="file-size" id="selected-file-size"></span>
+                                <button type="button" class="file-remove" id="file-remove">x</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="upload-btn">
+                        <span class="btn-text">Crumble It</span>
+                        <span class="btn-loading" style="display: none;">Uploading...</span>
+                    </button>
+                </form>
+
+                <!-- Upload Success -->
+                <div class="upload-success" id="upload-success" style="display: none;">
+                    <h2>File Dropped!</h2>
+                    <div class="success-details">
+                        <p>Share these details with the receiver:</p>
+                        <div class="share-info">
+                            <div class="share-item">
+                                <span class="share-label">Author:</span>
+                                <span class="share-value" id="success-author"></span>
+                            </div>
+                            <div class="share-item">
+                                <span class="share-label">Tag:</span>
+                                <span class="share-value" id="success-hashtag"></span>
+                            </div>
+                            <div class="share-item">
+                                <span class="share-label">Password:</span>
+                                <span class="share-value">[share separately]</span>
+                            </div>
+                            <div class="share-item">
+                                <span class="share-label">Expires:</span>
+                                <span class="share-value" id="success-expires"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="submit-btn secondary" id="upload-another">Drop Another</button>
+                </div>
+            </div>
+
+            <!-- Download Tab -->
+            <div class="tab-content" id="download-tab">
+                <form id="download-form" class="crumble-form">                    
+                    <div class="form-group">
+                        <label for="download-author">Author Tag</label>
+                        <div class="input-with-prefix">
+                            <span class="input-prefix">#</span>
+                            <input type="text" id="download-author" placeholder="winss" maxlength="30" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="download-hashtag">File Tag</label>
+                        <div class="input-with-prefix">
+                            <span class="input-prefix">#</span>
+                            <input type="text" id="download-hashtag" placeholder="physics" maxlength="50" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="download-password">File Password</label>
+                        <input type="password" id="download-password" placeholder="Password from sender" required>
+                    </div>
+
+                    <button type="submit" class="submit-btn" id="download-btn">
+                        <span class="btn-text">Grab It</span>
+                        <span class="btn-loading" style="display: none;">Checking...</span>
+                    </button>
+                </form>
+
+                <!-- File Preview -->
+                <div class="file-preview" id="file-preview" style="display: none;">
+                    <div class="preview-header">
+                        <h3>File Found</h3>
+                    </div>
+                    <div class="preview-details">
+                        <div class="preview-item">
+                            <span class="preview-label">File:</span>
+                            <span class="preview-value" id="preview-filename"></span>
+                        </div>
+                        <div class="preview-item">
+                            <span class="preview-label">Size:</span>
+                            <span class="preview-value" id="preview-size"></span>
+                        </div>
+                        <div class="preview-item">
+                            <span class="preview-label">Expires:</span>
+                            <span class="preview-value" id="preview-expires"></span>
+                        </div>
+                        <div class="preview-item" id="preview-downloads-container">
+                            <span class="preview-label">Downloads:</span>
+                            <span class="preview-value" id="preview-downloads"></span>
+                        </div>
+                    </div>
+                    <div class="warning-box">
+                        <strong>Warning:</strong> Files are not scanned for malware. Download at your own risk.
+                    </div>
+                    <button type="button" class="submit-btn" id="confirm-download">Download File</button>
+                    <button type="button" class="submit-btn secondary" id="cancel-download">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Error/Status Messages -->
+            <div class="message-box" id="message-box" style="display: none;">
+                <span class="message-text" id="message-text"></span>
+                <button type="button" class="message-close" id="message-close">x</button>
+            </div>
+
+            <div class="back-link-container">
+                <a href="../index.html" class="back-link">Back to Mint</a>
+            </div>
+
+            <div class="disclaimer">
+                <p>Files auto-delete after expiry. No illegal content. Not for sensitive data.</p>
+            </div>
+        </div>
+
+        <span class="version-text">crumble v1.0</span>
+    </div>
+
+    <script src="crumble.js"></script>
+</body>
+</html>

@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const BLINK_DURATION_MS = 5000;
     const BLINK_TARGET_FPS = 60;
-    const BLINK_FALLBACK_CAPTURE_FPS = 15;
+    const BLINK_FALLBACK_CAPTURE_FPS = 30;
     const BLINK_MIN_BITRATE = 3000000;
     const BLINK_MAX_BITRATE = 20000000;
     const BLINK_BITS_PER_PIXEL = 0.2;
@@ -512,6 +512,14 @@ document.addEventListener('DOMContentLoaded', () => {
             thickness: 1,
             sensitivity: 50,
             smoothColors: false
+        },
+        'Frosted Glass': {
+            enabled: false,
+            type: 'frostedGlass',
+            intensity: 10,
+            noise: 20,
+            opacity: 50,
+            tint: '#333333'
         }
     };
 
@@ -545,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'Dotted Line': 'overlay',
         'Kaleidoscope': 'overlay',
         '3D Perspective': 'overlay',
+        'Frosted Glass': 'overlay',
         'Bad TV': 'animated',
         'Spinning Rainbow Wheel': 'animated',
         'Liquid Marble': 'animated',
@@ -561,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'Edge Detection', 'Duotone', 'Glitch', 'Chromatic Aberration', 'Pixelate', 'Mosaic',
         'Posterize', 'Oil Painting', 'Emboss', 'Solarize', 'Cross Hatch', 'Thermal Vision',
         'Neon Glow', 'Bad Apple', 'Bad TV', 'Spinning Rainbow Wheel', 'Liquid Marble', 'Matrix Rain', 'Glitter Field', 'Storm Syndrome', 'Melt', 'Bouncing Logo', 'Line Art', 'Blur', 'Hue', 'Vignette', 'CRT', 'Dotted Matrix', 'Dotted Line',
-        'Kaleidoscope', '3D Perspective'
+        'Kaleidoscope', '3D Perspective', 'Frosted Glass'
     ];
 
     const layersPanel = document.getElementById('layers-panel');
@@ -649,6 +658,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let filterCanvas = null;
     let filterCtx = null;
+    let frostedCanvas = null;
+    let frostedCtx = null;
+    let cachedNoiseCanvas = null;
+    let cachedNoiseAmount = -1;
 
     function ensureProcessingContext(width, height) {
         if (!processingCanvas) {
@@ -720,6 +733,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case '3D Perspective':
                 perspective3D(canvas, context, effectConfig);
+                break;
+            case 'Frosted Glass':
+                frostedGlass(canvas, context, effectConfig.intensity, effectConfig.noise, effectConfig.opacity, effectConfig.tint);
                 break;
             default:
                 break;
@@ -860,6 +876,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 addBouncingLogoControls(controlsContainer, name, config);
             } else if (config.type === 'lineArt') {
                 addLineArtControls(controlsContainer, name, config);
+            } else if (config.type === 'frostedGlass') {
+                addFrostedGlassControls(controlsContainer, name, config);
             } else if (config.type === 'toggle') {
                 addToggle(controlsContainer, name, config.value);
             }
@@ -1439,21 +1457,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         lineColorInput.addEventListener('input', () => {
             effects[name].lineColor = lineColorInput.value;
-            throttledApplyEffects();
-        });
-        
-        lineColorInput.addEventListener('change', () => {
-            effects[name].lineColor = lineColorInput.value;
             applyAllEffects();
             captureFrame();
         });
         
         bgColorInput.addEventListener('input', () => {
-            effects[name].backgroundColor = bgColorInput.value;
-            throttledApplyEffects();
-        });
-        
-        bgColorInput.addEventListener('change', () => {
             effects[name].backgroundColor = bgColorInput.value;
             applyAllEffects();
             captureFrame();
@@ -1465,7 +1473,6 @@ document.addEventListener('DOMContentLoaded', () => {
             applyAllEffects();
             captureFrame();
         });
-        
         thicknessNumber.addEventListener('change', () => {
             thicknessSlider.value = thicknessNumber.value;
             effects[name].thickness = parseInt(thicknessNumber.value);
@@ -1479,9 +1486,8 @@ document.addEventListener('DOMContentLoaded', () => {
             applyAllEffects();
             captureFrame();
         });
-        
         sensitivityNumber.addEventListener('change', () => {
-            sensitivitySlider.value = sensitivitySlider.value;
+            sensitivitySlider.value = sensitivityNumber.value;
             effects[name].sensitivity = parseInt(sensitivityNumber.value);
             applyAllEffects();
             captureFrame();
@@ -1493,6 +1499,143 @@ document.addEventListener('DOMContentLoaded', () => {
             captureFrame();
         });
         
+        container.appendChild(controlGroup);
+    }
+
+    function addFrostedGlassControls(container, name, config) {
+        const controlGroup = document.createElement('div');
+        controlGroup.className = 'control-group';
+
+        const intensityContainer = document.createElement('div');
+        intensityContainer.className = 'flex items-center space-x-2';
+        const intensityLabel = document.createElement('label');
+        intensityLabel.textContent = 'Blur';
+        intensityLabel.className = 'text-sm';
+        const intensitySlider = document.createElement('input');
+        intensitySlider.type = 'range';
+        intensitySlider.min = 0;
+        intensitySlider.max = 50;
+        intensitySlider.value = config.intensity;
+        intensitySlider.className = 'slider';
+        const intensityInput = document.createElement('input');
+        intensityInput.type = 'number';
+        intensityInput.min = 0;
+        intensityInput.max = 50;
+        intensityInput.value = config.intensity;
+        intensityInput.className = 'number-input';
+        intensityContainer.appendChild(intensityLabel);
+        intensityContainer.appendChild(intensitySlider);
+        intensityContainer.appendChild(intensityInput);
+
+        const noiseContainer = document.createElement('div');
+        noiseContainer.className = 'flex items-center space-x-2';
+        const noiseLabel = document.createElement('label');
+        noiseLabel.textContent = 'Noise';
+        noiseLabel.className = 'text-sm';
+        const noiseSlider = document.createElement('input');
+        noiseSlider.type = 'range';
+        noiseSlider.min = 0;
+        noiseSlider.max = 100;
+        noiseSlider.value = config.noise;
+        noiseSlider.className = 'slider';
+        const noiseInput = document.createElement('input');
+        noiseInput.type = 'number';
+        noiseInput.min = 0;
+        noiseInput.max = 100;
+        noiseInput.value = config.noise;
+        noiseInput.className = 'number-input';
+        noiseContainer.appendChild(noiseLabel);
+        noiseContainer.appendChild(noiseSlider);
+        noiseContainer.appendChild(noiseInput);
+
+        const opacityContainer = document.createElement('div');
+        opacityContainer.className = 'flex items-center space-x-2';
+        const opacityLabel = document.createElement('label');
+        opacityLabel.textContent = 'Opacity';
+        opacityLabel.className = 'text-sm';
+        const opacitySlider = document.createElement('input');
+        opacitySlider.type = 'range';
+        opacitySlider.min = 0;
+        opacitySlider.max = 100;
+        opacitySlider.value = config.opacity;
+        opacitySlider.className = 'slider';
+        const opacityInput = document.createElement('input');
+        opacityInput.type = 'number';
+        opacityInput.min = 0;
+        opacityInput.max = 100;
+        opacityInput.value = config.opacity;
+        opacityInput.className = 'number-input';
+        opacityContainer.appendChild(opacityLabel);
+        opacityContainer.appendChild(opacitySlider);
+        opacityContainer.appendChild(opacityInput);
+
+        const tintContainer = document.createElement('div');
+        tintContainer.className = 'flex items-center space-x-2';
+        const tintLabel = document.createElement('label');
+        tintLabel.textContent = 'Tint';
+        tintLabel.className = 'text-sm';
+        const tintInput = document.createElement('input');
+        tintInput.type = 'color';
+        tintInput.value = config.tint;
+        tintInput.className = 'color-input';
+        tintContainer.appendChild(tintLabel);
+        tintContainer.appendChild(tintInput);
+
+        controlGroup.appendChild(intensityContainer);
+        controlGroup.appendChild(noiseContainer);
+        controlGroup.appendChild(opacityContainer);
+        controlGroup.appendChild(tintContainer);
+
+        intensitySlider.addEventListener('input', () => {
+            intensityInput.value = intensitySlider.value;
+            effects[name].intensity = parseFloat(intensitySlider.value);
+            applyAllEffects();
+            captureFrame();
+        });
+        intensityInput.addEventListener('change', () => {
+            intensitySlider.value = intensityInput.value;
+            effects[name].intensity = parseFloat(intensityInput.value);
+            applyAllEffects();
+            captureFrame();
+        });
+
+        noiseSlider.addEventListener('input', () => {
+            noiseInput.value = noiseSlider.value;
+            effects[name].noise = parseFloat(noiseSlider.value);
+            applyAllEffects();
+            captureFrame();
+        });
+        noiseInput.addEventListener('change', () => {
+            noiseSlider.value = noiseInput.value;
+            effects[name].noise = parseFloat(noiseInput.value);
+            applyAllEffects();
+            captureFrame();
+        });
+
+        opacitySlider.addEventListener('input', () => {
+            opacityInput.value = opacitySlider.value;
+            effects[name].opacity = parseFloat(opacitySlider.value);
+            applyAllEffects();
+            captureFrame();
+        });
+        opacityInput.addEventListener('change', () => {
+            opacitySlider.value = opacityInput.value;
+            effects[name].opacity = parseFloat(opacityInput.value);
+            applyAllEffects();
+            captureFrame();
+        });
+
+        tintInput.addEventListener('input', () => {
+            effects[name].tint = tintInput.value;
+            throttledApplyEffects();
+        });
+        
+        tintInput.addEventListener('change', () => {
+            effects[name].tint = tintInput.value;
+            applyAllEffects();
+            captureFrame();
+        });
+
         container.appendChild(controlGroup);
     }
 
@@ -3615,6 +3758,73 @@ upload.addEventListener('change', (e) => {
         gradient.addColorStop(1, `rgba(0,0,0,${amount})`);
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function frostedGlass(canvas, ctx, intensity, noiseAmount, opacity, tint) {
+        if (!frostedCanvas) {
+            frostedCanvas = document.createElement('canvas');
+            frostedCtx = frostedCanvas.getContext('2d');
+        }
+        if (frostedCanvas.width !== canvas.width || frostedCanvas.height !== canvas.height) {
+            frostedCanvas.width = canvas.width;
+            frostedCanvas.height = canvas.height;
+        }
+
+        frostedCtx.clearRect(0, 0, frostedCanvas.width, frostedCanvas.height);
+
+        if (intensity > 0) {
+            frostedCtx.filter = `blur(${intensity}px)`;
+        } else {
+            frostedCtx.filter = 'none';
+        }
+        frostedCtx.drawImage(canvas, 0, 0);
+        frostedCtx.filter = 'none';
+
+        if (noiseAmount > 0) {
+            if (!cachedNoiseCanvas || cachedNoiseAmount !== noiseAmount) {
+                cachedNoiseCanvas = document.createElement('canvas');
+                cachedNoiseCanvas.width = 256;
+                cachedNoiseCanvas.height = 256;
+                const noiseCtx = cachedNoiseCanvas.getContext('2d');
+                const noiseData = noiseCtx.createImageData(256, 256);
+                const data = noiseData.data;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const val = Math.floor(Math.random() * 255);
+                    data[i] = val;
+                    data[i + 1] = val;
+                    data[i + 2] = val;
+                    data[i + 3] = (noiseAmount / 100) * 255; 
+                }
+                noiseCtx.putImageData(noiseData, 0, 0);
+                cachedNoiseAmount = noiseAmount;
+            }
+
+            frostedCtx.save();
+            frostedCtx.globalCompositeOperation = 'overlay';
+            const pattern = frostedCtx.createPattern(cachedNoiseCanvas, 'repeat');
+            frostedCtx.fillStyle = pattern;
+            frostedCtx.fillRect(0, 0, frostedCanvas.width, frostedCanvas.height);
+            frostedCtx.restore();
+        }
+
+        if (tint) {
+            frostedCtx.save();
+            frostedCtx.globalCompositeOperation = 'soft-light';
+            frostedCtx.fillStyle = tint;
+            frostedCtx.fillRect(0, 0, frostedCanvas.width, frostedCanvas.height);
+            
+            frostedCtx.globalCompositeOperation = 'source-over';
+            frostedCtx.globalAlpha = 0.2;
+            frostedCtx.fillStyle = tint;
+            frostedCtx.fillRect(0, 0, frostedCanvas.width, frostedCanvas.height);
+            frostedCtx.restore();
+        }
+
+        ctx.save();
+        ctx.globalAlpha = opacity / 100;
+        ctx.drawImage(frostedCanvas, 0, 0);
+        ctx.restore();
     }    function glitch(imageData, amount) {
         const data = imageData.data;
         const width = imageData.width;

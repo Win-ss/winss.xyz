@@ -1,0 +1,621 @@
+(function() {
+    'use strict';
+
+    // Configuration
+    
+    const API_BASE = 'http://85.215.159.4:9830/api';
+    
+    // Local storage keys
+    const STORAGE_USER = 'crumble_user';
+    const STORAGE_PASS = 'crumble_pass';
+    
+    // State
+    
+    let currentUser = null;
+    let currentUserPassword = null;
+    let currentDownloadInfo = null;
+    let messageTimeout = null;
+    
+    // DOM Elements
+    
+    const elements = {
+        // User bar
+        userBar: document.getElementById('user-bar'),
+        loggedUsername: document.getElementById('logged-username'),
+        logoutBtn: document.getElementById('logout-btn'),
+        
+        // Tabs
+        tabBtns: document.querySelectorAll('.tab-btn'),
+        uploadTab: document.getElementById('upload-tab'),
+        downloadTab: document.getElementById('download-tab'),
+        
+        // Auth section
+        authSection: document.getElementById('auth-section'),
+        authTabBtns: document.querySelectorAll('.auth-tab-btn'),
+        loginForm: document.getElementById('login-form'),
+        registerForm: document.getElementById('register-form'),
+        
+        // Login
+        loginUsername: document.getElementById('login-username'),
+        loginPassword: document.getElementById('login-password'),
+        rememberLogin: document.getElementById('remember-login'),
+        loginBtn: document.getElementById('login-btn'),
+        
+        // Register
+        registerUsername: document.getElementById('register-username'),
+        registerPassword: document.getElementById('register-password'),
+        registerBtn: document.getElementById('register-btn'),
+        
+        // Upload form
+        uploadForm: document.getElementById('upload-form'),
+        uploadAuthor: document.getElementById('upload-author'),
+        uploadHashtag: document.getElementById('upload-hashtag'),
+        uploadFilePassword: document.getElementById('upload-file-password'),
+        uploadTTL: document.getElementById('upload-ttl'),
+        uploadMaxDownloads: document.getElementById('upload-maxdownloads'),
+        uploadFile: document.getElementById('upload-file'),
+        fileDropZone: document.getElementById('file-drop-zone'),
+        fileSelected: document.getElementById('file-selected'),
+        selectedFileName: document.getElementById('selected-file-name'),
+        selectedFileSize: document.getElementById('selected-file-size'),
+        fileRemove: document.getElementById('file-remove'),
+        uploadBtn: document.getElementById('upload-btn'),
+        
+        // Upload success
+        uploadSuccess: document.getElementById('upload-success'),
+        successAuthor: document.getElementById('success-author'),
+        successHashtag: document.getElementById('success-hashtag'),
+        successExpires: document.getElementById('success-expires'),
+        uploadAnother: document.getElementById('upload-another'),
+        
+        // Download form
+        downloadForm: document.getElementById('download-form'),
+        downloadAuthor: document.getElementById('download-author'),
+        downloadHashtag: document.getElementById('download-hashtag'),
+        downloadPassword: document.getElementById('download-password'),
+        downloadBtn: document.getElementById('download-btn'),
+        
+        // File preview
+        filePreview: document.getElementById('file-preview'),
+        previewFilename: document.getElementById('preview-filename'),
+        previewSize: document.getElementById('preview-size'),
+        previewExpires: document.getElementById('preview-expires'),
+        previewDownloads: document.getElementById('preview-downloads'),
+        previewDownloadsContainer: document.getElementById('preview-downloads-container'),
+        confirmDownload: document.getElementById('confirm-download'),
+        cancelDownload: document.getElementById('cancel-download'),
+        
+        // Message
+        messageBox: document.getElementById('message-box'),
+        messageText: document.getElementById('message-text'),
+        messageClose: document.getElementById('message-close'),
+    };
+    
+    
+    function init() {
+        loadSavedSession();
+        setupEventListeners();
+        updateUIForAuth();
+    }
+    
+    function loadSavedSession() {
+        const savedUser = localStorage.getItem(STORAGE_USER);
+        const savedPass = sessionStorage.getItem(STORAGE_PASS);
+        
+        if (savedUser && savedPass) {
+            currentUser = savedUser;
+            currentUserPassword = savedPass;
+        }
+    }
+    
+    function setupEventListeners() {
+        elements.tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+        
+        elements.authTabBtns.forEach(btn => {
+            btn.addEventListener('click', () => switchAuthTab(btn.dataset.auth));
+        });
+        
+        elements.loginForm.addEventListener('submit', handleLogin);
+        elements.registerForm.addEventListener('submit', handleRegister);
+        elements.logoutBtn.addEventListener('click', handleLogout);
+        
+        elements.uploadFile.addEventListener('change', handleFileSelect);
+        elements.fileRemove.addEventListener('click', clearFileSelection);
+        
+        elements.fileDropZone.addEventListener('dragover', handleDragOver);
+        elements.fileDropZone.addEventListener('dragleave', handleDragLeave);
+        elements.fileDropZone.addEventListener('drop', handleDrop);
+        
+        elements.uploadForm.addEventListener('submit', handleUpload);
+        elements.uploadAnother.addEventListener('click', resetUploadForm);
+        
+        elements.downloadForm.addEventListener('submit', handleDownloadCheck);
+        elements.confirmDownload.addEventListener('click', handleDownload);
+        elements.cancelDownload.addEventListener('click', cancelDownloadPreview);
+        
+        elements.messageClose.addEventListener('click', hideMessage);
+    }
+    
+    // Authentication
+    
+    function updateUIForAuth() {
+        if (currentUser) {
+            elements.userBar.style.display = 'flex';
+            elements.loggedUsername.textContent = '#' + currentUser;
+            elements.authSection.style.display = 'none';
+            elements.uploadForm.style.display = 'flex';
+            elements.uploadAuthor.value = currentUser;
+        } else {
+            elements.userBar.style.display = 'none';
+            elements.authSection.style.display = 'block';
+            elements.uploadForm.style.display = 'none';
+        }
+        elements.uploadSuccess.style.display = 'none';
+    }
+    
+    function switchAuthTab(tab) {
+        elements.authTabBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.auth === tab);
+        });
+        
+        elements.loginForm.style.display = tab === 'login' ? 'flex' : 'none';
+        elements.registerForm.style.display = tab === 'register' ? 'flex' : 'none';
+    }
+    
+    async function handleLogin(e) {
+        e.preventDefault();
+        
+        const username = elements.loginUsername.value.trim();
+        const password = elements.loginPassword.value;
+        
+        if (!username || !password) {
+            showMessage('Please fill in all fields.', 'error');
+            return;
+        }
+        
+        setButtonLoading(elements.loginBtn, true);
+        
+        try {
+            const response = await fetch(`${API_BASE}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Login failed.');
+            }
+            
+            currentUser = data.username;
+            currentUserPassword = password;
+            
+            if (elements.rememberLogin.checked) {
+                localStorage.setItem(STORAGE_USER, data.username);
+            }
+            sessionStorage.setItem(STORAGE_PASS, password);
+            
+            showMessage('Logged in successfully!', 'success');
+            updateUIForAuth();
+            elements.loginPassword.value = '';
+            
+        } catch (error) {
+            showMessage(error.message || 'Login failed.', 'error');
+        } finally {
+            setButtonLoading(elements.loginBtn, false);
+        }
+    }
+    
+    async function handleRegister(e) {
+        e.preventDefault();
+        
+        const username = elements.registerUsername.value.trim();
+        const password = elements.registerPassword.value;
+        
+        if (!username || !password) {
+            showMessage('Please fill in all fields.', 'error');
+            return;
+        }
+        
+        if (username.length < 2 || username.length > 30) {
+            showMessage('Username must be 2-30 characters.', 'error');
+            return;
+        }
+        
+        if (password.length < 4) {
+            showMessage('Password must be at least 4 characters.', 'error');
+            return;
+        }
+        
+        setButtonLoading(elements.registerBtn, true);
+        
+        try {
+            const response = await fetch(`${API_BASE}/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
+            });
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Registration failed.');
+            }
+            
+            currentUser = data.username;
+            currentUserPassword = password;
+            
+            localStorage.setItem(STORAGE_USER, data.username);
+            sessionStorage.setItem(STORAGE_PASS, password);
+            
+            showMessage('Account created! You are now logged in.', 'success');
+            updateUIForAuth();
+            
+            elements.registerUsername.value = '';
+            elements.registerPassword.value = '';
+            
+        } catch (error) {
+            showMessage(error.message || 'Registration failed.', 'error');
+        } finally {
+            setButtonLoading(elements.registerBtn, false);
+        }
+    }
+    
+    function handleLogout() {
+        currentUser = null;
+        currentUserPassword = null;
+        localStorage.removeItem(STORAGE_USER);
+        sessionStorage.removeItem(STORAGE_PASS);
+        
+        updateUIForAuth();
+        showMessage('Logged out.', 'success');
+    }
+    
+    // Tab Management
+    
+    function switchTab(tab) {
+        elements.tabBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab);
+        });
+        
+        elements.uploadTab.classList.toggle('active', tab === 'upload');
+        elements.downloadTab.classList.toggle('active', tab === 'download');
+        
+        hideMessage();
+        if (tab === 'download') {
+            cancelDownloadPreview();
+        }
+    }
+    
+    // File Selection
+    
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (file) displaySelectedFile(file);
+    }
+    
+    function handleDragOver(e) {
+        e.preventDefault();
+        elements.fileDropZone.classList.add('dragover');
+    }
+    
+    function handleDragLeave(e) {
+        e.preventDefault();
+        elements.fileDropZone.classList.remove('dragover');
+    }
+    
+    function handleDrop(e) {
+        e.preventDefault();
+        elements.fileDropZone.classList.remove('dragover');
+        
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            elements.uploadFile.files = dataTransfer.files;
+            displaySelectedFile(file);
+        }
+    }
+    
+    function displaySelectedFile(file) {
+        const maxSize = 100 * 1024 * 1024;
+        if (file.size > maxSize) {
+            showMessage('File too large. Maximum size is 100MB.', 'error');
+            clearFileSelection();
+            return;
+        }
+        
+        elements.selectedFileName.textContent = file.name;
+        elements.selectedFileSize.textContent = formatBytes(file.size);
+        elements.fileDropZone.querySelector('.file-drop-content').style.display = 'none';
+        elements.fileSelected.style.display = 'flex';
+    }
+    
+    function clearFileSelection() {
+        elements.uploadFile.value = '';
+        elements.fileDropZone.querySelector('.file-drop-content').style.display = 'flex';
+        elements.fileSelected.style.display = 'none';
+    }
+    
+    // Upload
+    
+    async function handleUpload(e) {
+        e.preventDefault();
+        
+        if (!currentUser || !currentUserPassword) {
+            showMessage('Please login first.', 'error');
+            return;
+        }
+        
+        const hashtag = elements.uploadHashtag.value.trim();
+        const filePassword = elements.uploadFilePassword.value;
+        const ttl = elements.uploadTTL.value;
+        const maxDownloads = elements.uploadMaxDownloads.value;
+        const file = elements.uploadFile.files[0];
+        
+        if (!hashtag || !filePassword || !file) {
+            showMessage('Please fill in all required fields.', 'error');
+            return;
+        }
+        
+        if (hashtag.length < 2) {
+            showMessage('File tag must be at least 2 characters.', 'error');
+            return;
+        }
+        
+        if (filePassword.length < 4) {
+            showMessage('File password must be at least 4 characters.', 'error');
+            return;
+        }
+        
+        setButtonLoading(elements.uploadBtn, true);
+        
+        try {
+            const checkResponse = await fetch(`${API_BASE}/check`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ author: currentUser, hashtag }),
+            });
+            
+            const checkData = await checkResponse.json();
+            
+            if (!checkData.success) {
+                throw new Error(checkData.error || 'Failed to check availability.');
+            }
+            
+            if (!checkData.available) {
+                throw new Error('This tag is already in use. Try a different one.');
+            }
+            
+            // Upload the file
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('username', currentUser);
+            formData.append('userPassword', currentUserPassword);
+            formData.append('hashtag', hashtag);
+            formData.append('filePassword', filePassword);
+            formData.append('ttl', ttl);
+            if (maxDownloads) {
+                formData.append('maxDownloads', maxDownloads);
+            }
+            
+            const uploadResponse = await fetch(`${API_BASE}/upload`, {
+                method: 'POST',
+                body: formData,
+            });
+            
+            const uploadData = await uploadResponse.json();
+            
+            if (!uploadData.success) {
+                throw new Error(uploadData.error || 'Upload failed.');
+            }
+            
+            showUploadSuccess(uploadData.data);
+            
+        } catch (error) {
+            showMessage(error.message || 'Upload failed. Please try again.', 'error');
+        } finally {
+            setButtonLoading(elements.uploadBtn, false);
+        }
+    }
+    
+    function showUploadSuccess(data) {
+        elements.uploadForm.style.display = 'none';
+        elements.uploadSuccess.style.display = 'block';
+        
+        elements.successAuthor.textContent = '#' + data.author;
+        elements.successHashtag.textContent = '#' + data.hashtag;
+        elements.successExpires.textContent = formatDate(data.expiresAt);
+    }
+    
+    function resetUploadForm() {
+        elements.uploadForm.style.display = 'flex';
+        elements.uploadSuccess.style.display = 'none';
+        
+        elements.uploadHashtag.value = '';
+        elements.uploadFilePassword.value = '';
+        elements.uploadMaxDownloads.value = '';
+        elements.uploadTTL.value = '24';
+        clearFileSelection();
+    }
+    
+    // Download
+    
+    async function handleDownloadCheck(e) {
+        e.preventDefault();
+        
+        const author = elements.downloadAuthor.value.trim();
+        const hashtag = elements.downloadHashtag.value.trim();
+        const password = elements.downloadPassword.value;
+        
+        if (!author || !hashtag || !password) {
+            showMessage('Please fill in all fields.', 'error');
+            return;
+        }
+        
+        setButtonLoading(elements.downloadBtn, true);
+        
+        try {
+            const infoResponse = await fetch(`${API_BASE}/info`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ author, hashtag }),
+            });
+            
+            const infoData = await infoResponse.json();
+            
+            if (!infoData.success) {
+                throw new Error(infoData.error || 'File not found.');
+            }
+            
+            currentDownloadInfo = {
+                author,
+                hashtag,
+                password,
+                ...infoData.data,
+            };
+            
+            showFilePreview(infoData.data);
+            
+        } catch (error) {
+            showMessage(error.message || 'File not found.', 'error');
+        } finally {
+            setButtonLoading(elements.downloadBtn, false);
+        }
+    }
+    
+    function showFilePreview(data) {
+        elements.downloadForm.style.display = 'none';
+        elements.filePreview.style.display = 'block';
+        
+        elements.previewFilename.textContent = data.fileName;
+        elements.previewSize.textContent = formatBytes(data.size);
+        elements.previewExpires.textContent = formatDate(data.expiresAt);
+        
+        if (data.maxDownloads !== null) {
+            elements.previewDownloadsContainer.style.display = 'flex';
+            elements.previewDownloads.textContent = `${data.downloadCount} / ${data.maxDownloads}`;
+        } else {
+            elements.previewDownloadsContainer.style.display = 'none';
+        }
+    }
+    
+    async function handleDownload() {
+        if (!currentDownloadInfo) return;
+        
+        setButtonLoading(elements.confirmDownload, true);
+        
+        try {
+            const response = await fetch(`${API_BASE}/download`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    author: currentDownloadInfo.author,
+                    hashtag: currentDownloadInfo.hashtag,
+                    password: currentDownloadInfo.password,
+                }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Download failed.');
+            }
+            
+            const blob = await response.blob();
+            
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = currentDownloadInfo.fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showMessage('Download started!', 'success');
+            
+            setTimeout(() => {
+                cancelDownloadPreview();
+            }, 1500);
+            
+        } catch (error) {
+            showMessage(error.message || 'Download failed.', 'error');
+        } finally {
+            setButtonLoading(elements.confirmDownload, false);
+        }
+    }
+    
+    function cancelDownloadPreview() {
+        elements.downloadForm.style.display = 'flex';
+        elements.filePreview.style.display = 'none';
+        currentDownloadInfo = null;
+    }
+    
+    // UI Helpers
+    
+    function setButtonLoading(btn, loading) {
+        if (!btn) return;
+        const btnText = btn.querySelector('.btn-text');
+        const btnLoading = btn.querySelector('.btn-loading');
+        
+        btn.disabled = loading;
+        if (btnText) btnText.style.display = loading ? 'none' : 'inline';
+        if (btnLoading) btnLoading.style.display = loading ? 'inline' : 'none';
+    }
+    
+    function showMessage(text, type = 'info') {
+        if (messageTimeout) {
+            clearTimeout(messageTimeout);
+        }
+        
+        elements.messageText.textContent = text;
+        elements.messageBox.className = 'message-box ' + type;
+        elements.messageBox.style.display = 'flex';
+        
+        messageTimeout = setTimeout(hideMessage, 5000);
+    }
+    
+    function hideMessage() {
+        elements.messageBox.style.display = 'none';
+        if (messageTimeout) {
+            clearTimeout(messageTimeout);
+            messageTimeout = null;
+        }
+    }
+    
+    // Utility Functions
+    
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function formatDate(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = date - now;
+        
+        if (diff <= 0) {
+            return 'Expired';
+        }
+        
+        const hours = Math.floor(diff / (60 * 60 * 1000));
+        const days = Math.floor(hours / 24);
+        
+        if (days > 0) {
+            return `in ${days} day${days !== 1 ? 's' : ''}`;
+        }
+        
+        return `in ${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+    
+    
+    init();
+    
+})();
