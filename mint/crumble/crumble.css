@@ -486,20 +486,21 @@ select option {
 
 .share-link-container {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 20px;
 }
 
 .share-link-input {
     flex: 1;
-    background: #1a1a1a;
+    min-width: 0;
+    background: #0a0a0a;
     border: 1px solid #333;
     border-radius: 6px;
-    padding: 12px;
+    padding: 14px 12px;
     color: #4ade80;
     font-family: 'Monocraft', monospace;
-    font-size: 0.85rem;
-    cursor: text;
+    font-size: 0.8rem;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -513,13 +514,14 @@ select option {
     background: #4ade80;
     border: none;
     border-radius: 6px;
-    padding: 12px 16px;
+    padding: 14px 16px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
     min-width: 50px;
+    flex-shrink: 0;
 }
 
 .copy-btn:hover {
