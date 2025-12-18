@@ -3,7 +3,7 @@
 
     // Configuration
     
-    const API_BASE = 'http://85.215.159.4:9830/api';
+    const API_BASE = 'https://crumble.winss.studio/api';
     
     // Local storage keys
     const STORAGE_USER = 'crumble_user';
@@ -67,6 +67,8 @@
         successHashtag: document.getElementById('success-hashtag'),
         successExpires: document.getElementById('success-expires'),
         uploadAnother: document.getElementById('upload-another'),
+        shareLink: document.getElementById('share-link'),
+        copyLinkBtn: document.getElementById('copy-link-btn'),
         
         // Download form
         downloadForm: document.getElementById('download-form'),
@@ -96,6 +98,20 @@
         loadSavedSession();
         setupEventListeners();
         updateUIForAuth();
+        checkShareLink();
+    }
+    
+    function checkShareLink() {
+        const params = new URLSearchParams(window.location.search);
+        const author = params.get('a');
+        const hashtag = params.get('t');
+        
+        if (author && hashtag) {
+            switchTab('download');
+            elements.downloadAuthor.value = author;
+            elements.downloadHashtag.value = hashtag;
+            elements.downloadPassword.focus();
+        }
     }
     
     function loadSavedSession() {
@@ -130,6 +146,7 @@
         
         elements.uploadForm.addEventListener('submit', handleUpload);
         elements.uploadAnother.addEventListener('click', resetUploadForm);
+        elements.copyLinkBtn.addEventListener('click', copyShareLink);
         
         elements.downloadForm.addEventListener('submit', handleDownloadCheck);
         elements.confirmDownload.addEventListener('click', handleDownload);
@@ -429,6 +446,24 @@
         elements.successAuthor.textContent = '#' + data.author;
         elements.successHashtag.textContent = '#' + data.hashtag;
         elements.successExpires.textContent = formatDate(data.expiresAt);
+        
+        // Generate shareable link
+        const shareUrl = `${window.location.origin}${window.location.pathname}?a=${encodeURIComponent(data.author)}&t=${encodeURIComponent(data.hashtag)}`;
+        elements.shareLink.value = shareUrl;
+    }
+    
+    function copyShareLink() {
+        elements.shareLink.select();
+        navigator.clipboard.writeText(elements.shareLink.value).then(() => {
+            const copyIcon = elements.copyLinkBtn.querySelector('.copy-icon');
+            const copiedText = elements.copyLinkBtn.querySelector('.copied-text');
+            copyIcon.style.display = 'none';
+            copiedText.style.display = 'inline';
+            setTimeout(() => {
+                copyIcon.style.display = 'inline';
+                copiedText.style.display = 'none';
+            }, 2000);
+        });
     }
     
     function resetUploadForm() {

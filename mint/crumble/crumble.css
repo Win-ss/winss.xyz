@@ -484,6 +484,59 @@ select option {
     font-size: 0.9rem;
 }
 
+.share-link-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.share-link-input {
+    flex: 1;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 12px;
+    color: #4ade80;
+    font-family: 'Monocraft', monospace;
+    font-size: 0.85rem;
+    cursor: text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.share-link-input:focus {
+    outline: none;
+    border-color: #4ade80;
+}
+
+.copy-btn {
+    background: #4ade80;
+    border: none;
+    border-radius: 6px;
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    min-width: 50px;
+}
+
+.copy-btn:hover {
+    background: #22c55e;
+}
+
+.copy-btn .copy-icon {
+    color: #000;
+}
+
+.copy-btn .copied-text {
+    color: #000;
+    font-family: 'Monocraft', monospace;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
 .share-info {
     display: flex;
     flex-direction: column;
