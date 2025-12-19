@@ -7,12 +7,12 @@
     
     // Local storage keys
     const STORAGE_USER = 'crumble_user';
-    const STORAGE_PASS = 'crumble_pass';
+    const STORAGE_TOKEN = 'crumble_token';
     
     // State
     
     let currentUser = null;
-    let currentUserPassword = null;
+    let currentToken = null;
     let currentDownloadInfo = null;
     let messageTimeout = null;
     
@@ -118,11 +118,11 @@
     
     function loadSavedSession() {
         const savedUser = localStorage.getItem(STORAGE_USER);
-        const savedPass = sessionStorage.getItem(STORAGE_PASS);
+        const savedToken = sessionStorage.getItem(STORAGE_TOKEN);
         
-        if (savedUser && savedPass) {
+        if (savedUser && savedToken) {
             currentUser = savedUser;
-            currentUserPassword = savedPass;
+            currentToken = savedToken;
         }
     }
     
@@ -234,12 +234,12 @@
             }
             
             currentUser = data.username;
-            currentUserPassword = password;
+            currentToken = data.token;
             
             if (elements.rememberLogin.checked) {
                 localStorage.setItem(STORAGE_USER, data.username);
             }
-            sessionStorage.setItem(STORAGE_PASS, password);
+            sessionStorage.setItem(STORAGE_TOKEN, data.token);
             
             showMessage('Logged in successfully!', 'success');
             updateUIForAuth();
@@ -289,10 +289,10 @@
             }
             
             currentUser = data.username;
-            currentUserPassword = password;
+            currentToken = data.token;
             
             localStorage.setItem(STORAGE_USER, data.username);
-            sessionStorage.setItem(STORAGE_PASS, password);
+            sessionStorage.setItem(STORAGE_TOKEN, data.token);
             
             showMessage('Account created! You are now logged in.', 'success');
             updateUIForAuth();
@@ -309,9 +309,9 @@
     
     function handleLogout() {
         currentUser = null;
-        currentUserPassword = null;
+        currentToken = null;
         localStorage.removeItem(STORAGE_USER);
-        sessionStorage.removeItem(STORAGE_PASS);
+        sessionStorage.removeItem(STORAGE_TOKEN);
         
         updateUIForAuth();
         showMessage('Logged out.', 'success');
@@ -388,7 +388,7 @@
     async function handleUpload(e) {
         e.preventDefault();
         
-        if (!currentUser || !currentUserPassword) {
+        if (!currentUser || !currentToken) {
             showMessage('Please login first.', 'error');
             return;
         }
@@ -436,8 +436,6 @@
             // Upload the file
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('username', currentUser);
-            formData.append('userPassword', currentUserPassword);
             formData.append('hashtag', hashtag);
             formData.append('filePassword', filePassword);
             formData.append('ttl', ttl);
@@ -447,6 +445,9 @@
             
             const uploadResponse = await fetch(`${API_BASE}/upload`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`,
+                },
                 body: formData,
             });
             

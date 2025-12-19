@@ -219,6 +219,7 @@
     text-align: center;
     padding: 12px 6px !important;
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .form-group-narrow input[type="number"]::-webkit-outer-spin-button,
@@ -311,6 +312,7 @@ select option {
     text-align: center;
     padding: 12px 8px;
     -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 .input-with-suffix input::-webkit-outer-spin-button,
