@@ -1163,10 +1163,98 @@
             margin-right: 0.5rem;
         }
 
+        .mobile-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .mobile-warning-content {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .mobile-warning-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .mobile-warning-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            color: var(--text-main);
+        }
+
+        .mobile-warning-text {
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .mobile-warning-button {
+            background-color: var(--accent);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .mobile-warning-button.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            margin-left: 0.5rem;
+        }
+
+        .mobile-warning-button:hover {
+            transform: translateY(-2px);
+            opacity: 0.95;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-warning {
+                display: flex;
+            }
+            .main-content {
+                display: none;
+            }
+        }
+
     </style>
 </head>
 <body>
 
+    <div class="mobile-warning">
+        <div class="mobile-warning-content">
+            <div class="mobile-warning-icon">💻</div>
+            <h2 class="mobile-warning-title">Desktop Required</h2>
+            <p class="mobile-warning-text">Chroma runs best on a desktop browser. Please open this page on a desktop or laptop or tablet for the full experience.</p>
+            <a href="../index.html" class="mobile-warning-button">← Back to Home</a>
+            <button id="close-warning" class="mobile-warning-button secondary" style="margin-left:0.5rem;">Continue</button>
+        </div>
+    </div>
+    <div class="main-content">
     <div class="bg-glow">
         <div class="glow-blob" style="width: 600px; height: 600px; background: var(--accent); top: -200px; left: -200px;"></div>
         <div class="glow-blob" style="width: 500px; height: 500px; background: #9333ea; bottom: -100px; right: -100px; animation-delay: -5s;"></div>
@@ -1363,7 +1451,9 @@ The extractor will find all colors automatically!"></textarea>
         </div>
     </div>
 
-    <script>
+    </div>
+
+    <script> 
 
         class ColorEngine {
             constructor() {
@@ -2397,6 +2487,17 @@ accent: '#89B4FA'
         document.addEventListener('DOMContentLoaded', () => {
             const engine = new ColorEngine();
             new CodeColorExtractor(engine);
+
+            const closeBtn = document.getElementById('close-warning');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const mw = document.querySelector('.mobile-warning');
+                    const main = document.querySelector('.main-content');
+                    if (mw) mw.style.display = 'none';
+                    if (main) main.style.display = 'block';
+                });
+            }
         });
 
     </script>
