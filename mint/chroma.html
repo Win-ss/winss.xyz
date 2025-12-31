@@ -203,16 +203,23 @@
 
         .saved-scroller {
             display: flex;
-            align-items: center;
+            align-items: flex-end;
             gap: 0.5rem;
             margin-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        .saved-scroller .swipe-btn {
+            margin-bottom: 1.2rem;
+            position: relative;
+            z-index: 60;
         }
 
         .saved-swatches {
             display: flex;
             gap: 0.5rem;
             overflow-x: auto;
-            padding: 0.25rem 0.25rem;
+            padding: 10rem 2rem 0.5rem 2rem;
+            margin: -4rem -1rem 0 -1rem;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: thin;
             scrollbar-color: var(--accent) transparent;
@@ -248,16 +255,26 @@
         .saved-swatch:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
 
         .saved-swatch span {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
             font-size: 0.75rem;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.9);
             color: white;
             padding: 4px 8px;
             border-radius: 4px;
             opacity: 0;
-            transition: opacity 0.15s;
+            transition: all 0.15s var(--ease-out);
             pointer-events: none;
+            white-space: nowrap;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
-        .saved-swatch:hover span { opacity: 1; }
+        .saved-swatch:hover span { 
+            opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
+        }
 
         .empty-state-small {
             color: var(--text-muted);
@@ -305,17 +322,33 @@
 
         .delete-confirm {
             position: absolute;
-            top: -54px;
-            right: 0.25rem;
+            bottom: calc(100% + 12px);
+            left: 50%;
+            transform: translateX(-50%);
             background: var(--bg-surface);
             color: var(--text-main);
             border: 1px solid var(--border);
-            padding: 0.5rem;
-            border-radius: 8px;
-            min-width: 150px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            padding: 0.75rem;
+            border-radius: 12px;
+            width: 160px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             display: none;
-            z-index: 4;
+            z-index: 50;
+            text-align: center;
+        }
+        .saved-swatch:first-child .delete-confirm {
+            left: 0;
+            transform: translateX(0);
+        }
+        .saved-swatch:last-child .delete-confirm {
+            left: auto;
+            right: 0;
+            transform: translateX(0);
+        }
+        .delete-confirm div:first-child {
+            white-space: nowrap;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
         }
         .delete-confirm.visible { display: block; }
 
@@ -406,10 +439,12 @@
         .palette-display {
             display: flex;
             height: 80px;
-            border-radius: 8px;
-            overflow: hidden;
             margin-top: auto;
+            position: relative;
         }
+
+        .swatch:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+        .swatch:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
 
         .swatch {
             flex: 1;
@@ -424,16 +459,27 @@
         .swatch:hover { flex: 2; }
 
         .swatch span {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
             opacity: 0;
             font-size: 0.7rem;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
+            color: white;
             padding: 4px 8px;
             border-radius: 4px;
-            transition: opacity 0.2s;
+            transition: all 0.2s var(--ease-out);
             pointer-events: none;
+            white-space: nowrap;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
-        .swatch:hover span { opacity: 1; }
+        .swatch:hover span { 
+            opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
+        }
 
         /* --- CONTRAST --- */
         .contrast-checker {
@@ -584,18 +630,32 @@
             justify-content: center;
             font-size: 0.8rem;
             transition: transform 0.2s;
+            position: relative;
         }
         .shade-item:hover {
             transform: scale(1.05);
             z-index: 1;
         }
         .shade-item span {
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
             opacity: 0;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.9);
+            color: white;
             padding: 2px 6px;
             border-radius: 4px;
+            transition: all 0.2s var(--ease-out);
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
-        .shade-item:hover span { opacity: 1; }
+        .shade-item:hover span { 
+            opacity: 1;
+            transform: translateX(-50%) translateY(-2px);
+        }
 
         .extractor-section {
             margin-top: 2rem;
@@ -914,8 +974,8 @@
 
         .palette-preview-card {
             border-radius: 16px;
-            overflow: hidden;
             border: 1px solid var(--border);
+            position: relative;
         }
 
         .palette-preview-card.dark-theme {
@@ -1012,9 +1072,11 @@
         .palette-swatches-row {
             display: flex;
             margin-top: 1rem;
-            border-radius: 8px;
-            overflow: hidden;
+            position: relative;
         }
+
+        .palette-swatch-item:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+        .palette-swatch-item:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
 
         .palette-swatch-item {
             flex: 1;
@@ -1024,6 +1086,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
         }
 
         .palette-swatch-item:hover {
@@ -1031,13 +1094,26 @@
         }
 
         .palette-swatch-item span {
+            position: absolute;
+            bottom: calc(100% + 6px);
+            left: 50%;
+            transform: translateX(-50%);
             font-size: 0.65rem;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: all 0.2s var(--ease-out);
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
         .palette-swatch-item:hover span {
             opacity: 1;
+            transform: translateX(-50%) translateY(-2px);
         }
 
         /* Empty state */
