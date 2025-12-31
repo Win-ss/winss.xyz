@@ -36,7 +36,6 @@
             --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* --- RESET & BASE --- */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
@@ -180,14 +179,169 @@
         }
 
         .hue-thumb {
-            width: 16px; height: 16px;
+            width: 18px; height: 18px;
             background: white;
             border-radius: 50%;
             position: absolute;
             top: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 4px rgba(0,0,0,0.5);
+            border: 2px solid rgba(0,0,0,0.6);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.55), 0 0 0 4px rgba(79,70,229,0.06);
             pointer-events: none;
+        }
+
+        .saved-colors-panel {
+            margin-top: 1rem;
+        }
+
+        .saved-colors-panel .label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .saved-scroller {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .saved-swatches {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding: 0.25rem 0.25rem;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent) transparent;
+            flex: 1 1 auto;
+            scroll-snap-type: x mandatory;
+        }
+
+        .saved-swatches::-webkit-scrollbar {
+            height: 8px;
+        }
+        .saved-swatches::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .saved-swatches::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, rgba(79,70,229,0.9), rgba(147,51,234,0.9));
+            border-radius: 999px;
+            box-shadow: 0 0 10px rgba(79,70,229,0.2);
+        }
+
+        .saved-swatch {
+            flex: 0 0 92px;
+            height: 48px;
+            border-radius: 8px;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255,255,255,0.04);
+            transition: transform 0.15s var(--ease-out), box-shadow 0.15s;
+            scroll-snap-align: start;
+        }
+        .saved-swatch:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
+
+        .saved-swatch span {
+            font-size: 0.75rem;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.15s;
+            pointer-events: none;
+        }
+        .saved-swatch:hover span { opacity: 1; }
+
+        .empty-state-small {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            padding: 0.75rem;
+        }
+
+        .swipe-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));
+            border: 1px solid rgba(255,255,255,0.04);
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: transform 0.12s, color 0.12s, box-shadow 0.12s;
+            flex: 0 0 auto;
+        }
+        .swipe-btn:hover { transform: translateY(-2px); color: var(--accent); box-shadow: 0 6px 20px rgba(79,70,229,0.12); }
+        .swipe-btn:disabled { opacity: 0.25; cursor: default; transform: none; box-shadow: none; }
+
+        /* delete controls for saved swatches */
+        .swatch-delete-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.32);
+            border: 1px solid rgba(255,255,255,0.04);
+            color: #fff;
+            cursor: pointer;
+            z-index: 3;
+            padding: 0;
+            transition: background 0.12s, transform 0.12s;
+        }
+        .swatch-delete-btn:hover { background: rgba(239,68,68,0.95); transform: translateY(-2px); }
+
+        .delete-confirm {
+            position: absolute;
+            top: -54px;
+            right: 0.25rem;
+            background: var(--bg-surface);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            border-radius: 8px;
+            min-width: 150px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            display: none;
+            z-index: 4;
+        }
+        .delete-confirm.visible { display: block; }
+
+        .delete-confirm .confirm-actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-top: 0.5rem;
+        }
+        .delete-confirm .confirm-yes {
+            background: var(--accent);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .delete-confirm .confirm-no {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 0.25rem 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
         }
 
         /* --- MAIN STAGE --- */
@@ -443,6 +597,496 @@
         }
         .shade-item:hover span { opacity: 1; }
 
+        .extractor-section {
+            margin-top: 2rem;
+        }
+
+        .code-input-container {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .code-textarea {
+            width: 100%;
+            min-height: 200px;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-main);
+            resize: vertical;
+            transition: all 0.2s var(--ease-out);
+            line-height: 1.6;
+        }
+
+        .code-textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+            outline: none;
+        }
+
+        .code-textarea::placeholder {
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+
+        .extractor-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            background: var(--accent);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-out);
+            border: none;
+            font-family: var(--font-mono);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        .action-btn.secondary {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .action-btn.secondary:hover {
+            border-color: var(--accent);
+            color: var(--text-main);
+            box-shadow: none;
+        }
+
+        .extracted-stats {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .stats-count {
+            background: var(--accent);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        /* --- EXTRACTED COLORS GRID --- */
+        .extracted-colors-container {
+            display: none;
+        }
+
+        .extracted-colors-container.has-colors {
+            display: block;
+        }
+
+        .mode-toggle-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            background: var(--bg-surface);
+            padding: 0.5rem;
+            border-radius: 12px;
+            width: fit-content;
+            border: 1px solid var(--border);
+        }
+
+        .mode-toggle {
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-out);
+            font-size: 0.85rem;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        .mode-toggle.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .mode-toggle:hover:not(.active) {
+            color: var(--text-main);
+        }
+
+        .extracted-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .extracted-color-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.3s var(--ease-out);
+        }
+
+        .extracted-color-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px -10px rgba(0,0,0,0.5);
+        }
+
+        .color-preview-split {
+            display: flex;
+            height: 120px;
+        }
+
+        .preview-half {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            position: relative;
+            cursor: pointer;
+            transition: flex 0.3s var(--ease-out);
+        }
+
+        .preview-half:hover {
+            flex: 1.5;
+        }
+
+        .preview-half.dark-mode {
+            background: #0a0a0a;
+        }
+
+        .preview-half.light-mode {
+            background: #f5f5f5;
+        }
+
+        .preview-swatch {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s var(--ease-out);
+        }
+
+        .preview-half:hover .preview-swatch {
+            transform: scale(1.1);
+        }
+
+        .preview-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 0.5rem;
+            opacity: 0.6;
+        }
+
+        .preview-half.dark-mode .preview-label {
+            color: white;
+        }
+
+        .preview-half.light-mode .preview-label {
+            color: black;
+        }
+
+        .color-card-info {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .color-name-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .color-var-name {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--text-main);
+            max-width: 70%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .color-use-btn {
+            font-size: 0.7rem;
+            padding: 0.35rem 0.75rem;
+            background: rgba(79, 70, 229, 0.2);
+            color: var(--accent);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-family: var(--font-mono);
+        }
+
+        .color-use-btn:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .color-values {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .color-value-chip {
+            font-size: 0.7rem;
+            padding: 0.35rem 0.6rem;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+
+        .color-value-chip:hover {
+            background: rgba(0,0,0,0.5);
+            color: var(--text-main);
+        }
+
+        .color-contrast-info {
+            display: flex;
+            gap: 0.75rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .contrast-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.7rem;
+        }
+
+        .contrast-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .contrast-dot.pass { background: #4ade80; }
+        .contrast-dot.fail { background: #f87171; }
+
+        /* --- PALETTE GENERATION FROM EXTRACTED --- */
+        .generated-palettes-section {
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .generated-palettes-section.visible {
+            display: block;
+        }
+
+        .palette-preview-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .palette-preview-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .palette-preview-card {
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .palette-preview-card.dark-theme {
+            background: #0a0a0a;
+        }
+
+        .palette-preview-card.light-theme {
+            background: #fafafa;
+        }
+
+        .palette-preview-header {
+            padding: 1rem 1.25rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .dark-theme .palette-preview-header {
+            color: white;
+            border-color: #222;
+        }
+
+        .light-theme .palette-preview-header {
+            color: #111;
+            border-color: #e0e0e0;
+        }
+
+        .palette-preview-body {
+            padding: 1.5rem;
+        }
+
+        .mock-ui {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .mock-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .mock-button:hover {
+            transform: scale(1.02);
+        }
+
+        .mock-card {
+            padding: 1rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .dark-theme .mock-card {
+            background: #151515;
+            border: 1px solid #222;
+        }
+
+        .light-theme .mock-card {
+            background: white;
+            border: 1px solid #e5e5e5;
+        }
+
+        .mock-text-primary {
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+
+        .mock-text-secondary {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .mock-chips {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .mock-chip {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+        }
+
+        .palette-swatches-row {
+            display: flex;
+            margin-top: 1rem;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .palette-swatch-item {
+            flex: 1;
+            height: 40px;
+            cursor: pointer;
+            transition: flex 0.2s var(--ease-out);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .palette-swatch-item:hover {
+            flex: 2;
+        }
+
+        .palette-swatch-item span {
+            font-size: 0.65rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .palette-swatch-item:hover span {
+            opacity: 1;
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+
+        .empty-state-title {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        .icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1em;
+            height: 1em;
+            vertical-align: middle;
+        }
+
+        .icon svg {
+            width: 100%;
+            height: 100%;
+            fill: currentColor;
+        }
+
+        .icon-accent svg {
+            fill: var(--accent);
+        }
+
+        .icon-lg {
+            width: 3rem;
+            height: 3rem;
+        }
+
+        .btn-icon {
+            margin-right: 0.5rem;
+        }
+
     </style>
 </head>
 <body>
@@ -469,6 +1113,27 @@
                     </div>
                     <div class="hue-slider" id="hueSlider">
                         <div class="hue-thumb" id="hueThumb"></div>
+                    </div>
+                </div>
+
+                <div class="saved-colors-panel">
+                    <div class="label">
+                        <span>SAVED COLORS</span>
+                        <button class="action-btn secondary" id="saveColorBtn" title="Save current color">SAVE</button>
+                    </div>
+
+                    <div class="saved-scroller" id="savedScroller">
+                        <button class="swipe-btn left" id="savedPrevBtn" aria-label="Scroll left">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+
+                        <div class="saved-swatches" id="savedSwatches">
+                            <div class="empty-state-small">save colors so they appear here!</div>
+                        </div>
+
+                        <button class="swipe-btn right" id="savedNextBtn" aria-label="Scroll right">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
                     </div>
                 </div>
 
@@ -503,7 +1168,7 @@
             
             <!-- PALETTES SECTION -->
             <section>
-                <h2 class="section-title">GENERATED HARMONIES</h2>
+                <h2 class="section-title">GENERATED COLORS</h2>
                 <div class="bento-grid" id="paletteGrid">
                     <!-- Palettes injected via JS -->
                 </div>
@@ -560,6 +1225,52 @@
                 </div>
             </section>
 
+            <section class="extractor-section">
+                <h2 class="section-title">CODE COLOR EXTRACTOR</h2>
+                
+                <div class="code-input-container">
+                    <textarea class="code-textarea" id="codeInput" placeholder="Paste your code here...
+
+Examples:
+• CSS:  --primary: #4F46E5;
+• JSON: &quot;accent&quot;: &quot;#FF5733&quot;
+• YAML: background: '#1a1a2e'
+• Any format with hex (#RRGGBB), rgb(), hsl() colors
+
+The extractor will find all colors automatically!"></textarea>
+                    
+                    <div class="extractor-actions">
+                        <button class="action-btn" id="extractBtn">Extract Colors</button>
+                        <button class="action-btn secondary" id="clearBtn">Clear</button>
+                        <button class="action-btn secondary" id="sampleBtn">Load Sample</button>
+                        <div class="extracted-stats" id="extractedStats">
+                            <span>Colors found:</span>
+                            <span class="stats-count" id="colorCount">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="extracted-colors-container" id="extractedContainer">
+                    <div class="mode-toggle-container">
+                        <button class="mode-toggle active" data-mode="both">Both Modes</button>
+                        <button class="mode-toggle" data-mode="dark">Dark Only</button>
+                        <button class="mode-toggle" data-mode="light">Light Only</button>
+                    </div>
+
+                    <div class="extracted-grid" id="extractedGrid">
+                        <!-- Extracted color cards will be inserted here -->
+                    </div>
+                </div>
+
+                <div class="generated-palettes-section" id="generatedPalettes">
+                    <h3 class="section-title" style="font-size: 1.5rem;">LIVE PREVIEW</h3>
+                    
+                    <div class="palette-preview-container" id="palettePreviewContainer">
+                        <!-- Dark and Light theme previews -->
+                    </div>
+                </div>
+            </section>
+
         </main>
     </div>
 
@@ -609,6 +1320,11 @@
                     pickerCursor: document.getElementById('pickerCursor'),
                     hueSlider: document.getElementById('hueSlider'),
                     hueThumb: document.getElementById('hueThumb'),
+                    savedSwatches: document.getElementById('savedSwatches'),
+                    savedScroller: document.getElementById('savedScroller'),
+                    savedPrevBtn: document.getElementById('savedPrevBtn'),
+                    savedNextBtn: document.getElementById('savedNextBtn'),
+                    saveColorBtn: document.getElementById('saveColorBtn'),
                     paletteModal: document.getElementById('paletteModal'),
                     modalTitle: document.getElementById('modalTitle'),
                     modalBody: document.getElementById('modalBody')
@@ -620,6 +1336,7 @@
             init() {
                 this.state.hsv = this.rgbToHsv(this.state.r, this.state.g, this.state.b);
                 this.bindEvents();
+                this.loadSavedColors();
                 this.updateUI();
             }
 
@@ -632,6 +1349,24 @@
 
                 this.setupDrag(this.dom.pickerArea, this.handleAreaDrag.bind(this));
                 this.setupDrag(this.dom.hueSlider, this.handleHueDrag.bind(this));
+                if (this.dom.saveColorBtn) {
+                    this.dom.saveColorBtn.addEventListener('click', () => this.saveCurrentColor());
+                }
+
+                if (this.dom.savedPrevBtn && this.dom.savedNextBtn && this.dom.savedScroller) {
+                    this.dom.savedPrevBtn.addEventListener('click', (e) => { e.preventDefault(); this.scrollSaved(-1); });
+                    this.dom.savedNextBtn.addEventListener('click', (e) => { e.preventDefault(); this.scrollSaved(1); });
+                    this.dom.savedScroller.addEventListener('scroll', () => this.updateSavedNavVisibility());
+                    window.addEventListener('resize', () => this.updateSavedNavVisibility());
+
+                    if (this.dom.savedSwatches) {
+                        this.dom.savedSwatches.setAttribute('tabindex', '0');
+                        this.dom.savedSwatches.addEventListener('keydown', (e) => {
+                            if (e.key === 'ArrowLeft') { e.preventDefault(); this.scrollSaved(-1); }
+                            else if (e.key === 'ArrowRight') { e.preventDefault(); this.scrollSaved(1); }
+                        });
+                    }
+                }
             }
 
             setupDrag(element, handler) {
@@ -914,6 +1649,145 @@
                 }
             }
 
+            saveCurrentColor() {
+                const hex = this.state.hex.toUpperCase();
+                const key = 'chroma.savedColors';
+                let list = JSON.parse(localStorage.getItem(key) || '[]');
+                list = list.filter(h => h !== hex);
+                list.unshift(hex);
+                if (list.length > 50) list = list.slice(0, 50);
+                localStorage.setItem(key, JSON.stringify(list));
+                this.savedColors = list;
+                this.renderSavedColors();
+
+                if (this.dom.savedScroller) {
+                    this.dom.savedScroller.scrollTo({ left: 0, behavior: 'smooth' });
+                    this.updateSavedNavVisibility();
+                }
+
+                this.dom.toast.classList.add('show');
+                this.dom.toast.innerText = 'Color saved!';
+                setTimeout(() => {
+                    this.dom.toast.classList.remove('show');
+                    this.dom.toast.innerText = 'Copied to clipboard!';
+                }, 1500);
+            }
+
+            loadSavedColors() {
+                const key = 'chroma.savedColors';
+                const list = JSON.parse(localStorage.getItem(key) || '[]');
+                this.savedColors = list;
+                this.renderSavedColors();
+            }
+
+            renderSavedColors() {
+                const container = this.dom.savedSwatches;
+                const scroller = this.dom.savedScroller;
+                if (!container) return;
+                container.innerHTML = '';
+                if (!this.savedColors || this.savedColors.length === 0) {
+                    container.innerHTML = '<div class="empty-state-small">save colors so they appear here!</div>';
+                    if (this.dom.savedPrevBtn) this.dom.savedPrevBtn.disabled = true;
+                    if (this.dom.savedNextBtn) this.dom.savedNextBtn.disabled = true;
+                    return;
+                }
+
+                this.savedColors.forEach((hex) => {
+                    const sw = document.createElement('div');
+                    sw.className = 'saved-swatch';
+                    sw.style.backgroundColor = hex;
+                    sw.title = hex;
+                    sw.setAttribute('tabindex', '0');
+                    sw.setAttribute('role', 'button');
+
+                    sw.innerHTML = `
+                        <span>${hex}</span>
+                        <button class="swatch-delete-btn" aria-label="Delete color">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <div class="delete-confirm" aria-hidden="true">
+                            <div style="font-size:0.85rem; opacity:0.95;">are you sure?</div>
+                            <div class="confirm-actions">
+                                <button class="confirm-no">No</button>
+                                <button class="confirm-yes">Yes</button>
+                            </div>
+                        </div>
+                    `;
+
+                    sw.addEventListener('click', (e) => {
+                        if (e.target.closest('.delete-confirm') || e.target.closest('.swatch-delete-btn')) return;
+                        this.setFromHex(hex);
+                    });
+
+                    const deleteBtn = sw.querySelector('.swatch-delete-btn');
+                    const confirm = sw.querySelector('.delete-confirm');
+                    const yesBtn = sw.querySelector('.confirm-yes');
+                    const noBtn = sw.querySelector('.confirm-no');
+
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const open = confirm.classList.toggle('visible');
+                        if (open) {
+                            container.querySelectorAll('.delete-confirm.visible').forEach(c => { if (c !== confirm) c.classList.remove('visible'); });
+                        }
+                    });
+
+                    noBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        confirm.classList.remove('visible');
+                    });
+
+                    yesBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.removeSavedColor(hex);
+                    });
+
+                    if (scroller) {
+                        scroller.addEventListener('click', () => {
+                            container.querySelectorAll('.delete-confirm.visible').forEach(c => c.classList.remove('visible'));
+                        });
+                    }
+
+                    container.appendChild(sw);
+                });
+
+                setTimeout(() => this.updateSavedNavVisibility(), 50);
+            }
+
+            scrollSaved(direction = 1) {
+                const scroller = this.dom.savedScroller;
+                if (!scroller) return;
+                const amount = Math.round(scroller.clientWidth * 0.7) * direction;
+                scroller.scrollBy({ left: amount, behavior: 'smooth' });
+            }
+
+            removeSavedColor(hex) {
+                const key = 'chroma.savedColors';
+                let list = JSON.parse(localStorage.getItem(key) || '[]');
+                list = list.filter(h => h !== hex);
+                localStorage.setItem(key, JSON.stringify(list));
+                this.savedColors = list;
+                this.renderSavedColors();
+
+                this.dom.toast.classList.add('show');
+                this.dom.toast.innerText = 'Color removed';
+                setTimeout(() => this.dom.toast.classList.remove('show'), 1400);
+            }
+
+            updateSavedNavVisibility() {
+                const scroller = this.dom.savedScroller;
+                if (!scroller || !this.dom.savedPrevBtn || !this.dom.savedNextBtn) return;
+                const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+                if (maxScroll <= 0) {
+                    this.dom.savedPrevBtn.disabled = true;
+                    this.dom.savedNextBtn.disabled = true;
+                    return;
+                }
+                const eps = 2;
+                this.dom.savedPrevBtn.disabled = scroller.scrollLeft <= eps;
+                this.dom.savedNextBtn.disabled = scroller.scrollLeft >= (maxScroll - eps);
+            }
+
             // --- UTILS ---
 
             rgbToHex(r, g, b) {
@@ -1025,7 +1899,6 @@
             }
 
             rgbToLab(r, g, b) {
-                // RGB to XYZ
                 let rLinear = r / 255;
                 let gLinear = g / 255;
                 let bLinear = b / 255;
@@ -1038,7 +1911,6 @@
                 let y = (rLinear * 0.2126 + gLinear * 0.7152 + bLinear * 0.0722) * 100;
                 let z = (rLinear * 0.0193 + gLinear * 0.1192 + bLinear * 0.9505) * 100;
 
-                // XYZ to Lab
                 x /= 95.047;
                 y /= 100.000;
                 z /= 108.883;
@@ -1062,8 +1934,393 @@
             setTimeout(() => toast.classList.remove('show'), 2000);
         }
 
+        class CodeColorExtractor {
+            constructor(colorEngine) {
+                this.colorEngine = colorEngine;
+                this.extractedColors = [];
+                this.displayMode = 'both';
+                
+                this.dom = {
+                    codeInput: document.getElementById('codeInput'),
+                    extractBtn: document.getElementById('extractBtn'),
+                    clearBtn: document.getElementById('clearBtn'),
+                    sampleBtn: document.getElementById('sampleBtn'),
+                    colorCount: document.getElementById('colorCount'),
+                    extractedContainer: document.getElementById('extractedContainer'),
+                    extractedGrid: document.getElementById('extractedGrid'),
+                    generatedPalettes: document.getElementById('generatedPalettes'),
+                    palettePreviewContainer: document.getElementById('palettePreviewContainer'),
+                    modeToggles: document.querySelectorAll('.mode-toggle')
+                };
+
+                this.init();
+            }
+
+            init() {
+                this.dom.extractBtn.addEventListener('click', () => this.extractColors());
+                this.dom.clearBtn.addEventListener('click', () => this.clearAll());
+                this.dom.sampleBtn.addEventListener('click', () => this.loadSample());
+                
+                this.dom.modeToggles.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.dom.modeToggles.forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.displayMode = e.target.dataset.mode;
+                        this.renderExtractedColors();
+                    });
+                });
+
+                this.dom.codeInput.addEventListener('paste', () => {
+                    setTimeout(() => this.extractColors(), 100);
+                });
+            }
+
+            extractColors() {
+                const code = this.dom.codeInput.value;
+                if (!code.trim()) return;
+
+                const colors = this.parseColors(code);
+                this.extractedColors = colors;
+                
+                this.dom.colorCount.textContent = colors.length;
+                
+                if (colors.length > 0) {
+                    this.dom.extractedContainer.classList.add('has-colors');
+                    this.dom.generatedPalettes.classList.add('visible');
+                    this.renderExtractedColors();
+                    this.renderLivePreview();
+                } else {
+                    this.dom.extractedContainer.classList.remove('has-colors');
+                    this.dom.generatedPalettes.classList.remove('visible');
+                }
+            }
+
+            parseColors(code) {
+                const colors = [];
+                const seen = new Set();
+
+                const patterns = [
+                    // CSS 
+                    /(-{2}[\w-]+)\s*:\s*(#[0-9A-Fa-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\))/g,
+                    // JSON/JS
+                    /["']?([\w-]+)["']?\s*[:=]\s*["']?(#[0-9A-Fa-f]{3,8})["']?/g,
+                    // YAML
+                    /([\w-]+)\s*:\s*['"]?(#[0-9A-Fa-f]{3,8})['"]?/g,
+                    // rgb/rgba values with names
+                    /["']?([\w-]+)["']?\s*[:=]\s*["']?(rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*(?:,\s*[\d.]+)?\s*\))["']?/gi,
+                    // hsl/hsla values with names
+                    /["']?([\w-]+)["']?\s*[:=]\s*["']?(hsla?\(\s*\d+\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*(?:,\s*[\d.]+)?\s*\))["']?/gi,
+                ];
+
+                patterns.forEach(pattern => {
+                    let match;
+                    while ((match = pattern.exec(code)) !== null) {
+                        const name = match[1];
+                        const colorValue = match[2];
+                        const parsed = this.parseColorValue(colorValue);
+                        
+                        if (parsed && !seen.has(parsed.hex)) {
+                            seen.add(parsed.hex);
+                            colors.push({
+                                name: name,
+                                ...parsed
+                            });
+                        }
+                    }
+                });
+
+                const standaloneHex = /#[0-9A-Fa-f]{6}(?![0-9A-Fa-f])/g;
+                let match;
+                while ((match = standaloneHex.exec(code)) !== null) {
+                    const hex = match[0].toUpperCase();
+                    if (!seen.has(hex)) {
+                        seen.add(hex);
+                        const parsed = this.parseColorValue(hex);
+                        if (parsed) {
+                            colors.push({
+                                name: `color-${colors.length + 1}`,
+                                ...parsed
+                            });
+                        }
+                    }
+                }
+
+                return colors;
+            }
+
+            parseColorValue(value) {
+                let r, g, b, a = 1;
+
+                // HEX
+                if (value.startsWith('#')) {
+                    let hex = value.slice(1);
+                    
+                    // Handle 3-char hex
+                    if (hex.length === 3) {
+                        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+                    }
+                    // Handle 8-char hex (with alpha)
+                    if (hex.length === 8) {
+                        a = parseInt(hex.slice(6, 8), 16) / 255;
+                        hex = hex.slice(0, 6);
+                    }
+                    
+                    if (!/^[0-9A-Fa-f]{6}$/.test(hex)) return null;
+                    
+                    r = parseInt(hex.slice(0, 2), 16);
+                    g = parseInt(hex.slice(2, 4), 16);
+                    b = parseInt(hex.slice(4, 6), 16);
+                }
+                // RGB/RGBA
+                else if (value.toLowerCase().startsWith('rgb')) {
+                    const match = value.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+))?\s*\)/i);
+                    if (!match) return null;
+                    r = parseInt(match[1]);
+                    g = parseInt(match[2]);
+                    b = parseInt(match[3]);
+                    if (match[4]) a = parseFloat(match[4]);
+                }
+                // HSL/HSLA
+                else if (value.toLowerCase().startsWith('hsl')) {
+                    const match = value.match(/hsla?\(\s*(\d+)\s*,\s*([\d.]+)%?\s*,\s*([\d.]+)%?\s*(?:,\s*([\d.]+))?\s*\)/i);
+                    if (!match) return null;
+                    const h = parseInt(match[1]) / 360;
+                    const s = parseFloat(match[2]) / 100;
+                    const l = parseFloat(match[3]) / 100;
+                    if (match[4]) a = parseFloat(match[4]);
+                    
+                    const rgb = this.colorEngine.hslToRgb(h, s, l);
+                    r = rgb.r;
+                    g = rgb.g;
+                    b = rgb.b;
+                }
+                else {
+                    return null;
+                }
+
+                const hex = this.colorEngine.rgbToHex(r, g, b);
+                const hsl = this.colorEngine.rgbToHsl(r, g, b);
+                const luminance = this.colorEngine.getLuminance(r, g, b);
+
+                return {
+                    hex,
+                    r, g, b, a,
+                    h: hsl.h, s: hsl.s, l: hsl.l,
+                    luminance,
+                    contrastWhite: this.colorEngine.getContrastRatio(luminance, 1),
+                    contrastBlack: this.colorEngine.getContrastRatio(luminance, 0)
+                };
+            }
+
+            renderExtractedColors() {
+                this.dom.extractedGrid.innerHTML = '';
+
+                if (this.extractedColors.length === 0) {
+                    this.dom.extractedGrid.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1 / -1;">
+                            <div class="empty-state-icon"><span class="icon icon-lg icon-accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.93 0 1.82-.13 2.68-.36a1 1 0 0 0 .56-1.51l-1.5-2.25a1 1 0 0 1 .84-1.53h3.17a2.25 2.25 0 0 0 2.25-2.25V12A10 10 0 0 0 12 2z"/><circle cx="7.5" cy="11.5" r="1.5" fill="var(--accent)"/><circle cx="12" cy="7.5" r="1.5" fill="var(--accent)"/><circle cx="16.5" cy="11.5" r="1.5" fill="var(--accent)"/></svg></span></div>
+                            <div class="empty-state-title">No colors extracted</div>
+                            <p>Paste some code with colors to get started</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                this.extractedColors.forEach((color, index) => {
+                    const card = this.createColorCard(color, index);
+                    this.dom.extractedGrid.appendChild(card);
+                });
+            }
+
+            createColorCard(color, index) {
+                const card = document.createElement('div');
+                card.className = 'extracted-color-card';
+
+                const textColorDark = color.contrastWhite >= color.contrastBlack ? 'white' : 'black';
+                const textColorLight = color.contrastBlack >= color.contrastWhite ? 'black' : 'white';
+
+                let previewHTML = '';
+                if (this.displayMode === 'both' || this.displayMode === 'dark') {
+                    previewHTML += `
+                        <div class="preview-half dark-mode" onclick="copyToClipboard('${color.hex}')">
+                            <div class="preview-swatch" style="background: ${color.hex};"></div>
+                            <span class="preview-label">Dark Mode</span>
+                        </div>
+                    `;
+                }
+                if (this.displayMode === 'both' || this.displayMode === 'light') {
+                    previewHTML += `
+                        <div class="preview-half light-mode" onclick="copyToClipboard('${color.hex}')">
+                            <div class="preview-swatch" style="background: ${color.hex};"></div>
+                            <span class="preview-label">Light Mode</span>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="color-preview-split">
+                        ${previewHTML}
+                    </div>
+                    <div class="color-card-info">
+                        <div class="color-name-row">
+                            <span class="color-var-name" title="${color.name}">${color.name}</span>
+                            <button class="color-use-btn" data-index="${index}">Use Color</button>
+                        </div>
+                        <div class="color-values">
+                            <span class="color-value-chip" onclick="copyToClipboard('${color.hex}')">${color.hex}</span>
+                            <span class="color-value-chip" onclick="copyToClipboard('rgb(${color.r}, ${color.g}, ${color.b})')">RGB</span>
+                            <span class="color-value-chip" onclick="copyToClipboard('hsl(${color.h}, ${color.s}%, ${color.l}%)')">HSL</span>
+                        </div>
+                        <div class="color-contrast-info">
+                            <div class="contrast-item">
+                                <span class="contrast-dot ${color.contrastWhite >= 4.5 ? 'pass' : 'fail'}"></span>
+                                <span>White: ${color.contrastWhite.toFixed(1)}</span>
+                            </div>
+                            <div class="contrast-item">
+                                <span class="contrast-dot ${color.contrastBlack >= 4.5 ? 'pass' : 'fail'}"></span>
+                                <span>Black: ${color.contrastBlack.toFixed(1)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                card.querySelector('.color-use-btn').addEventListener('click', () => {
+                    this.colorEngine.updateStateRGB(color.r, color.g, color.b);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+
+                return card;
+            }
+
+            renderLivePreview() {
+                if (this.extractedColors.length === 0) {
+                    this.dom.palettePreviewContainer.innerHTML = '';
+                    return;
+                }
+
+                const primary = this.extractedColors[0];
+                const secondary = this.extractedColors[1] || primary;
+                const accent = this.extractedColors[2] || secondary;
+
+                this.dom.palettePreviewContainer.innerHTML = `
+                    <!-- Dark Theme Preview -->
+                    <div class="palette-preview-card dark-theme">
+                        <div class="palette-preview-header"><span class="icon btn-icon" style="color: ${primary.hex}"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg></span>Dark Theme Preview</div>
+                        <div class="palette-preview-body">
+                            <div class="mock-ui">
+                                <div class="mock-button" style="background: ${primary.hex}; color: ${primary.contrastWhite >= primary.contrastBlack ? 'white' : 'black'};">
+                                    Primary Action
+                                </div>
+                                <div class="mock-card">
+                                    <span class="mock-text-primary" style="color: white;">Card Title</span>
+                                    <span class="mock-text-secondary" style="color: #aaa;">Secondary text with your color palette</span>
+                                    <div class="mock-chips">
+                                        <span class="mock-chip" style="background: ${primary.hex}; color: ${primary.contrastWhite >= primary.contrastBlack ? 'white' : 'black'};">Tag 1</span>
+                                        <span class="mock-chip" style="background: ${secondary.hex}; color: ${secondary.contrastWhite >= secondary.contrastBlack ? 'white' : 'black'};">Tag 2</span>
+                                        <span class="mock-chip" style="background: ${accent.hex}; color: ${accent.contrastWhite >= accent.contrastBlack ? 'white' : 'black'};">Tag 3</span>
+                                    </div>
+                                </div>
+                                <div class="mock-button" style="background: transparent; border: 2px solid ${secondary.hex}; color: ${secondary.hex};">
+                                    Secondary Action
+                                </div>
+                            </div>
+                            <div class="palette-swatches-row">
+                                ${this.extractedColors.slice(0, 6).map(c => `
+                                    <div class="palette-swatch-item" style="background: ${c.hex}; color: ${c.contrastWhite >= c.contrastBlack ? 'white' : 'black'};" onclick="copyToClipboard('${c.hex}')">
+                                        <span>${c.hex}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Light Theme Preview -->
+                    <div class="palette-preview-card light-theme">
+                        <div class="palette-preview-header"><span class="icon btn-icon" style="color: ${primary.hex}"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></span>Light Theme Preview</div>
+                        <div class="palette-preview-body">
+                            <div class="mock-ui">
+                                <div class="mock-button" style="background: ${primary.hex}; color: ${primary.contrastWhite >= primary.contrastBlack ? 'white' : 'black'};">
+                                    Primary Action
+                                </div>
+                                <div class="mock-card">
+                                    <span class="mock-text-primary" style="color: #111;">Card Title</span>
+                                    <span class="mock-text-secondary" style="color: #666;">Secondary text with your color palette</span>
+                                    <div class="mock-chips">
+                                        <span class="mock-chip" style="background: ${this.lightenColor(primary, 0.85)}; color: ${primary.hex};">${primary.name}</span>
+                                        <span class="mock-chip" style="background: ${this.lightenColor(secondary, 0.85)}; color: ${secondary.hex};">${secondary.name}</span>
+                                        <span class="mock-chip" style="background: ${this.lightenColor(accent, 0.85)}; color: ${accent.hex};">${accent.name}</span>
+                                    </div>
+                                </div>
+                                <div class="mock-button" style="background: transparent; border: 2px solid ${secondary.hex}; color: ${secondary.hex};">
+                                    Secondary Action
+                                </div>
+                            </div>
+                            <div class="palette-swatches-row">
+                                ${this.extractedColors.slice(0, 6).map(c => `
+                                    <div class="palette-swatch-item" style="background: ${c.hex}; color: ${c.contrastWhite >= c.contrastBlack ? 'white' : 'black'};" onclick="copyToClipboard('${c.hex}')">
+                                        <span>${c.hex}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            lightenColor(color, factor) {
+                const newL = Math.min(100, color.l + (100 - color.l) * factor);
+                const rgb = this.colorEngine.hslToRgb(color.h / 360, color.s / 100, newL / 100);
+                return this.colorEngine.rgbToHex(rgb.r, rgb.g, rgb.b);
+            }
+
+            clearAll() {
+                this.dom.codeInput.value = '';
+                this.extractedColors = [];
+                this.dom.colorCount.textContent = '0';
+                this.dom.extractedContainer.classList.remove('has-colors');
+                this.dom.generatedPalettes.classList.remove('visible');
+                this.dom.extractedGrid.innerHTML = '';
+                this.dom.palettePreviewContainer.innerHTML = '';
+            }
+
+            loadSample() {
+                const sample = `/* Design System Colors */
+:root {
+    --primary: #4F46E5;
+    --primary-hover: #4338CA;
+    --secondary: #EC4899;
+    --accent: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --neutral-900: #18181B;
+    --neutral-100: #F4F4F5;
+}
+
+/* Alternative formats also work! */
+{
+    "brand": {
+        "primary": "#6366F1",
+        "secondary": "#8B5CF6"
+    },
+    "status": {
+        "success": "rgb(34, 197, 94)",
+        "error": "hsl(0, 84%, 60%)"
+    }
+}
+
+# YAML style
+background: '#1E1E2E'
+foreground: '#CDD6F4'
+accent: '#89B4FA'
+`;
+                this.dom.codeInput.value = sample;
+                this.extractColors();
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            new ColorEngine();
+            const engine = new ColorEngine();
+            new CodeColorExtractor(engine);
         });
 
     </script>
