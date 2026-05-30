@@ -16,6 +16,7 @@
     
     <link rel="icon" type="image/png" href="../assets/wink/winkwhite.png" id="favicon-light">
     <link rel="icon" type="image/png" href="../assets/wink/winkblack.png" id="favicon-dark" media="(prefers-color-scheme: light)">
+    <script src="https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js"></script>
 </head>
 <body>    
     <!-- Mobile Toggle Button -->
@@ -55,6 +56,11 @@
             <div class="search-container">
                 <input type="text" id="effect-search" class="search-input" placeholder="Search for an effect here..." />
                 <span class="search-clear" id="search-clear" style="display: none;">&times;</span>
+                <!-- toggle to show only currently active effects in the list -->
+                <label class="active-toggle-label">
+                    <input type="checkbox" id="active-toggle" />
+                    <span class="active-toggle-text">active</span>
+                </label>
             </div>
 
             <div id="effects-container" class="effects-list">

@@ -251,7 +251,8 @@ body {
 }
 
 .search-input {
-    width: 100%;
+    flex: 1 1 auto;
+    width: auto;
     padding: 0.6rem 2rem 0.6rem 0.75rem;
     background-color: var(--input-bg);
     border: 1px solid var(--border-color);
@@ -268,6 +269,27 @@ body {
 
 .search-input::placeholder {
     color: var(--text-secondary);
+}
+
+/* toggle next to search input for filtering active effects */
+.search-container {
+    display: flex;
+    align-items: center;
+}
+
+.active-toggle-label {
+    margin-left: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.active-toggle-label input {
+    margin-right: 0.25rem;
+}
+.active-toggle-label:hover {
     opacity: 0.7;
 }
 
@@ -1080,4 +1102,36 @@ input:checked + .toggle-slider:before {
 #export-video-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+.palette-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    margin-top: 8px;
+    padding: 8px;
+    background: var(--bg-primary);
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+
+.palette-color-input {
+    width: 100%;
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 2px;
+    cursor: pointer;
+    background: none;
+    min-width: 24px;
+    min-height: 24px;
+}
+
+.palette-color-input::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.palette-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
 }
