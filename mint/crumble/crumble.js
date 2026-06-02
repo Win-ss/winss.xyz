@@ -188,7 +188,7 @@
     function updateUIForAuth() {
         if (currentUser) {
             elements.userBar.style.display = 'flex';
-            elements.loggedUsername.textContent = '#' + currentUser;
+            elements.loggedUsername.textContent = '@' + currentUser;
             elements.authSection.style.display = 'none';
             elements.uploadForm.style.display = 'flex';
             elements.uploadAuthor.value = currentUser;
@@ -492,7 +492,7 @@
         elements.uploadForm.style.display = 'none';
         elements.uploadSuccess.style.display = 'block';
         
-        elements.successAuthor.textContent = '#' + data.author;
+        elements.successAuthor.textContent = '@' + data.author;
         elements.successHashtag.textContent = '#' + data.hashtag;
         elements.successExpires.textContent = formatDate(data.expiresAt);
         lastUploadedPassword = data.noPassword ? '' : elements.uploadFilePassword.value;
