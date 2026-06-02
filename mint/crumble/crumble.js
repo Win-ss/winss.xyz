@@ -3,7 +3,7 @@
 
     // Configuration
     
-    const API_BASE = 'https://crumble.winss.studio/api';
+    const API_BASE = 'http://93.115.101.183:9840/api';
     
     // Local storage keys
     const STORAGE_USER = 'crumble_user';
@@ -51,6 +51,7 @@
         uploadAuthor: document.getElementById('upload-author'),
         uploadHashtag: document.getElementById('upload-hashtag'),
         uploadFilePassword: document.getElementById('upload-file-password'),
+        uploadNoPassword: document.getElementById('upload-no-password'),
         uploadTTL: document.getElementById('upload-ttl'),
         uploadMaxDownloads: document.getElementById('upload-maxdownloads'),
         uploadFile: document.getElementById('upload-file'),
@@ -118,7 +119,7 @@
     
     function loadSavedSession() {
         const savedUser = localStorage.getItem(STORAGE_USER);
-        const savedToken = sessionStorage.getItem(STORAGE_TOKEN);
+        const savedToken = localStorage.getItem(STORAGE_TOKEN) || sessionStorage.getItem(STORAGE_TOKEN);
         
         if (savedUser && savedToken) {
             currentUser = savedUser;
@@ -141,6 +142,7 @@
         
         elements.uploadFile.addEventListener('change', handleFileSelect);
         elements.fileRemove.addEventListener('click', clearFileSelection);
+        elements.uploadNoPassword.addEventListener('change', handleNoPasswordToggle);
         
         elements.fileDropZone.addEventListener('dragover', handleDragOver);
         elements.fileDropZone.addEventListener('dragleave', handleDragLeave);
@@ -238,8 +240,11 @@
             
             if (elements.rememberLogin.checked) {
                 localStorage.setItem(STORAGE_USER, data.username);
+                localStorage.setItem(STORAGE_TOKEN, data.token);
+            } else {
+                localStorage.setItem(STORAGE_USER, data.username);
+                sessionStorage.setItem(STORAGE_TOKEN, data.token);
             }
-            sessionStorage.setItem(STORAGE_TOKEN, data.token);
             
             showMessage('Logged in successfully!', 'success');
             updateUIForAuth();
@@ -292,7 +297,7 @@
             currentToken = data.token;
             
             localStorage.setItem(STORAGE_USER, data.username);
-            sessionStorage.setItem(STORAGE_TOKEN, data.token);
+            localStorage.setItem(STORAGE_TOKEN, data.token);
             
             showMessage('Account created! You are now logged in.', 'success');
             updateUIForAuth();
@@ -311,6 +316,7 @@
         currentUser = null;
         currentToken = null;
         localStorage.removeItem(STORAGE_USER);
+        localStorage.removeItem(STORAGE_TOKEN);
         sessionStorage.removeItem(STORAGE_TOKEN);
         
         updateUIForAuth();
@@ -383,6 +389,18 @@
         elements.fileSelected.style.display = 'none';
     }
     
+    function handleNoPasswordToggle() {
+        const noPassword = elements.uploadNoPassword.checked;
+        elements.uploadFilePassword.required = !noPassword;
+        elements.uploadFilePassword.disabled = noPassword;
+        if (noPassword) {
+            elements.uploadFilePassword.value = '';
+            elements.uploadFilePassword.placeholder = 'No password required';
+        } else {
+            elements.uploadFilePassword.placeholder = 'for receiver';
+        }
+    }
+    
     // Upload
     
     async function handleUpload(e) {
@@ -395,11 +413,12 @@
         
         const hashtag = elements.uploadHashtag.value.trim();
         const filePassword = elements.uploadFilePassword.value;
+        const noPassword = elements.uploadNoPassword.checked;
         const ttl = elements.uploadTTL.value;
         const maxDownloads = elements.uploadMaxDownloads.value;
         const file = elements.uploadFile.files[0];
         
-        if (!hashtag || !filePassword || !file) {
+        if (!hashtag || !file) {
             showMessage('Please fill in all required fields.', 'error');
             return;
         }
@@ -409,8 +428,8 @@
             return;
         }
         
-        if (filePassword.length < 4) {
-            showMessage('File password must be at least 4 characters.', 'error');
+        if (!noPassword && filePassword.length < 4) {
+            showMessage('File password must be at least 4 characters, or enable "No Password".', 'error');
             return;
         }
         
@@ -437,7 +456,10 @@
             const formData = new FormData();
             formData.append('file', file);
             formData.append('hashtag', hashtag);
-            formData.append('filePassword', filePassword);
+            formData.append('noPassword', noPassword ? 'true' : 'false');
+            if (!noPassword) {
+                formData.append('filePassword', filePassword);
+            }
             formData.append('ttl', ttl);
             if (maxDownloads) {
                 formData.append('maxDownloads', maxDownloads);
@@ -473,7 +495,7 @@
         elements.successAuthor.textContent = '#' + data.author;
         elements.successHashtag.textContent = '#' + data.hashtag;
         elements.successExpires.textContent = formatDate(data.expiresAt);
-        elements.successPasswordDisplay.textContent = "[share separately]";
+        elements.successPasswordDisplay.textContent = data.noPassword ? "No password required" : "[share separately]";
         
         // Generate shareable link
         const shareUrl = `${window.location.origin}${window.location.pathname}?a=${encodeURIComponent(data.author)}&t=${encodeURIComponent(data.hashtag)}`;
@@ -500,6 +522,8 @@
         
         elements.uploadHashtag.value = '';
         elements.uploadFilePassword.value = '';
+        elements.uploadNoPassword.checked = false;
+        handleNoPasswordToggle();
         elements.uploadMaxDownloads.value = '';
         elements.uploadTTL.value = '24';
         clearFileSelection();
@@ -514,8 +538,8 @@
         const hashtag = elements.downloadHashtag.value.trim();
         const password = elements.downloadPassword.value;
         
-        if (!author || !hashtag || !password) {
-            showMessage('Please fill in all fields.', 'error');
+        if (!author || !hashtag) {
+            showMessage('Please fill in author and tag.', 'error');
             return;
         }
         
@@ -534,10 +558,17 @@
                 throw new Error(infoData.error || 'File not found.');
             }
             
+            if (infoData.data.requiresPassword && !password) {
+                showMessage('This file requires a password.', 'error');
+                elements.downloadPassword.focus();
+                return;
+            }
+            
             currentDownloadInfo = {
                 author,
                 hashtag,
-                password,
+                password: infoData.data.requiresPassword ? password : null,
+                requiresPassword: infoData.data.requiresPassword,
                 ...infoData.data,
             };
             
@@ -564,6 +595,11 @@
         } else {
             elements.previewDownloadsContainer.style.display = 'none';
         }
+        
+        const passwordNote = elements.filePreview.querySelector('.password-note');
+        if (passwordNote) {
+            passwordNote.style.display = data.requiresPassword ? 'none' : 'block';
+        }
     }
     
     async function handleDownload() {
@@ -572,14 +608,18 @@
         setButtonLoading(elements.confirmDownload, true);
         
         try {
+            const payload = {
+                author: currentDownloadInfo.author,
+                hashtag: currentDownloadInfo.hashtag,
+            };
+            if (currentDownloadInfo.requiresPassword) {
+                payload.password = currentDownloadInfo.password;
+            }
+            
             const response = await fetch(`${API_BASE}/download`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    author: currentDownloadInfo.author,
-                    hashtag: currentDownloadInfo.hashtag,
-                    password: currentDownloadInfo.password,
-                }),
+                body: JSON.stringify(payload),
             });
             
             if (!response.ok) {
