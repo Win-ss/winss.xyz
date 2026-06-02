@@ -163,15 +163,15 @@
     }
     
     let passwordRevealTimeout = null;
+    let lastUploadedPassword = '';
 
     function handlePasswordHover() {
-        const password = elements.uploadFilePassword.value;
-        if (!password) return;
+        if (!lastUploadedPassword) return;
 
         elements.successPasswordDisplay.textContent = "do you really want to see it? fine.. showing password in 3s...";
         
         passwordRevealTimeout = setTimeout(() => {
-            elements.successPasswordDisplay.textContent = password;
+            elements.successPasswordDisplay.textContent = lastUploadedPassword;
         }, 3000);
     }
 
@@ -180,7 +180,7 @@
             clearTimeout(passwordRevealTimeout);
             passwordRevealTimeout = null;
         }
-        elements.successPasswordDisplay.textContent = "[share separately]";
+        elements.successPasswordDisplay.textContent = "[hover to see]";
     }
     
     // Authentication
@@ -495,7 +495,8 @@
         elements.successAuthor.textContent = '#' + data.author;
         elements.successHashtag.textContent = '#' + data.hashtag;
         elements.successExpires.textContent = formatDate(data.expiresAt);
-        elements.successPasswordDisplay.textContent = data.noPassword ? "No password required" : "[share separately]";
+        lastUploadedPassword = data.noPassword ? '' : elements.uploadFilePassword.value;
+        elements.successPasswordDisplay.textContent = data.noPassword ? "No password required" : "[hover to see]";
         
         // Generate shareable link
         const shareUrl = `${window.location.origin}${window.location.pathname}?a=${encodeURIComponent(data.author)}&t=${encodeURIComponent(data.hashtag)}`;
@@ -527,6 +528,7 @@
         elements.uploadMaxDownloads.value = '';
         elements.uploadTTL.value = '24';
         clearFileSelection();
+        lastUploadedPassword = '';
     }
     
     // Download
