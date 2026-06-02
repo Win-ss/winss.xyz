@@ -3,7 +3,7 @@
 
     // Configuration
     
-    const API_BASE = 'http://93.115.101.183:9840/api';
+    const API_BASE = 'https://tapi.winss.xyz/api';
     
     // Local storage keys
     const STORAGE_USER = 'crumble_user';
