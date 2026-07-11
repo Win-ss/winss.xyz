@@ -116,8 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayWidth = displayHeight * imgAspect;
             }
 
-            canvas.width = width;
-            canvas.height = height;
+            setCanvasSize(canvas, width, height);
 
             canvas.style.width = displayWidth + 'px';
             canvas.style.height = displayHeight + 'px';
@@ -155,6 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let isVideoSource = false;
     let videoFrameCanvas = null;
     let videoFrameCtx = null;
+    let videoFrameRequestId = null;
+    let videoAnimationFrameId = null;
+    let lastVideoFrameTime = -1;
     let originalFileName = '';
     let isRecording = false;
     let recordingStream = null;
@@ -201,8 +203,55 @@ document.addEventListener('DOMContentLoaded', () => {
     let gifHeight = 0;
     let gifEncoder = null;
     let gifWorkerBlobURL = null;
+    let gifEncoderPromise = null;
+    let mediaObjectURL = null;
+    let exportCanvas = null;
+    let exportCtx = null;
+    let badTVCanvas = null;
+    let badTVCtx = null;
+    let rainbowCanvas = null;
+    let rainbowCtx = null;
+    let defaultLogoImage = null;
+
+    function setCanvasSize(target, width, height) {
+        if (target.width !== width) target.width = width;
+        if (target.height !== height) target.height = height;
+    }
+
+    function getReusableCanvas(width, height) {
+        if (!exportCanvas) {
+            exportCanvas = document.createElement('canvas');
+            exportCtx = exportCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        setCanvasSize(exportCanvas, width, height);
+        return { canvas: exportCanvas, ctx: exportCtx };
+    }
+
+    function setMediaObjectURL(file, element) {
+        if (mediaObjectURL) URL.revokeObjectURL(mediaObjectURL);
+        mediaObjectURL = URL.createObjectURL(file);
+        element.src = mediaObjectURL;
+    }
+
+    function ensureGIFEncoder() {
+        if (window.GIF) return Promise.resolve(window.GIF);
+        if (gifEncoderPromise) return gifEncoderPromise;
+
+        gifEncoderPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.js';
+            script.onload = () => resolve(window.GIF);
+            script.onerror = () => reject(new Error('Failed to load GIF encoder'));
+            document.head.appendChild(script);
+        }).catch(error => {
+            gifEncoderPromise = null;
+            throw error;
+        });
+        return gifEncoderPromise;
+    }
 
     async function getGIFWorkerURL() {
+        await ensureGIFEncoder();
         if (gifWorkerBlobURL) return gifWorkerBlobURL;
         const response = await fetch('https://cdn.jsdelivr.net/npm/gif.js@0.2.0/dist/gif.worker.js');
         const text = await response.text();
@@ -488,7 +537,13 @@ document.addEventListener('DOMContentLoaded', () => {
         'Noise': { value: 0, min: 0, max: 100, type: 'slider', enabled: false },
         'Chromatic Aberration': { value: 0, min: 0, max: 20, type: 'slider', enabled: false },
         'Dotted Matrix': { value: 0, min: 0, max: 20, type: 'slider', enabled: false },
-        'Mosaic': { value: 1, min: 1, max: 50, type: 'slider', enabled: false },        'Duotone': { enabled: false, color1: '#0000ff', color2: '#ffff00', type: 'duotone' },        
+        'Mosaic': { value: 1, min: 1, max: 50, type: 'slider', enabled: false },
+        'Duotone': {
+            enabled: false,
+            type: 'multitone',
+            toneCount: 2,
+            colors: ['#0000ff', '#ffff00']
+        },
         'CRT': { 
             intensity: 0, 
             curvature: 50, 
@@ -642,7 +697,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const SNAPSHOT_FIELDS_BY_TYPE = {
         'slider': ['value'],
         'dual-slider': ['threshold', 'fuzz'],
-        'duotone': ['color1', 'color2'],
+        'multitone': ['toneCount', 'colors'],
         'perspective3d': ['rotation', 'skewX', 'skewY', 'scaleX', 'scaleY', 'offsetX', 'offsetY', 'shadowBlur', 'shadowOpacity'],
         'toggle': ['value'],
         'edgeDetection': ['intensity', 'edgeColor', 'backgroundColor'],
@@ -811,7 +866,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
                 break;
             case 'Duotone':
-                duotone(data, effectConfig.color1, effectConfig.color2);
+                multitone(data, effectConfig.colors);
                 break;
             case 'Glitch':
                 if (effectConfig.value > 0) glitch(imageData, effectConfig.value);
@@ -875,6 +930,233 @@ document.addEventListener('DOMContentLoaded', () => {
     let frostedCtx = null;
     let cachedNoiseCanvas = null;
     let cachedNoiseAmount = -1;
+    let gpuCanvas = null;
+    let gpuContext = null;
+    let gpuTexture = null;
+    let gpuDisabledForTest = false;
+    const gpuPrograms = new Map();
+
+    const GPU_VERTEX_SHADER = `#version 300 es
+        precision highp float;
+        out vec2 v_uv;
+        void main() {
+            vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+            v_uv = vec2(p.x, 1.0 - p.y);
+            gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+        }`;
+
+    const GPU_FRAGMENT_SHADERS = {
+        crt: `#version 300 es
+            precision highp float;
+            uniform sampler2D u_source;
+            uniform vec2 u_resolution;
+            uniform float u_intensity;
+            uniform float u_curvature;
+            uniform float u_scanlines;
+            in vec2 v_uv;
+            out vec4 outColor;
+            vec4 sourceAt(vec2 pixel) {
+                vec2 p = clamp(floor(pixel), vec2(0.0), u_resolution - 1.0);
+                return texture(u_source, (p + 0.5) / u_resolution);
+            }
+            void main() {
+                vec2 pixel = vec2(floor(gl_FragCoord.x), u_resolution.y - 1.0 - floor(gl_FragCoord.y));
+                vec2 n = pixel / u_resolution * 2.0 - 1.0;
+                float rd = dot(n, n);
+                vec2 warped = n * (1.0 + u_curvature * rd);
+                if (any(lessThan(warped, vec2(-1.0))) || any(greaterThan(warped, vec2(1.0)))) {
+                    outColor = vec4(0.0, 0.0, 0.0, 1.0);
+                    return;
+                }
+                vec2 sourcePixel = floor((warped + 1.0) * 0.5 * u_resolution);
+                float bleed = floor(u_intensity * 3.0);
+                vec4 center = sourceAt(sourcePixel);
+                vec4 green = sourceAt(sourcePixel + vec2(-bleed, 0.0));
+                vec4 blue = sourceAt(sourcePixel + vec2(bleed, 0.0));
+                float scanlineCount = max(floor(u_resolution.y * u_scanlines * 0.5), 1.0);
+                float scanlineFactor = u_resolution.y / scanlineCount;
+                float scan = sin(pixel.y * 3.141592653589793 / scanlineFactor);
+                float darken = 1.0 - u_intensity * 0.5 * (1.0 - scan);
+                outColor = vec4(vec3(center.r, green.g, blue.b) * darken, center.a);
+            }`,
+        storm: `#version 300 es
+            precision highp float;
+            uniform sampler2D u_source;
+            uniform vec2 u_resolution;
+            uniform float u_intensity;
+            uniform float u_time;
+            in vec2 v_uv;
+            out vec4 outColor;
+            vec4 sourceAt(vec2 pixel) {
+                vec2 p = clamp(floor(pixel), vec2(0.0), u_resolution - 1.0);
+                return texture(u_source, (p + 0.5) / u_resolution);
+            }
+            void main() {
+                vec2 pixel = vec2(floor(gl_FragCoord.x), u_resolution.y - 1.0 - floor(gl_FragCoord.y));
+                float maxDist = 80.0 * u_intensity;
+                float noiseX = sin(pixel.y * 0.01 + u_time * 1.2) + cos(pixel.x * 0.02 + u_time * 0.8);
+                float noiseY = sin(pixel.x * 0.015 - u_time * 2.0) + cos(pixel.y * 0.005 + u_time);
+                float meltY = max(0.0, noiseY * maxDist);
+                float meltX = noiseX * maxDist * 0.3;
+                if (pixel.y + meltY < u_resolution.y && meltY > 5.0 * u_intensity) {
+                    vec4 color = sourceAt(pixel + vec2(meltX, meltY));
+                    float sheen = (sin(pixel.x * 0.01 + pixel.y * 0.02 + u_time * 3.0) + 1.0) * 0.5;
+                    if (sheen > 0.6) {
+                        float hue = mod(pixel.x * 0.1 + pixel.y * 0.1 + u_time * 50.0, 360.0);
+                        vec3 oil = sin(radians(vec3(hue, hue + 120.0, hue + 240.0))) * 0.5 + 0.5;
+                        color.rgb = mix(color.rgb, oil, (sheen - 0.6) * 0.8 * u_intensity);
+                    }
+                    outColor = color;
+                } else {
+                    outColor = sourceAt(pixel);
+                }
+            }`,
+        melt: `#version 300 es
+            precision highp float;
+            uniform sampler2D u_source;
+            uniform vec2 u_resolution;
+            uniform float u_intensity;
+            uniform float u_time;
+            in vec2 v_uv;
+            out vec4 outColor;
+            vec4 displaced(vec2 p) {
+                float drip1 = sin(p.x * 0.006 + u_time * 0.005) * cos(p.y * 0.004 + u_time * 0.003);
+                float drip2 = sin((p.x + p.y) * 0.01 + u_time * 0.004) * cos(p.x * 0.007 + u_time * 0.006);
+                float offsetY = (drip1 + drip2 * 0.7) * u_intensity * 15.0;
+                vec2 sourcePixel = vec2(p.x, clamp(p.y + offsetY, 0.0, u_resolution.y - 1.0));
+                sourcePixel = clamp(floor(sourcePixel), vec2(0.0), u_resolution - 1.0);
+                return texture(u_source, (sourcePixel + 0.5) / u_resolution);
+            }
+            void main() {
+                vec2 pixel = vec2(floor(gl_FragCoord.x), u_resolution.y - 1.0 - floor(gl_FragCoord.y));
+                vec2 p0 = floor(pixel / 3.0) * 3.0;
+                vec2 p1 = min(u_resolution - 1.0, p0 + 3.0);
+                vec2 weight = (pixel - p0) / 3.0;
+                vec4 top = mix(displaced(p0), displaced(vec2(p1.x, p0.y)), weight.x);
+                vec4 bottom = mix(displaced(vec2(p0.x, p1.y)), displaced(p1), weight.x);
+                outColor = mix(top, bottom, weight.y);
+            }`,
+        marble: `#version 300 es
+            precision highp float;
+            uniform vec2 u_resolution;
+            uniform float u_time;
+            uniform float u_turbulence;
+            uniform float u_scale;
+            uniform float u_colorInfluence;
+            uniform float u_flowX;
+            uniform float u_flowY;
+            in vec2 v_uv;
+            out vec4 outColor;
+            void main() {
+                vec2 p = vec2(floor(gl_FragCoord.x), u_resolution.y - 1.0 - floor(gl_FragCoord.y));
+                float timeX = u_time * u_flowX;
+                float timeY = u_time * u_flowY;
+                float wave1 = sin((p.x + timeX * 100.0) * 0.01 * u_scale) * cos((p.y + timeY * 100.0) * 0.01 * u_scale);
+                float wave2 = sin((p.x + timeX * 50.0) * 0.005 * u_scale + u_time) * cos((p.y + timeY * 50.0) * 0.007 * u_scale + u_time);
+                float wave3 = sin(p.x * 0.02 * u_scale) * cos(p.y * 0.015 * u_scale + u_time * 0.5);
+                float combined = clamp((wave1 + wave2 * 0.5 + wave3 * 0.3) * u_turbulence, -10.0, 10.0);
+                float value = sin(combined) * 80.0 + 128.0;
+                outColor = vec4(
+                    clamp((value + 15.0 * u_colorInfluence) / 255.0, 0.0, 1.0),
+                    clamp((value - 8.0 * u_colorInfluence) / 255.0, 0.0, 1.0),
+                    clamp((value + 20.0 * u_colorInfluence) / 255.0, 0.0, 1.0),
+                    60.0 / 255.0
+                );
+            }`
+    };
+
+    function compileGPUShader(gl, type, source) {
+        const shader = gl.createShader(type);
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            const message = gl.getShaderInfoLog(shader);
+            gl.deleteShader(shader);
+            throw new Error(message);
+        }
+        return shader;
+    }
+
+    function getGPUProgram(name) {
+        if (gpuPrograms.has(name)) return gpuPrograms.get(name);
+        const gl = gpuContext;
+        const program = gl.createProgram();
+        const vertex = compileGPUShader(gl, gl.VERTEX_SHADER, GPU_VERTEX_SHADER);
+        const fragment = compileGPUShader(gl, gl.FRAGMENT_SHADER, GPU_FRAGMENT_SHADERS[name]);
+        gl.attachShader(program, vertex);
+        gl.attachShader(program, fragment);
+        gl.linkProgram(program);
+        gl.deleteShader(vertex);
+        gl.deleteShader(fragment);
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            const message = gl.getProgramInfoLog(program);
+            gl.deleteProgram(program);
+            throw new Error(message);
+        }
+        gpuPrograms.set(name, program);
+        return program;
+    }
+
+    function ensureGPUContext(width, height) {
+        if (gpuContext && gpuContext.isContextLost()) return false;
+        if (!gpuContext) {
+            gpuCanvas = document.createElement('canvas');
+            gpuContext = gpuCanvas.getContext('webgl2', {
+                alpha: true,
+                antialias: false,
+                depth: false,
+                premultipliedAlpha: false,
+                preserveDrawingBuffer: true
+            });
+            if (!gpuContext) return false;
+            gpuTexture = gpuContext.createTexture();
+            gpuContext.bindTexture(gpuContext.TEXTURE_2D, gpuTexture);
+            gpuContext.texParameteri(gpuContext.TEXTURE_2D, gpuContext.TEXTURE_MIN_FILTER, gpuContext.NEAREST);
+            gpuContext.texParameteri(gpuContext.TEXTURE_2D, gpuContext.TEXTURE_MAG_FILTER, gpuContext.NEAREST);
+            gpuContext.texParameteri(gpuContext.TEXTURE_2D, gpuContext.TEXTURE_WRAP_S, gpuContext.CLAMP_TO_EDGE);
+            gpuContext.texParameteri(gpuContext.TEXTURE_2D, gpuContext.TEXTURE_WRAP_T, gpuContext.CLAMP_TO_EDGE);
+            gpuContext.pixelStorei(gpuContext.UNPACK_FLIP_Y_WEBGL, false);
+        }
+        setCanvasSize(gpuCanvas, width, height);
+        gpuContext.viewport(0, 0, width, height);
+        return true;
+    }
+
+    function renderGPU(name, sourceCanvas, targetContext, uniforms, replace = true) {
+        if (gpuDisabledForTest) return false;
+        try {
+            const width = sourceCanvas ? sourceCanvas.width : targetContext.canvas.width;
+            const height = sourceCanvas ? sourceCanvas.height : targetContext.canvas.height;
+            if (!ensureGPUContext(width, height)) return false;
+            const gl = gpuContext;
+            const program = getGPUProgram(name);
+            gl.useProgram(program);
+            gl.disable(gl.BLEND);
+
+            if (sourceCanvas) {
+                gl.activeTexture(gl.TEXTURE0);
+                gl.bindTexture(gl.TEXTURE_2D, gpuTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sourceCanvas);
+                const sourceLocation = gl.getUniformLocation(program, 'u_source');
+                if (sourceLocation !== null) gl.uniform1i(sourceLocation, 0);
+            }
+
+            const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
+            if (resolutionLocation) gl.uniform2f(resolutionLocation, width, height);
+            Object.entries(uniforms).forEach(([key, value]) => {
+                const location = gl.getUniformLocation(program, `u_${key}`);
+                if (location !== null) gl.uniform1f(location, value);
+            });
+
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            if (replace) targetContext.clearRect(0, 0, width, height);
+            targetContext.drawImage(gpuCanvas, 0, 0);
+            return true;
+        } catch (error) {
+            console.warn(`WebGL2 ${name} fallback:`, error);
+            return false;
+        }
+    }
 
     function ensureProcessingContext(width, height) {
         if (!processingCanvas) {
@@ -1020,7 +1302,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const enableCheckbox = document.createElement('input');
             enableCheckbox.type = 'checkbox';
-            enableCheckbox.checked = config.enabled || (config.type === 'duotone' ? config.enabled : false);
+            enableCheckbox.checked = config.enabled;
             
             const enableSlider = document.createElement('span');
             enableSlider.className = 'toggle-slider';
@@ -1039,11 +1321,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             enableCheckbox.addEventListener('change', (e) => {
                 e.stopPropagation(); 
-                if (config.type === 'duotone') {
-                    effects[name].enabled = enableCheckbox.checked;
-                } else {
-                    effects[name].enabled = enableCheckbox.checked;
-                }
+                effects[name].enabled = enableCheckbox.checked;
                 container.dataset.enabled = enableCheckbox.checked ? 'true' : 'false';
                 
                 if (enableCheckbox.checked) {
@@ -1075,8 +1353,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 addDualSlider(controlsContainer, name, config);
             } else if (config.type === 'color') {
                 addColorPicker(controlsContainer, name, 'color1', config.color1);
-                addColorPicker(controlsContainer, name, 'color2', config.color2);            } else if (config.type === 'duotone') {
-                addDuotoneControls(controlsContainer, name, config);
+                addColorPicker(controlsContainer, name, 'color2', config.color2);
+            } else if (config.type === 'multitone') {
+                addMultitoneControls(controlsContainer, name, config);
             } else if (config.type === 'edgeDetection') {
                 addEdgeDetectionControls(controlsContainer, name, config);
             } else if (config.type === 'perspective3d') {
@@ -1293,11 +1572,11 @@ document.addEventListener('DOMContentLoaded', () => {
         numberInput.min = min;
         numberInput.max = max;
         numberInput.value = value;
-        numberInput.className = 'number-input';        slider.addEventListener('input', () => {
+        numberInput.className = 'number-input';
+        slider.addEventListener('input', () => {
             numberInput.value = slider.value;
             effects[name].value = parseFloat(slider.value);
-            applyAllEffects();
-            captureFrame();
+            throttledApplyEffects();
 
             if (hasAnimatedEffects() && !animationFrameId) {
                 animate();
@@ -1305,6 +1584,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
             }
+        });
+
+        slider.addEventListener('change', () => {
+            applyAllEffects();
+            captureFrame();
         });
 
         numberInput.addEventListener('change', () => {
@@ -1471,62 +1755,83 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleContainer.appendChild(slider);
         controlGroup.appendChild(toggleContainer);
         container.appendChild(controlGroup);
-    }    function addDuotoneControls(container, name, config) {
+    }
+
+    function resampleToneColors(colors, count) {
+        if (colors.length === count) return [...colors];
+        return Array.from({ length: count }, (_, index) => {
+            const position = index / (count - 1) * (colors.length - 1);
+            const lowerIndex = Math.floor(position);
+            const upperIndex = Math.min(colors.length - 1, lowerIndex + 1);
+            const amount = position - lowerIndex;
+            const lower = hexToRgb(colors[lowerIndex]);
+            const upper = hexToRgb(colors[upperIndex]);
+            return rgbToHex({
+                r: lower.r + (upper.r - lower.r) * amount,
+                g: lower.g + (upper.g - lower.g) * amount,
+                b: lower.b + (upper.b - lower.b) * amount
+            });
+        });
+    }
+
+    function addMultitoneControls(container, name, config) {
         const controlGroup = document.createElement('div');
         controlGroup.className = 'control-group';
-        
-        const color1Container = document.createElement('div');
-        color1Container.className = 'flex items-center space-x-2';
-        const color1Label = document.createElement('label');
-        color1Label.textContent = 'Color 1';
-        color1Label.className = 'text-sm';
-        const color1Input = document.createElement('input');
-        color1Input.type = 'color';
-        color1Input.value = config.color1;
-        color1Input.className = 'color-input';
-        color1Container.appendChild(color1Label);
-        color1Container.appendChild(color1Input);
-        
-        const color2Container = document.createElement('div');
-        color2Container.className = 'flex items-center space-x-2';
-        const color2Label = document.createElement('label');
-        color2Label.textContent = 'Color 2';
-        color2Label.className = 'text-sm';
-        const color2Input = document.createElement('input');
-        color2Input.type = 'color';
-        color2Input.value = config.color2;
-        color2Input.className = 'color-input';
-        color2Container.appendChild(color2Label);
-        color2Container.appendChild(color2Input);
-        
-        controlGroup.appendChild(color1Container);
-        controlGroup.appendChild(color2Container);
-        
-        color1Input.addEventListener('input', () => {
-            effects[name].color1 = color1Input.value;
-            throttledApplyEffects();
-        });
-        
-        
-        color1Input.addEventListener('change', () => {
-            effects[name].color1 = color1Input.value;
+
+        const countRow = document.createElement('div');
+        countRow.className = 'flex items-center space-x-2';
+        const countLabel = document.createElement('label');
+        countLabel.textContent = '#tone';
+        countLabel.className = 'text-sm';
+        const countInput = document.createElement('input');
+        countInput.type = 'number';
+        countInput.min = 2;
+        countInput.max = 12;
+        countInput.step = 1;
+        countInput.value = config.toneCount;
+        countInput.className = 'number-input';
+        countRow.append(countLabel, countInput);
+        controlGroup.appendChild(countRow);
+
+        const paletteContainer = document.createElement('div');
+        const renderPalette = () => {
+            paletteContainer.replaceChildren();
+            effects[name].colors.forEach((color, index) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center space-x-2';
+                const label = document.createElement('label');
+                label.textContent = `Tone ${index + 1}`;
+                label.className = 'text-sm';
+                const input = document.createElement('input');
+                input.type = 'color';
+                input.value = color;
+                input.className = 'color-input';
+                input.addEventListener('input', () => {
+                    effects[name].colors[index] = input.value;
+                    throttledApplyEffects();
+                });
+                input.addEventListener('change', () => {
+                    effects[name].colors[index] = input.value;
+                    applyAllEffects();
+                    captureFrame();
+                });
+                row.append(label, input);
+                paletteContainer.appendChild(row);
+            });
+        };
+
+        countInput.addEventListener('change', () => {
+            const toneCount = Math.max(2, Math.min(12, Math.round(Number(countInput.value) || 2)));
+            countInput.value = toneCount;
+            effects[name].colors = resampleToneColors(effects[name].colors, toneCount);
+            effects[name].toneCount = toneCount;
+            renderPalette();
             applyAllEffects();
             captureFrame();
         });
-        
-        
-        color2Input.addEventListener('input', () => {
-            effects[name].color2 = color2Input.value;
-            throttledApplyEffects();
-        });
-        
-        
-        color2Input.addEventListener('change', () => {
-            effects[name].color2 = color2Input.value;
-            applyAllEffects();
-            captureFrame();
-        });
-        
+
+        renderPalette();
+        controlGroup.appendChild(paletteContainer);
         container.appendChild(controlGroup);
     }
 
@@ -3917,20 +4222,16 @@ document.addEventListener('DOMContentLoaded', () => {
             currentVideo = null;
         }
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            currentImage.onload = () => {
-                setInitialCanvasSize();
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
-                originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                applyAllEffects();
-                resizeCanvas();
-                updatePasteHintVisibility(true);
-            };
-            currentImage.src = event.target.result;
+        currentImage.onload = () => {
+            setInitialCanvasSize();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
+            originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            applyAllEffects();
+            resizeCanvas();
+            updatePasteHintVisibility(true);
         };
-        reader.readAsDataURL(file);
+        setMediaObjectURL(file, currentImage);
     }
 
     function loadVideoFile(file) {
@@ -3944,6 +4245,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentVideo.playsInline = true;
             currentVideo.muted = true;
             currentVideo.loop = true;
+            currentVideo.onplay = scheduleVideoFrame;
         }
 
         
@@ -3952,11 +4254,8 @@ document.addEventListener('DOMContentLoaded', () => {
             videoFrameCtx = videoFrameCanvas.getContext('2d', { willReadFrequently: true });
         }
 
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            currentVideo.src = event.target.result;
-            
-            currentVideo.onloadedmetadata = () => {
+        currentVideo.onloadedmetadata = () => {
+                lastVideoFrameTime = -1;
                 videoFrameCanvas.width = currentVideo.videoWidth;
                 videoFrameCanvas.height = currentVideo.videoHeight;
                 
@@ -3982,18 +4281,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 
-                updateVideoFrame();
                 updatePasteHintVisibility(true);
                 showSuccess(`Video loaded successfully! Duration: ${currentVideo.duration.toFixed(1)}s`);
-            };
-
-            currentVideo.onerror = (err) => {
-                console.error('Video loading error:', err);
-                showError('Failed to load video. The format may not be supported.');
-                isVideoSource = false;
-            };
         };
-        reader.readAsDataURL(file);
+
+        currentVideo.onerror = (err) => {
+            console.error('Video loading error:', err);
+            showError('Failed to load video. The format may not be supported.');
+            isVideoSource = false;
+        };
+        setMediaObjectURL(file, currentVideo);
     }
 
     function loadGIFFile(file) {
@@ -4037,8 +4334,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isGIFSource = true;
                 gifFrameIndex = 0;
 
-                canvas.width = gifWidth;
-                canvas.height = gifHeight;
+                setCanvasSize(canvas, gifWidth, gifHeight);
                 originalImageData = gifFrames[0].imageData;
                 applyAllEffects();
                 resizeCanvas();
@@ -4114,13 +4410,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const frame = gifFrames[gifFrameIndex];
 
-            canvas.width = gifWidth;
-            canvas.height = gifHeight;
+            setCanvasSize(canvas, gifWidth, gifHeight);
             originalImageData = frame.imageData;
             applyAllEffects();
-            if (hasAnimatedEffects()) {
-                applyAnimatedEffects();
-            }
 
             gifFrameIndex = (gifFrameIndex + 1) % gifFrames.length;
             gifPlaybackTimer = setTimeout(renderFrame, frame.delay);
@@ -4136,10 +4428,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function scheduleVideoFrame() {
+        if (!isVideoSource || !currentVideo || currentVideo.paused || currentVideo.ended) return;
+        if (typeof currentVideo.requestVideoFrameCallback === 'function') {
+            if (videoFrameRequestId === null) {
+                videoFrameRequestId = currentVideo.requestVideoFrameCallback(updateVideoFrame);
+            }
+        } else if (videoAnimationFrameId === null) {
+            videoAnimationFrameId = requestAnimationFrame(updateVideoFrame);
+        }
+    }
+
     function updateVideoFrame() {
+        videoFrameRequestId = null;
+        videoAnimationFrameId = null;
         if (!isVideoSource || !currentVideo || currentVideo.paused || currentVideo.ended) {
             return;
         }
+        if (typeof currentVideo.requestVideoFrameCallback !== 'function' && currentVideo.currentTime === lastVideoFrameTime) {
+            scheduleVideoFrame();
+            return;
+        }
+        lastVideoFrameTime = currentVideo.currentTime;
 
         
         videoFrameCtx.drawImage(currentVideo, 0, 0, videoFrameCanvas.width, videoFrameCanvas.height);
@@ -4148,15 +4458,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const frameData = videoFrameCtx.getImageData(0, 0, videoFrameCanvas.width, videoFrameCanvas.height);
         
         
-        canvas.width = videoFrameCanvas.width;
-        canvas.height = videoFrameCanvas.height;
+        setCanvasSize(canvas, videoFrameCanvas.width, videoFrameCanvas.height);
         originalImageData = frameData;
         
         
         applyAllEffects();
         
         
-        requestAnimationFrame(updateVideoFrame);
+        scheduleVideoFrame();
     }
 
 upload.addEventListener('change', (e) => {
@@ -4242,8 +4551,7 @@ upload.addEventListener('change', (e) => {
             displayWidth = displayHeight * imageAspectRatio;
         }
 
-        canvas.width = width;
-        canvas.height = height;
+        setCanvasSize(canvas, width, height);
         
         canvas.style.width = displayWidth + 'px';
         canvas.style.height = displayHeight + 'px';
@@ -4264,10 +4572,11 @@ upload.addEventListener('change', (e) => {
             if (config.type === 'toggle') {
                 config.value = false;
                 config.enabled = false;
-            }            if (config.type === 'duotone') {
+            }
+            if (config.type === 'multitone') {
                 config.enabled = false;
-                config.color1 = '#0000ff';
-                config.color2 = '#ffff00';
+                config.toneCount = 2;
+                config.colors = ['#0000ff', '#ffff00'];
             }
             if (config.type === 'perspective3d') {
                 config.enabled = false;
@@ -4315,11 +4624,7 @@ upload.addEventListener('change', (e) => {
             
             const link = document.createElement('a');
             link.download = `wink-edited.${format}`;
-
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
+            const { canvas: tempCanvas, ctx: tempCtx } = getReusableCanvas(canvas.width, canvas.height);
 
             if (!isVideoSource && !isGIFSource) {
                 applyAllEffects();
@@ -4331,8 +4636,16 @@ upload.addEventListener('change', (e) => {
             tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
             tempCtx.drawImage(canvas, 0, 0);
 
-            link.href = tempCanvas.toDataURL(`image/${format}`);
-            link.click();
+            tempCanvas.toBlob(blob => {
+                if (!blob) {
+                    showError('Failed to encode image.');
+                    return;
+                }
+                const url = URL.createObjectURL(blob);
+                link.href = url;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 0);
+            }, `image/${format}`);
         });
 
     blinkBtn.addEventListener('click', startRecording);
@@ -4431,6 +4744,11 @@ upload.addEventListener('change', (e) => {
                     effectConfig.enabled = !!snapshotConfig.enabled;
                 }
 
+                if (name === 'Duotone' && snapshotConfig.color1 && snapshotConfig.color2) {
+                    effectConfig.toneCount = 2;
+                    effectConfig.colors = [snapshotConfig.color1, snapshotConfig.color2];
+                }
+
                 const fields = getSnapshotFields(effectConfig.type, effectConfig);
                 fields.forEach(field => {
                     if (field === 'enabled') return;
@@ -4458,13 +4776,11 @@ upload.addEventListener('change', (e) => {
         if (!originalImageData && !inputImageData) return;
 
         const sourceImageData = inputImageData || originalImageData;
+        badTVOriginalData = null;
         ensureProcessingContext(sourceImageData.width, sourceImageData.height);
 
-        let workingImageData = new ImageData(
-            new Uint8ClampedArray(sourceImageData.data),
-            sourceImageData.width,
-            sourceImageData.height
-        );
+        let workingImageData = sourceImageData;
+        let ownsWorkingImageData = false;
         let hasPendingImageData = true;
 
         processingCtx.clearRect(0, 0, processingCanvas.width, processingCanvas.height);
@@ -4486,7 +4802,15 @@ upload.addEventListener('change', (e) => {
         const ensureWorkingImageData = () => {
             if (!hasPendingImageData) {
                 workingImageData = processingCtx.getImageData(0, 0, processingCanvas.width, processingCanvas.height);
+                ownsWorkingImageData = true;
                 hasPendingImageData = true;
+            } else if (!ownsWorkingImageData) {
+                workingImageData = new ImageData(
+                    new Uint8ClampedArray(sourceImageData.data),
+                    sourceImageData.width,
+                    sourceImageData.height
+                );
+                ownsWorkingImageData = true;
             }
         };
 
@@ -5274,37 +5598,48 @@ upload.addEventListener('change', (e) => {
         }
 
         const spacing = Math.max(2, Math.floor(dotSize));
-        
-        for (let y = 0; y < height; y += spacing) {
-            for (let x = 0; x < width; x += spacing) {
-                const i = (y * width + x) * 4;
+        const gap = Math.max(1, Math.round(spacing * 0.15));
+        const squareSize = spacing - gap;
+        const columns = Math.floor((width + gap) / spacing);
+        const rows = Math.floor((height + gap) / spacing);
+        const gridWidth = columns * squareSize + Math.max(0, columns - 1) * gap;
+        const gridHeight = rows * squareSize + Math.max(0, rows - 1) * gap;
+        const offsetX = Math.floor((width - gridWidth) / 2);
+        const offsetY = Math.floor((height - gridHeight) / 2);
+
+        for (let row = 0; row < rows; row++) {
+            const y = offsetY + row * spacing;
+            for (let column = 0; column < columns; column++) {
+                const x = offsetX + column * spacing;
+                const sampleX = Math.min(width - 1, x + Math.floor(squareSize / 2));
+                const sampleY = Math.min(height - 1, y + Math.floor(squareSize / 2));
+                const i = (sampleY * width + sampleX) * 4;
                 const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
                 
                 if (a === 0) continue;
-                
-                const brightness = (r * 0.299 + g * 0.587 + b * 0.114) / 255; 
-                const maxSize = spacing;
-                const size = Math.floor(brightness * maxSize);
-
-                if (size > 0) { 
-                    ctx.fillStyle = `rgba(${r},${g},${b},${a/255})`;
-                    const offset = (spacing - size) / 2;
-                    ctx.fillRect(x + offset, y + offset, size, size);
-                }
+                ctx.fillStyle = `rgba(${r},${g},${b},${a/255})`;
+                ctx.fillRect(x, y, squareSize, squareSize);
             }
         }
     }
 
-    function duotone(data, color1, color2) {
-        const c1 = hexToRgb(color1);
-        const c2 = hexToRgb(color2);
-        if (!c1 || !c2) return;
+    function multitone(data, colors) {
+        const palette = colors.map(hexToRgb);
+        if (palette.length < 2) return;
+
         for (let i = 0; i < data.length; i += 4) {
-            const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-            const t = avg / 255;
-            data[i] = c1.r * (1 - t) + c2.r * t;
-            data[i + 1] = c1.g * (1 - t) + c2.g * t;
-            data[i + 2] = c1.b * (1 - t) + c2.b * t;        }
+            if (data[i + 3] === 0) continue;
+            const brightness = (data[i] + data[i + 1] + data[i + 2]) / (3 * 255);
+            const position = brightness * (palette.length - 1);
+            const lowerIndex = Math.floor(position);
+            const upperIndex = Math.min(palette.length - 1, lowerIndex + 1);
+            const amount = position - lowerIndex;
+            const lower = palette[lowerIndex];
+            const upper = palette[upperIndex];
+            data[i] = lower.r + (upper.r - lower.r) * amount;
+            data[i + 1] = lower.g + (upper.g - lower.g) * amount;
+            data[i + 2] = lower.b + (upper.b - lower.b) * amount;
+        }
     }
     
     function filmGrain(imageData, intensity, size, monochrome) {
@@ -5414,15 +5749,30 @@ upload.addEventListener('change', (e) => {
     }
 
     function crt(canvas, ctx, config) {
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = imageData.data;
-        const width = imageData.width;
-        const height = imageData.height;
-        
         const intensity = config.intensity / 100;
         const curvature = config.curvature / 100;
         const scanlines = config.scanlines / 100;
         const glow = config.glow;
+
+        if (renderGPU('crt', canvas, ctx, { intensity, curvature, scanlines })) {
+            if (glow) {
+                ensureFilterContext(canvas);
+                filterCtx.clearRect(0, 0, filterCanvas.width, filterCanvas.height);
+                filterCtx.drawImage(canvas, 0, 0);
+                ctx.save();
+                ctx.globalCompositeOperation = 'screen';
+                ctx.globalAlpha = 0.5 * intensity;
+                ctx.filter = `blur(${Math.max(2, intensity * 10)}px)`;
+                ctx.drawImage(filterCanvas, 0, 0);
+                ctx.restore();
+            }
+            return;
+        }
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        const width = imageData.width;
+        const height = imageData.height;
         
         const output = new Uint8ClampedArray(data);
         
@@ -6287,20 +6637,13 @@ upload.addEventListener('change', (e) => {
                 workerScript: workerURL
             });
 
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = gifWidth;
-        tempCanvas.height = gifHeight;
-        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+        const { canvas: tempCanvas, ctx: tempCtx } = getReusableCanvas(gifWidth, gifHeight);
 
         for (let i = 0; i < gifFrames.length; i++) {
             const frame = gifFrames[i];
-            canvas.width = gifWidth;
-            canvas.height = gifHeight;
+            setCanvasSize(canvas, gifWidth, gifHeight);
             originalImageData = frame.imageData;
             applyAllEffects();
-            if (hasAnimatedEffects()) {
-                applyAnimatedEffects();
-            }
 
             tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
             tempCtx.drawImage(canvas, 0, 0);
@@ -6383,14 +6726,13 @@ upload.addEventListener('change', (e) => {
 
         gifEncoder = encoder;
         let capturedCount = 0;
+        const { canvas: tempCanvas, ctx: tempCtx } = getReusableCanvas(canvasW, canvasH);
 
         const captureFrame = () => {
             if (!isVideoExporting) return;
 
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
+            setCanvasSize(tempCanvas, canvas.width, canvas.height);
+            tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
             tempCtx.drawImage(canvas, 0, 0);
 
             encoder.addFrame(tempCtx, {
@@ -6650,14 +6992,15 @@ upload.addEventListener('change', (e) => {
         
         const scrollY = badTVOffset % canvas.height;
         
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        tempCtx.putImageData(badTVOriginalData, 0, 0);
+        if (!badTVCanvas) {
+            badTVCanvas = document.createElement('canvas');
+            badTVCtx = badTVCanvas.getContext('2d');
+        }
+        setCanvasSize(badTVCanvas, canvas.width, canvas.height);
+        badTVCtx.putImageData(badTVOriginalData, 0, 0);
         
-        ctx.drawImage(tempCanvas, 0, scrollY, canvas.width, canvas.height - scrollY, 0, 0, canvas.width, canvas.height - scrollY);
-        ctx.drawImage(tempCanvas, 0, 0, canvas.width, scrollY, 0, canvas.height - scrollY, canvas.width, scrollY);
+        ctx.drawImage(badTVCanvas, 0, scrollY, canvas.width, canvas.height - scrollY, 0, 0, canvas.width, canvas.height - scrollY);
+        ctx.drawImage(badTVCanvas, 0, 0, canvas.width, scrollY, 0, canvas.height - scrollY, canvas.width, scrollY);
         
         ctx.fillStyle = 'rgba(255,255,255,0.02)';
         for (let i = 0; i < 20; i++) {
@@ -6695,29 +7038,31 @@ upload.addEventListener('change', (e) => {
         
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
-        const radius = Math.sqrt(canvas.width ** 2 + canvas.height ** 2) / 2;
+        const size = Math.ceil(Math.sqrt(canvas.width ** 2 + canvas.height ** 2));
         
+        if (!rainbowCanvas) {
+            rainbowCanvas = document.createElement('canvas');
+            rainbowCtx = rainbowCanvas.getContext('2d');
+        }
+        if (rainbowCanvas.width !== size || rainbowCanvas.height !== size) {
+            setCanvasSize(rainbowCanvas, size, size);
+            const radius = size / 2;
+            const gradient = rainbowCtx.createConicGradient(0, radius, radius);
+            for (let i = 0; i <= 360; i++) {
+                gradient.addColorStop(i / 360, `hsl(${i}, 100%, 50%)`);
+            }
+            rainbowCtx.fillStyle = gradient;
+            rainbowCtx.beginPath();
+            rainbowCtx.arc(radius, radius, radius, 0, 2 * Math.PI);
+            rainbowCtx.fill();
+        }
+
         ctx.save();
         ctx.globalAlpha = opacity;
         ctx.globalCompositeOperation = 'screen';
         ctx.translate(centerX, centerY);
         ctx.rotate(rainbowAngle);
-        
-        const gradient = ctx.createConicGradient(0, 0, 0);
-        
-        for (let i = 0; i <= 360; i += 1) { 
-            const hue = i;
-            const saturation = 100;
-            const lightness = 50;
-            const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-            gradient.addColorStop(i / 360, color);
-        }
-        
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, 2 * Math.PI);
-        ctx.fill();
-        
+        ctx.drawImage(rainbowCanvas, -size / 2, -size / 2);
         ctx.restore();
     }
 
@@ -6729,6 +7074,17 @@ upload.addEventListener('change', (e) => {
         ctx.save();
         ctx.globalAlpha = opacity;
         ctx.globalCompositeOperation = 'overlay'
+        if (renderGPU('marble', null, ctx, {
+            time: liquidMarbleTime,
+            turbulence: (turbulence / 100) * 2,
+            scale: Math.max(0.1, scale / 100),
+            colorInfluence: colorInfluence / 100,
+            flowX: (flowX - 50) / 10,
+            flowY: (flowY - 50) / 10
+        }, false)) {
+            ctx.restore();
+            return;
+        }
         const scaleFactor = 0.5;
         const scaledWidth = Math.floor(canvas.width * scaleFactor);
         const scaledHeight = Math.floor(canvas.height * scaleFactor);
@@ -6909,17 +7265,33 @@ upload.addEventListener('change', (e) => {
         ctx.restore();
     }
 
+    function drawStormParticles(canvas, ctx, intensityFactor, speed, time) {
+        const particleCount = Math.floor(canvas.width * 2 * intensityFactor);
+        ctx.fillStyle = `rgba(220, 230, 255, ${0.3 * intensityFactor})`;
+        for (let p = 0; p < particleCount; p++) {
+            const px = (p * 137 + time * 30) % canvas.width;
+            const py = canvas.height - ((p * 227 + time * speed * 30) % canvas.height);
+            const particleHeight = 10 + Math.random() * 40 * intensityFactor;
+            ctx.fillRect(px, py, Math.random() < 0.5 ? 1 : 2, particleHeight);
+        }
+    }
+
     function stormSyndrome(canvas, ctx, intensity, speed) {
         if (intensity <= 0) return;
 
         const time = Date.now() * (speed / 1000);
+        const intFactor = intensity / 100;
+        if (renderGPU('storm', canvas, ctx, { intensity: intFactor, time })) {
+            drawStormParticles(canvas, ctx, intFactor, speed, time);
+            return;
+        }
+
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         const width = canvas.width;
         const height = canvas.height;
         const output = new Uint8ClampedArray(data);
 
-        const intFactor = intensity / 100;
         const maxMeltDist = 80 * intFactor; // reduced purely vertical tearing
 
         for (let y = 0; y < height; y++) {
@@ -6971,27 +7343,21 @@ upload.addEventListener('change', (e) => {
         ctx.putImageData(new ImageData(output, width, height), 0, 0);
         
         // Reverse Rain Particles (Thinner, faster)
-        const particleCount = Math.floor(width * 2 * intFactor);
-        ctx.fillStyle = `rgba(220, 230, 255, ${0.3 * intFactor})`;
-        for(let p = 0; p < particleCount; p++) {
-            let px = (p * 137 + time * 30) % width;
-            let py = height - ((p * 227 + time * speed * 30) % height);
-            let pHeight = 10 + Math.random() * 40 * intFactor;
-            ctx.fillRect(px, py, Math.random() < 0.5 ? 1 : 2, pHeight);
-        }
+        drawStormParticles(canvas, ctx, intFactor, speed, time);
     }
 
     function melt(canvas, ctx, intensity, speed) {
         if (intensity <= 0) return;
 
         const time = Date.now() * (speed / 200);
+        const intensityFactor = intensity / 100;
+        if (renderGPU('melt', canvas, ctx, { intensity: intensityFactor, time })) return;
+
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
         const width = canvas.width;
         const height = canvas.height;
         const output = new Uint8ClampedArray(data);
-
-        const intensityFactor = intensity / 100;
 
         const freqX1 = 0.012;
         const freqY1 = 0.008;
@@ -7092,16 +7458,17 @@ upload.addEventListener('change', (e) => {
         const drawX = bouncingLogoX - halfSize;
         const drawY = bouncingLogoY - halfSize;
 
-        let logoImage;
-        if (customImage) {
-            logoImage = customImage;
-        } else {
-            logoImage = new Image();
-            logoImage.src = '../assets/wink/winkwhite.png';
-            if (!logoImage.complete) {
-                ctx.restore();
-                return;
+        let logoImage = customImage;
+        if (!logoImage) {
+            if (!defaultLogoImage) {
+                defaultLogoImage = new Image();
+                defaultLogoImage.src = '../assets/wink/winkwhite.png';
             }
+            logoImage = defaultLogoImage;
+        }
+        if (!logoImage.complete) {
+            ctx.restore();
+            return;
         }
 
         
@@ -7118,6 +7485,145 @@ upload.addEventListener('change', (e) => {
         }
 
         ctx.drawImage(logoImage, drawX, drawY, logoSize, logoSize);
+    }
+
+    async function runPerformanceSelfCheck() {
+        const multitonePixels = new Uint8ClampedArray([
+            0, 0, 0, 255,
+            127, 127, 127, 255,
+            255, 255, 255, 255
+        ]);
+        multitone(multitonePixels, ['#ff0000', '#00ff00', '#0000ff']);
+        console.assert(
+            multitonePixels[0] === 255 &&
+            multitonePixels[5] >= 250 &&
+            multitonePixels[10] === 255,
+            'Multitone self-check failed'
+        );
+
+        const matrixCheckCanvas = document.createElement('canvas');
+        matrixCheckCanvas.width = 24;
+        matrixCheckCanvas.height = 24;
+        const matrixCheckContext = matrixCheckCanvas.getContext('2d', { willReadFrequently: true });
+        matrixCheckContext.fillStyle = '#ffffff';
+        matrixCheckContext.fillRect(0, 0, 24, 24);
+        squareMatrix(matrixCheckCanvas, matrixCheckContext, 6);
+        const matrixPixels = matrixCheckContext.getImageData(0, 0, 24, 24).data;
+        let opaqueMatrixPixels = 0;
+        for (let i = 3; i < matrixPixels.length; i += 4) {
+            if (matrixPixels[i] > 0) opaqueMatrixPixels++;
+        }
+        console.assert(opaqueMatrixPixels === 400, 'Square Matrix grid self-check failed');
+
+        const width = 1280;
+        const height = 720;
+        if (!ensureGPUContext(width, height)) {
+            console.warn('Wink performance check: WebGL2 unavailable; CPU fallback is active.');
+            return [];
+        }
+
+        const fixture = document.createElement('canvas');
+        fixture.width = width;
+        fixture.height = height;
+        const fixtureCtx = fixture.getContext('2d', { willReadFrequently: true });
+        const fixtureData = fixtureCtx.createImageData(width, height);
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const i = (y * width + x) * 4;
+                fixtureData.data[i] = (x * 7 + y * 3) % 256;
+                fixtureData.data[i + 1] = (x * 2 + y * 11) % 256;
+                fixtureData.data[i + 2] = (x * 13 + y * 5) % 256;
+                fixtureData.data[i + 3] = 255;
+            }
+        }
+        fixtureCtx.putImageData(fixtureData, 0, 0);
+
+        const makeTarget = () => {
+            const target = document.createElement('canvas');
+            target.width = width;
+            target.height = height;
+            const targetCtx = target.getContext('2d', { willReadFrequently: true });
+            targetCtx.drawImage(fixture, 0, 0);
+            return { target, targetCtx };
+        };
+
+        const seededRandom = seed => () => {
+            seed = (seed * 1664525 + 1013904223) >>> 0;
+            return seed / 4294967296;
+        };
+
+        const checks = [
+            {
+                name: 'CRT',
+                render: (target, targetCtx) => crt(target, targetCtx, {
+                    intensity: 70, curvature: 25, scanlines: 60, glow: false
+                })
+            },
+            {
+                name: 'Storm Syndrome',
+                render: (target, targetCtx) => stormSyndrome(target, targetCtx, 70, 0),
+                seed: 42
+            },
+            {
+                name: 'Melt',
+                render: (target, targetCtx) => melt(target, targetCtx, 70, 0)
+            },
+            {
+                name: 'Liquid Marble',
+                render: (target, targetCtx) => {
+                    liquidMarbleTime = 0;
+                    liquidMarble(target, targetCtx, 1, 0, 60, 50, 50, 60, 40);
+                }
+            }
+        ];
+
+        const results = [];
+        for (const check of checks) {
+            const originalRandom = Math.random;
+            const gpuTarget = makeTarget();
+            if (check.seed) Math.random = seededRandom(check.seed);
+            gpuDisabledForTest = false;
+            const gpuStart = performance.now();
+            check.render(gpuTarget.target, gpuTarget.targetCtx);
+            const gpuMs = performance.now() - gpuStart;
+
+            const cpuTarget = makeTarget();
+            if (check.seed) Math.random = seededRandom(check.seed);
+            gpuDisabledForTest = true;
+            const cpuStart = performance.now();
+            check.render(cpuTarget.target, cpuTarget.targetCtx);
+            const cpuMs = performance.now() - cpuStart;
+            Math.random = originalRandom;
+
+            const gpuPixels = gpuTarget.targetCtx.getImageData(0, 0, width, height).data;
+            const cpuPixels = cpuTarget.targetCtx.getImageData(0, 0, width, height).data;
+            let totalDifference = 0;
+            let maxDifference = 0;
+            for (let i = 0; i < gpuPixels.length; i++) {
+                const difference = Math.abs(gpuPixels[i] - cpuPixels[i]);
+                totalDifference += difference;
+                maxDifference = Math.max(maxDifference, difference);
+            }
+            results.push({
+                effect: check.name,
+                gpuMs: Number(gpuMs.toFixed(2)),
+                cpuMs: Number(cpuMs.toFixed(2)),
+                speedup: Number((cpuMs / Math.max(gpuMs, 0.01)).toFixed(1)),
+                meanChannelDifference: Number((totalDifference / gpuPixels.length).toFixed(2)),
+                maxChannelDifference: maxDifference
+            });
+        }
+        gpuDisabledForTest = false;
+        console.table(results);
+        return results;
+    }
+
+    window.runWinkPerformanceCheck = runPerformanceSelfCheck;
+    if (new URLSearchParams(location.search).has('winkPerfCheck')) {
+        setTimeout(async () => {
+            const results = await runPerformanceSelfCheck();
+            document.body.dataset.winkPerfCheck = JSON.stringify(results);
+        }, 0);
     }
 
     createEffectControls();
