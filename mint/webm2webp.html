@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebM to Animated WebP Converter</title>
+    <link rel="icon" type="image/png" href="../assets/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
+
+    <meta name="description" content="Convert WebM videos to animated WebP format — 100% client-side">
+    <meta property="og:title" content="WebM to WebP Converter">
+    <meta property="og:description" content="Convert WebM videos to animated WebP — no server uploads">
+    <meta property="og:image" content="https://winss.xyz/assets/favicon.png">
+    <meta property="og:url" content="https://winss.xyz/mint/webm2webp.html">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#000000">
+
+    <link rel="stylesheet" href="mint.css">
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        body {
+            background: linear-gradient(180deg, #060606 0%, #0b0b0b 100%);
+            color: #e6e6e6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            font-family: 'Monocraft', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .page-wrap {
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 30px 40px 80px;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        /* Header */
+        .main-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .main-header a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .main-title {
+            font-size: 1.6rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.5s ease;
+            display: inline-block;
+            padding: 6px 24px;
+            border-radius: 12px;
+            font-family: 'Monocraft', monospace;
+        }
+
+        .main-title:hover {
+            color: #000000;
+            background: #ffffff;
+            filter: drop-shadow(0 0 30px rgba(255, 255, 255, 1)) drop-shadow(0 0 60px rgba(255, 255, 255, 0.8));
+        }
+
+        .main-subtitle {
+            font-size: 0.85rem;
+            opacity: 0.45;
+            margin-top: 6px;
+            font-family: 'Monocraft', monospace;
+        }
+
+        /* Two-column grid */
+        .app-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        @media (max-width: 800px) {
+            .app-grid {
+                grid-template-columns: 1fr;
+            }
+            .page-wrap {
+                padding: 20px 16px 60px;
+            }
+        }
+
+        /* Cards / Panels */
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .card-header .icon {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
+        /* Dropzone */
+        .dropzone {
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .dropzone:hover {
+            border-color: #fff;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .dropzone.dragover {
+            border-color: #4ade80;
+            background: rgba(74, 222, 128, 0.05);
+        }
+
+        .dropzone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .dropzone-icon {
+            font-size: 2.4rem;
+            margin-bottom: 12px;
+            opacity: 0.35;
+        }
+
+        .dropzone-text {
+            font-size: 0.95rem;
+            opacity: 0.7;
+            margin-bottom: 4px;
+        }
+
+        .dropzone-hint {
+            font-size: 0.75rem;
+            opacity: 0.35;
+        }
+
+        /* Video preview */
+        .preview-container {
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .preview-container video {
+            width: 100%;
+            display: block;
+        }
+
+        /* Metadata grid */
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            text-align: center;
+        }
+
+        .meta-item {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        .meta-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.45;
+        }
+
+        .meta-value {
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+
+        /* Form controls */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-row label {
+            flex: 1;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .control-row input[type="number"] {
+            flex: 1;
+            width: 100%;
+            background: #111;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-family: 'Monocraft', monospace;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .control-row input[type="number"]:focus {
+            border-color: #555;
+        }
+
+        .control-row input[type="range"] {
+            flex: 2;
+            width: 100%;
+            accent-color: #fff;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+        }
+
+        .control-label span:first-child {
+            opacity: 0.7;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .hint {
+            font-size: 0.7rem;
+            opacity: 0.35;
+            margin-top: 2px;
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            opacity: 0.35;
+            margin-top: 2px;
+        }
+
+        /* Buttons */
+        .btn {
+            background: #fff;
+            color: #000;
+            border: 1px solid #fff;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Monocraft', monospace;
+            font-weight: bold;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: #e6e6e6;
+            border-color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            color: #f87171;
+            cursor: pointer;
+            font-family: 'Monocraft', monospace;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .remove-btn:hover {
+            background: rgba(248, 113, 113, 0.1);
+        }
+
+        /* Output card */
+        .output-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+        }
+
+        .placeholder {
+            text-align: center;
+            opacity: 0.4;
+        }
+
+        .placeholder-icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .placeholder p {
+            font-size: 0.85rem;
+            max-width: 220px;
+        }
+
+        /* Processing state */
+        .processing {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border-radius: 0;
+            border: 4px solid #222;
+            border-top-color: #fff;
+            animation: spin 1s linear infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .spinner-text {
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            max-width: 250px;
+            background: #222;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #fff;
+            width: 0%;
+            transition: width 0.15s ease;
+        }
+
+        .processing-step {
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .processing-hint {
+            font-size: 0.75rem;
+            opacity: 0.4;
+        }
+
+        /* Result state */
+        .result {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .result-status {
+            color: #4ade80;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .result-size {
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .result-preview {
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+        }
+
+        .result-preview img {
+            max-width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .result-note {
+            font-size: 0.7rem;
+            text-align: center;
+            opacity: 0.35;
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 1px solid #222;
+            padding: 16px 40px;
+            margin-top: auto;
+            font-size: 0.75rem;
+            opacity: 0.35;
+            text-align: center;
+        }
+
+        /* Message box */
+        .message-box {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            font-family: 'Monocraft', monospace;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: all 0.3s ease;
+        }
+
+        .message-box.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .message-box.success {
+            background: #4ade80;
+            color: #000;
+        }
+
+        .message-box.error {
+            background: #f87171;
+            color: #000;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="page-wrap">
+
+        <!-- Header -->
+        <header class="main-header">
+            <a href="index.html">
+                <h1 class="main-title">WebM to WebP</h1>
+            </a>
+            <p class="main-subtitle">100% Client-Side Private Video Converter</p>
+        </header>
+
+        <!-- App Grid -->
+        <div class="app-grid">
+
+            <!-- Left: Input & Config -->
+            <div style="display:flex;flex-direction:column;gap:24px;">
+
+                <!-- Dropzone -->
+                <div id="dropzone" class="dropzone">
+                    <input type="file" id="video-input" accept="video/webm,video/mp4,video/ogg" />
+                    <p class="dropzone-text">Click to upload or drag & drop</p>
+                    <p class="dropzone-hint">Supports WebM, MP4, and standard video containers</p>
+                </div>
+
+                <!-- Source Video Preview -->
+                <div id="source-preview-card" class="card hidden">
+                    <div class="card-header" style="justify-content:space-between;">
+                        <span>Source Video Timeline</span>
+                        <button id="remove-video-btn" class="remove-btn">Remove</button>
+                    </div>
+
+                    <div class="preview-container">
+                        <video id="preview-video" controls></video>
+                    </div>
+
+                    <div class="meta-grid">
+                        <div class="meta-item">
+                            <div class="meta-label">Duration</div>
+                            <div class="meta-value" id="info-duration">0.00s</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Resolution</div>
+                            <div class="meta-value" id="info-resolution">-- × --</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Aspect Ratio</div>
+                            <div class="meta-value" id="info-aspect">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Config Card -->
+                <div class="card">
+                    <div class="card-header">
+                        Optimization & Settings
+                    </div>
+
+                    <!-- Trim Range -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Convert Range (Trim)</span>
+                            <span class="badge" id="range-display">0.0s – 5.0s</span>
+                        </div>
+                        <div class="control-row">
+                            <label>Start (s)</label>
+                            <input type="number" id="trim-start" min="0" step="0.1" value="0.0" />
+                        </div>
+                        <div class="control-row">
+                            <label>End (s)</label>
+                            <input type="number" id="trim-end" min="0.1" step="0.1" value="5.0" />
+                        </div>
+                        <p class="hint">Keep chunks under 10 seconds for best performance.</p>
+                    </div>
+
+                    <!-- Resolution Scale -->
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Target Output Scale</span>
+                            <span class="badge" id="scale-display">100% (Original)</span>
+                        </div>
+                        <input type="range" id="scale-slider" min="10" max="100" value="100" step="10" />
+                        <div class="range-labels">
+                            <span>10%</span>
+                            <span>50%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+
+                    <!-- FPS & Quality -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Framerate</span>
+                                <span class="badge" id="fps-display">12 FPS</span>
+                            </div>
+                            <input type="range" id="fps-slider" min="5" max="30" value="12" step="1" />
+                            <p class="hint">Lower FPS = smaller file.</p>
+                        </div>
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Quality</span>
+                                <span class="badge" id="quality-display">80</span>
+                            </div>
+                            <input type="range" id="quality-slider" min="10" max="100" value="80" step="5" />
+                            <p class="hint">80 is a good default.</p>
+                        </div>
+                    </div>
+
+                    <!-- Convert Button -->
+                    <button id="convert-btn" class="btn btn-full" disabled>
+                        Generate Animated WebP
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Output -->
+            <div style="display:flex;flex-direction:column;">
+                <div class="card output-card" style="flex:1;">
+
+                    <!-- Placeholder -->
+                    <div id="output-placeholder" class="placeholder">
+                        <p>Upload a video on the left, configure settings, and click Generate.</p>
+                    </div>
+
+                    <!-- Processing -->
+                    <div id="output-processing" class="processing hidden">
+                        <div class="spinner">
+                            <span class="spinner-text" id="progress-text">0%</span>
+                        </div>
+                        <div>
+                            <p class="processing-step" id="processing-step">Extracting video frames…</p>
+                            <p class="processing-hint">Processing locally inside your browser.</p>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-bar-fill"></div>
+                        </div>
+                    </div>
+
+                    <!-- Result -->
+                    <div id="output-result" class="result hidden">
+                        <div class="result-header">
+                            <span class="result-status">Completed</span>
+                            <span class="result-size" id="output-filesize">-- KB</span>
+                        </div>
+
+                        <div class="result-preview">
+                            <img id="result-webp-img" alt="Generated WebP Animation" />
+                        </div>
+
+                        <div class="btn-group">
+                            <button id="download-btn" class="btn">Download WebP</button>
+                            <button id="copy-btn" class="btn btn-secondary">Copy WebP</button>
+                        </div>
+
+                        <p class="result-note">
+                            Verify magic byte containers rather than file extensions when filtering for this format.
+                        </p>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Message Box -->
+    <div id="message-box" class="message-box"></div>
+
+    <!-- Hidden canvas -->
+    <canvas id="conversion-canvas" style="display:none;"></canvas>
+
+    <!-- Animated WebP Encoder -->
+    <script>
+        function concatBuffers(...buffers) {
+            let totalLength = buffers.reduce((acc, b) => acc + b.length, 0);
+            let result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (let b of buffers) { result.set(b, offset); offset += b.length; }
+            return result;
+        }
+        function writeUint32(val) {
+            return new Uint8Array([val & 0xff, (val >> 8) & 0xff, (val >> 16) & 0xff, (val >> 24) & 0xff]);
+        }
+        function stringToBuffer(str) { return new TextEncoder().encode(str); }
+        function parseStaticWebP(buffer) {
+            const riff = String.fromCharCode(...buffer.slice(0, 4));
+            const webp = String.fromCharCode(...buffer.slice(8, 12));
+            if (riff !== 'RIFF' || webp !== 'WEBP') throw new Error("Invalid WebP format");
+            let offset = 12, chunks = [];
+            while (offset < buffer.length) {
+                if (offset + 8 > buffer.length) break;
+                const tag = String.fromCharCode(...buffer.slice(offset, offset + 4));
+                const size = buffer[offset + 4] | (buffer[offset + 5] << 8) | (buffer[offset + 6] << 16) | (buffer[offset + 7] << 24);
+                if (offset + 8 + size > buffer.length) break;
+                const data = buffer.slice(offset + 8, offset + 8 + size);
+                chunks.push({ tag, data });
+                offset += 8 + size;
+                if (size % 2 !== 0) offset++;
+            }
+            return chunks;
+        }
+        function createChunk(tag, data) {
+            const header = stringToBuffer(tag);
+            const size = writeUint32(data.length);
+            const padding = data.length % 2 !== 0 ? new Uint8Array([0]) : new Uint8Array([]);
+            return concatBuffers(header, size, data, padding);
+        }
+        class AnimatedWebPEncoder {
+            constructor(w, h) { this.width = w; this.height = h; this.frames = []; }
+            async addFrame(dataUrl, ms) {
+                const res = await fetch(dataUrl);
+                const buf = new Uint8Array(await res.arrayBuffer());
+                this.frames.push({ buffer: buf, duration: ms });
+            }
+            build() {
+                if (!this.frames.length) return null;
+                const vp8xData = new Uint8Array(10);
+                vp8xData[0] = 0x12;
+                const w1 = this.width - 1, h1 = this.height - 1;
+                vp8xData[4] = w1 & 0xff; vp8xData[5] = (w1 >> 8) & 0xff; vp8xData[6] = (w1 >> 16) & 0xff;
+                vp8xData[7] = h1 & 0xff; vp8xData[8] = (h1 >> 8) & 0xff; vp8xData[9] = (h1 >> 16) & 0xff;
+                const chunks = [createChunk('VP8X', vp8xData), createChunk('ANIM', new Uint8Array(6))];
+                for (const frame of this.frames) {
+                    const parsed = parseStaticWebP(frame.buffer);
+                    const payload = parsed.filter(c => c.tag !== 'VP8X' && c.tag !== 'ICCP' && c.tag !== 'EXIF' && c.tag !== 'XMP');
+                    let payloadBufs = [];
+                    for (const pc of payload) payloadBufs.push(createChunk(pc.tag, pc.data));
+                    const payloadData = concatBuffers(...payloadBufs);
+                    const anmfData = new Uint8Array(16 + payloadData.length);
+                    const fw1 = this.width - 1, fh1 = this.height - 1;
+                    anmfData[6] = fw1 & 0xff; anmfData[7] = (fw1 >> 8) & 0xff; anmfData[8] = (fw1 >> 16) & 0xff;
+                    anmfData[9] = fh1 & 0xff; anmfData[10] = (fh1 >> 8) & 0xff; anmfData[11] = (fh1 >> 16) & 0xff;
+                    const dur = Math.round(frame.duration);
+                    anmfData[12] = dur & 0xff; anmfData[13] = (dur >> 8) & 0xff; anmfData[14] = (dur >> 16) & 0xff;
+                    anmfData[15] = 0x01;
+                    anmfData.set(payloadData, 16);
+                    chunks.push(createChunk('ANMF', anmfData));
+                }
+                const total = concatBuffers(...chunks);
+                return new Blob([concatBuffers(stringToBuffer('RIFF'), writeUint32(total.length + 4), stringToBuffer('WEBP'), total)], { type: 'image/webp' });
+            }
+        }
+    </script>
+
+    <!-- App Logic -->
+    <script>
+        const dropzone = document.getElementById('dropzone');
+        const videoInput = document.getElementById('video-input');
+        const sourcePreviewCard = document.getElementById('source-preview-card');
+        const previewVideo = document.getElementById('preview-video');
+        const removeVideoBtn = document.getElementById('remove-video-btn');
+        const convertBtn = document.getElementById('convert-btn');
+
+        const trimStartInput = document.getElementById('trim-start');
+        const trimEndInput = document.getElementById('trim-end');
+        const rangeDisplay = document.getElementById('range-display');
+        const scaleSlider = document.getElementById('scale-slider');
+        const scaleDisplay = document.getElementById('scale-display');
+        const fpsSlider = document.getElementById('fps-slider');
+        const fpsDisplay = document.getElementById('fps-display');
+        const qualitySlider = document.getElementById('quality-slider');
+        const qualityDisplay = document.getElementById('quality-display');
+
+        const infoDuration = document.getElementById('info-duration');
+        const infoResolution = document.getElementById('info-resolution');
+        const infoAspect = document.getElementById('info-aspect');
+
+        const outputPlaceholder = document.getElementById('output-placeholder');
+        const outputProcessing = document.getElementById('output-processing');
+        const outputResult = document.getElementById('output-result');
+        const resultWebpImg = document.getElementById('result-webp-img');
+        const outputFilesize = document.getElementById('output-filesize');
+        const progressText = document.getElementById('progress-text');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const processingStep = document.getElementById('processing-step');
+        const downloadBtn = document.getElementById('download-btn');
+        const copyBtn = document.getElementById('copy-btn');
+
+        const conversionCanvas = document.getElementById('conversion-canvas');
+        const ctx = conversionCanvas.getContext('2d');
+        const messageBox = document.getElementById('message-box');
+
+        let videoFile = null, videoUrl = null, finalWebpBlob = null, activePreviewUrl = null;
+
+        function showNotification(msg, type = 'success') {
+            messageBox.textContent = (type === 'success' ? '✓ ' : '✕ ') + msg;
+            messageBox.className = 'message-box ' + type;
+            setTimeout(() => messageBox.classList.add('show'), 10);
+            setTimeout(() => messageBox.classList.remove('show'), 3000);
+        }
+
+        ['dragenter', 'dragover'].forEach(e => dropzone.addEventListener(e, ev => { ev.preventDefault(); dropzone.classList.add('dragover'); }));
+        ['dragleave', 'drop'].forEach(e => dropzone.addEventListener(e, ev => { ev.preventDefault(); dropzone.classList.remove('dragover'); }));
+
+        videoInput.addEventListener('change', handleVideoUpload);
+        dropzone.addEventListener('drop', e => {
+            if (e.dataTransfer.files.length) { videoInput.files = e.dataTransfer.files; handleVideoUpload(); }
+        });
+
+        function handleVideoUpload() {
+            const file = videoInput.files[0];
+            if (!file) return;
+            videoFile = file;
+            if (videoUrl) URL.revokeObjectURL(videoUrl);
+            videoUrl = URL.createObjectURL(file);
+            previewVideo.src = videoUrl;
+            previewVideo.load();
+            previewVideo.onloadedmetadata = () => {
+                const dur = previewVideo.duration, w = previewVideo.videoWidth, h = previewVideo.videoHeight;
+                infoDuration.textContent = dur.toFixed(2) + 's';
+                infoResolution.textContent = w + ' × ' + h;
+                const gcd = (a, b) => b ? gcd(b, a % b) : a;
+                const d = gcd(w, h);
+                infoAspect.textContent = (w / d) + ':' + (h / d);
+                trimStartInput.value = '0.0'; trimStartInput.max = dur.toFixed(1);
+                trimEndInput.value = Math.min(5.0, dur).toFixed(1); trimEndInput.max = dur.toFixed(1);
+                updateTrimDisplay();
+                sourcePreviewCard.classList.remove('hidden');
+                dropzone.classList.add('hidden');
+                convertBtn.disabled = false;
+                showNotification('Video loaded successfully!');
+            };
+        }
+
+        removeVideoBtn.addEventListener('click', () => {
+            videoFile = null; if (videoUrl) URL.revokeObjectURL(videoUrl); videoUrl = null;
+            previewVideo.src = '';
+            sourcePreviewCard.classList.add('hidden'); dropzone.classList.remove('hidden');
+            convertBtn.disabled = true;
+            outputPlaceholder.classList.remove('hidden'); outputProcessing.classList.add('hidden'); outputResult.classList.add('hidden');
+        });
+
+        scaleSlider.addEventListener('input', () => { scaleDisplay.textContent = scaleSlider.value === '100' ? '100% (Original)' : scaleSlider.value + '%'; });
+        fpsSlider.addEventListener('input', () => { fpsDisplay.textContent = fpsSlider.value + ' FPS'; });
+        qualitySlider.addEventListener('input', () => { qualityDisplay.textContent = qualitySlider.value; });
+        [trimStartInput, trimEndInput].forEach(el => el.addEventListener('input', () => {
+            let s = parseFloat(trimStartInput.value) || 0, e = parseFloat(trimEndInput.value) || 0;
+            if (s < 0) s = 0; if (e < s + 0.1) e = s + 0.1;
+            trimStartInput.value = s.toFixed(1); trimEndInput.value = e.toFixed(1);
+            updateTrimDisplay();
+        }));
+        function updateTrimDisplay() { rangeDisplay.textContent = parseFloat(trimStartInput.value).toFixed(1) + 's – ' + parseFloat(trimEndInput.value).toFixed(1) + 's'; }
+
+        convertBtn.addEventListener('click', async () => {
+            if (!videoFile || !videoUrl) return;
+            outputPlaceholder.classList.add('hidden'); outputResult.classList.add('hidden'); outputProcessing.classList.remove('hidden');
+            const start = parseFloat(trimStartInput.value), end = parseFloat(trimEndInput.value);
+            const duration = end - start, fps = parseInt(fpsSlider.value);
+            const scale = parseFloat(scaleSlider.value) / 100, quality = parseFloat(qualitySlider.value) / 100;
+            const totalFrames = Math.ceil(duration * fps), frameDelay = 1000 / fps;
+            processingStep.textContent = 'Initializing…'; updateProgress(0);
+            try {
+                previewVideo.pause(); previewVideo.currentTime = start;
+                const frames = [];
+                const tw = Math.floor(previewVideo.videoWidth * scale), th = Math.floor(previewVideo.videoHeight * scale);
+                conversionCanvas.width = tw; conversionCanvas.height = th;
+                await new Promise(r => setTimeout(r, 500));
+                for (let i = 0; i < totalFrames; i++) {
+                    const t = start + (i / fps);
+                    if (t > previewVideo.duration) break;
+                    previewVideo.currentTime = t;
+                    await new Promise(r => { const h = () => { previewVideo.removeEventListener('seeked', h); r(); }; previewVideo.addEventListener('seeked', h); });
+                    ctx.drawImage(previewVideo, 0, 0, tw, th);
+                    frames.push(conversionCanvas.toDataURL('image/webp', quality));
+                    updateProgress(Math.min(90, Math.floor((i / totalFrames) * 100)));
+                    processingStep.textContent = 'Extracting frames (' + (i + 1) + '/' + totalFrames + ')…';
+                }
+                processingStep.textContent = 'Assembling animated WebP…'; updateProgress(95);
+                if (frames.length > 0) {
+                    const encoder = new AnimatedWebPEncoder(tw, th);
+                    for (const f of frames) await encoder.addFrame(f, frameDelay);
+                    finalWebpBlob = encoder.build(); updateProgress(100);
+                    if (finalWebpBlob) {
+                        if (activePreviewUrl) URL.revokeObjectURL(activePreviewUrl);
+                        activePreviewUrl = URL.createObjectURL(finalWebpBlob);
+                        resultWebpImg.src = activePreviewUrl;
+                        outputFilesize.textContent = (finalWebpBlob.size / 1024).toFixed(1) + ' KB';
+                        setTimeout(() => { outputProcessing.classList.add('hidden'); outputResult.classList.remove('hidden'); showNotification('Animated WebP created!'); }, 500);
+                    } else throw new Error('WebP composition failed');
+                } else throw new Error('No frames extracted');
+            } catch (err) {
+                console.error(err); showNotification('Conversion failed', 'error');
+                outputProcessing.classList.add('hidden'); outputPlaceholder.classList.remove('hidden');
+            }
+        });
+
+        function updateProgress(p) { progressText.textContent = p + '%'; progressBarFill.style.width = p + '%'; }
+
+        downloadBtn.addEventListener('click', () => {
+            if (!finalWebpBlob) return;
+            const u = URL.createObjectURL(finalWebpBlob), a = document.createElement('a');
+            a.href = u; a.download = 'animation-' + Date.now() + '.webp';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u);
+            showNotification('Download started!');
+        });
+
+        copyBtn.addEventListener('click', async () => {
+            try {
+                if (!finalWebpBlob) return;
+                await navigator.clipboard.write([new ClipboardItem({ [finalWebpBlob.type]: finalWebpBlob })]);
+                showNotification('Copied to clipboard!');
+            } catch { showNotification('Download instead', 'error'); }
+        });
+    </script>
+</body>
+</html>
