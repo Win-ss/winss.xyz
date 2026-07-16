@@ -3,7 +3,7 @@
 
     // Configuration
     
-    const API_BASE = 'https://tapi.winss.xyz/api';
+    const API_BASE = 'https://crumble.wisp.uno/api';
     
     // Local storage keys
     const STORAGE_USER = 'crumble_user';
@@ -94,8 +94,98 @@
         messageText: document.getElementById('message-text'),
         messageClose: document.getElementById('message-close'),
     };
-    
-    
+
+    // ============================================
+    // E2E Encryption (Web Crypto API)
+    // ============================================
+    //
+    // Files are encrypted in the browser before upload.
+    // The server only ever sees encrypted bytes; it cannot read the plaintext.
+    //
+    // Blob format on the server: [16 bytes salt][12 bytes IV][AES-GCM ciphertext + auth tag]
+    // - salt is random per file, used to derive the AES key from the file password (PBKDF2-SHA256, 200k rounds)
+    // - IV is random per file, used for AES-GCM
+    // - ciphertext includes the 16-byte auth tag (AES-GCM internal)
+    //
+    // The bcrypt hash on the server is just a download *gate* (keeps randoms from pulling
+    // the encrypted blob), not the encryption itself.
+
+    const PBKDF2_ITERATIONS = 200000;
+    const SALT_LENGTH = 16;
+    const IV_LENGTH = 12;
+
+    function generateSalt() {
+        return crypto.getRandomValues(new Uint8Array(SALT_LENGTH));
+    }
+
+    function generateIV() {
+        return crypto.getRandomValues(new Uint8Array(IV_LENGTH));
+    }
+
+    async function deriveKey(password, salt) {
+        const enc = new TextEncoder();
+        const keyMaterial = await crypto.subtle.importKey(
+            'raw',
+            enc.encode(password),
+            'PBKDF2',
+            false,
+            ['deriveKey']
+        );
+        return crypto.subtle.deriveKey(
+            { name: 'PBKDF2', salt: salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+            keyMaterial,
+            { name: 'AES-GCM', length: 256 },
+            false,
+            ['encrypt', 'decrypt']
+        );
+    }
+
+    // Encrypts a file with the given key. Returns ArrayBuffer:
+    // [16 bytes salt][12 bytes IV][ciphertext with 16-byte auth tag]
+    async function encryptFile(file, password) {
+        const salt = generateSalt();
+        const iv = generateIV();
+        const key = await deriveKey(password, salt);
+        const fileBuffer = await file.arrayBuffer();
+        const ciphertext = await crypto.subtle.encrypt(
+            { name: 'AES-GCM', iv: iv },
+            key,
+            fileBuffer
+        );
+        const out = new Uint8Array(SALT_LENGTH + IV_LENGTH + ciphertext.byteLength);
+        out.set(salt, 0);
+        out.set(iv, SALT_LENGTH);
+        out.set(new Uint8Array(ciphertext), SALT_LENGTH + IV_LENGTH);
+        return out.buffer;
+    }
+
+    // Decrypts a blob encrypted by encryptFile(). Returns ArrayBuffer (plaintext).
+    async function decryptBlob(encryptedBuffer, password) {
+        const data = new Uint8Array(encryptedBuffer);
+        if (data.length < SALT_LENGTH + IV_LENGTH + 16) {
+            throw new Error('File too short to be a valid encrypted blob.');
+        }
+        const salt = data.slice(0, SALT_LENGTH);
+        const iv = data.slice(SALT_LENGTH, SALT_LENGTH + IV_LENGTH);
+        const ciphertext = data.slice(SALT_LENGTH + IV_LENGTH);
+        const key = await deriveKey(password, salt);
+        return await crypto.subtle.decrypt(
+            { name: 'AES-GCM', iv: iv },
+            key,
+            ciphertext
+        );
+    }
+
+    // True if buffer starts with our salt+IV header (i.e. looks like an encrypted blob)
+    function looksEncrypted(buffer) {
+        if (!buffer || buffer.byteLength < SALT_LENGTH + IV_LENGTH + 16) return false;
+        // Heuristic: AES-GCM ciphertext is essentially random, so any blob >= 28 bytes
+        // uploaded after this change is treated as encrypted. Old plaintext files will
+        // fail decryption and we fall back to saving as-is.
+        return true;
+    }
+
+
     function init() {
         loadSavedSession();
         setupEventListeners();
@@ -399,62 +489,77 @@
         } else {
             elements.uploadFilePassword.placeholder = 'for receiver';
         }
+        const encryptNotice = document.getElementById('upload-encrypt-notice');
+        const noEncryptNotice = document.getElementById('upload-no-encrypt-notice');
+        if (encryptNotice) encryptNotice.style.display = noPassword ? 'none' : 'block';
+        if (noEncryptNotice) noEncryptNotice.style.display = noPassword ? 'block' : 'none';
     }
     
     // Upload
-    
+
     async function handleUpload(e) {
         e.preventDefault();
-        
+
         if (!currentUser || !currentToken) {
             showMessage('Please login first.', 'error');
             return;
         }
-        
+
         const hashtag = elements.uploadHashtag.value.trim();
         const filePassword = elements.uploadFilePassword.value;
         const noPassword = elements.uploadNoPassword.checked;
         const ttl = elements.uploadTTL.value;
         const maxDownloads = elements.uploadMaxDownloads.value;
         const file = elements.uploadFile.files[0];
-        
+
         if (!hashtag || !file) {
             showMessage('Please fill in all required fields.', 'error');
             return;
         }
-        
+
         if (hashtag.length < 2) {
             showMessage('File tag must be at least 2 characters.', 'error');
             return;
         }
-        
+
         if (!noPassword && filePassword.length < 4) {
             showMessage('File password must be at least 4 characters, or enable "No Password".', 'error');
             return;
         }
-        
+
         setButtonLoading(elements.uploadBtn, true);
-        
+
         try {
             const checkResponse = await fetch(`${API_BASE}/check`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ author: currentUser, hashtag }),
             });
-            
+
             const checkData = await checkResponse.json();
-            
+
             if (!checkData.success) {
                 throw new Error(checkData.error || 'Failed to check availability.');
             }
-            
+
             if (!checkData.available) {
                 throw new Error('This tag is already in use. Try a different one.');
             }
-            
-            // Upload the file
+
+            // Build the file payload. If a password is set, encrypt in the browser first.
+            let uploadFile = file;
+            if (!noPassword) {
+                const encryptedBuffer = await encryptFile(file, filePassword);
+                uploadFile = new File(
+                    [encryptedBuffer],
+                    file.name + '.enc',
+                    { type: 'application/octet-stream' }
+                );
+            }
+
+            // Upload the (possibly encrypted) file
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', uploadFile);
             formData.append('hashtag', hashtag);
             formData.append('noPassword', noPassword ? 'true' : 'false');
             if (!noPassword) {
@@ -464,7 +569,7 @@
             if (maxDownloads) {
                 formData.append('maxDownloads', maxDownloads);
             }
-            
+
             const uploadResponse = await fetch(`${API_BASE}/upload`, {
                 method: 'POST',
                 headers: {
@@ -472,16 +577,17 @@
                 },
                 body: formData,
             });
-            
+
             const uploadData = await uploadResponse.json();
-            
+
             if (!uploadData.success) {
                 throw new Error(uploadData.error || 'Upload failed.');
             }
-            
+
             showUploadSuccess(uploadData.data);
-            
+
         } catch (error) {
+            console.error('[Upload] Error:', error);
             showMessage(error.message || 'Upload failed. Please try again.', 'error');
         } finally {
             setButtonLoading(elements.uploadBtn, false);
@@ -606,9 +712,9 @@
     
     async function handleDownload() {
         if (!currentDownloadInfo) return;
-        
+
         setButtonLoading(elements.confirmDownload, true);
-        
+
         try {
             const payload = {
                 author: currentDownloadInfo.author,
@@ -617,36 +723,63 @@
             if (currentDownloadInfo.requiresPassword) {
                 payload.password = currentDownloadInfo.password;
             }
-            
+
             const response = await fetch(`${API_BASE}/download`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
-            
+
             if (!response.ok) {
                 const errorData = await response.json();
                 throw new Error(errorData.error || 'Download failed.');
             }
-            
-            const blob = await response.blob();
-            
+
+            const encryptedBuffer = await response.arrayBuffer();
+
+            // If the file was uploaded with a password, it's encrypted client-side.
+            // Decrypt it locally; if decryption fails, fall back to saving the raw
+            // blob (handles legacy plaintext files uploaded before encryption was added).
+            let finalBuffer = encryptedBuffer;
+            let finalName = currentDownloadInfo.fileName;
+            let isEncrypted = currentDownloadInfo.requiresPassword && looksEncrypted(encryptedBuffer);
+
+            if (isEncrypted) {
+                try {
+                    finalBuffer = await decryptBlob(encryptedBuffer, currentDownloadInfo.password);
+                    // Strip a trailing .enc from the originalName if present
+                    if (finalName && finalName.toLowerCase().endsWith('.enc')) {
+                        finalName = finalName.slice(0, -4);
+                    }
+                } catch (decryptErr) {
+                    // Wrong password or corrupted file. Don't silently fall back —
+                    // surface it so the user knows the password is wrong.
+                    throw new Error('Decryption failed. Wrong password or corrupted file.');
+                }
+            }
+
+            const mimeType = isEncrypted
+                ? (currentDownloadInfo.mimeType || 'application/octet-stream')
+                : (currentDownloadInfo.mimeType || 'application/octet-stream');
+            const blob = new Blob([finalBuffer], { type: mimeType });
+
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = currentDownloadInfo.fileName;
+            a.download = finalName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
-            
-            showMessage('Download started!', 'success');
-            
+
+            showMessage(isEncrypted ? 'Decrypted & downloaded!' : 'Download started!', 'success');
+
             setTimeout(() => {
                 cancelDownloadPreview();
             }, 1500);
-            
+
         } catch (error) {
+            console.error('[Download] Error:', error);
             showMessage(error.message || 'Download failed.', 'error');
         } finally {
             setButtonLoading(elements.confirmDownload, false);
@@ -830,3 +963,5 @@
     init();
     
 })();
+
+

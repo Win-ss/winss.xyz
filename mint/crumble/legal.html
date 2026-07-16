@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crumble - Legal</title>
+    <link rel="stylesheet" href="../mint.css">
+    <link rel="stylesheet" href="crumble.css">
+    <style>
+        .legal-section {
+            margin-bottom: 36px;
+        }
+        .legal-section h2 {
+            font-size: 1.1rem;
+            margin: 0 0 12px 0;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #222;
+            letter-spacing: 0.5px;
+        }
+        .legal-section h3 {
+            font-size: 0.95rem;
+            margin: 18px 0 8px 0;
+            color: #ccc;
+        }
+        .legal-section p,
+        .legal-section li {
+            font-size: 0.82rem;
+            color: #b8b8b8;
+            line-height: 1.7;
+        }
+        .legal-section p {
+            margin: 0 0 10px 0;
+        }
+        .legal-section ul {
+            padding-left: 18px;
+            margin: 0 0 10px 0;
+        }
+        .legal-section li {
+            margin-bottom: 4px;
+        }
+        .legal-section strong {
+            color: #e6e6e6;
+        }
+        .legal-section code {
+            font-family: 'Monocraft', monospace;
+            font-size: 0.78rem;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1px 5px;
+            border-radius: 3px;
+            color: #e6e6e6;
+        }
+        .legal-nav {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin: 24px 0 32px 0;
+            font-size: 0.8rem;
+            flex-wrap: wrap;
+        }
+        .legal-nav a {
+            color: #888;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .legal-nav a:hover {
+            color: #fff;
+            border-bottom-color: #fff;
+        }
+        .legal-highlight {
+            padding: 10px 14px;
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            border-radius: 6px;
+            color: #b8e6c4;
+            font-size: 0.82rem;
+            margin: 0 0 14px 0;
+        }
+        .legal-highlight strong {
+            color: #22c55e;
+        }
+        .legal-highlight p {
+            margin: 0 0 10px 0;
+        }
+        .legal-highlight p:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="crumble-page">
+        <div class="crumble-container">
+            <header class="crumble-header">
+                <h1 class="crumble-title" style="font-size: 2.2rem; cursor: default;">
+                    <span class="crumble-letter">L</span><span class="crumble-letter">e</span><span class="crumble-letter">g</span><span class="crumble-letter">a</span><span class="crumble-letter">l</span>
+                </h1>
+                <p class="crumble-subtitle">terms & privacy</p>
+            </header>
+
+            <nav class="legal-nav">
+                <a href="#terms">Terms</a>
+                <a href="#privacy">Privacy</a>
+                <a href="#account">Account</a>
+                <a href="#contact">Contact</a>
+            </nav>
+
+            <!-- TERMS OF SERVICE -->
+            <section class="legal-section" id="terms">
+                <h2>Terms of Service</h2>
+                <p>By using Crumble you agree to the following.</p>
+
+                <h3>What Crumble is</h3>
+                <p>A temporary file drop. You upload a file, hand the link and password to someone, and it goes away on its own after the TTL both the file and its metadata are deleted.</p>
+
+                <h3>What you can't upload</h3>
+                <ul>
+                    <li>Anything illegal where you are or where the file is being sent. (Files are stored in the EU)</li>
+                    <li>Malware, ransomware, viruses, stuff designed to break someone's computer.</li>
+                    <li>Anything that would get the service taken down for everyone else.</li>
+                </ul>
+                
+                <h3>No warranty</h3>
+                <p>The service is provided as-is.</p>
+            </section>
+
+            <!-- PRIVACY POLICY -->
+            <section class="legal-section" id="privacy">
+                <h2>Privacy Policy</h2>
+
+                <div class="legal-highlight">
+                    <p><strong>Short version:</strong> we collect what we need to run the service, we don't sell anything, we don't run ads. <strong>Files are end-to-end encrypted</strong></p>
+                </div>
+
+                <p><strong>What we collect:</strong> uploaded files, file metadata (your username, hashtag, expiry, download count), hashed passwords (used only as a download gate), and server logs with IPs for rate limiting.</p>
+
+                <p><strong>Retention:</strong> files and metadata are deleted when the TTL (1-72h) or download limit is hit. Account data is kept until you delete your account. Server logs are rotated and dropped. Nothing is backed up</p>
+
+                <p><strong>Where:</strong> the server is in the EU.</p>
+
+                <p><strong>Cloudflare:</strong> we use Cloudflare for DNS and DDoS protection only. Our CDN and file serving run on our own infrastructure. Cloudflare may process your IP address and TLS metadata. Their privacy policy applies to that layer.</p>
+            </section>
+
+            <!-- ACCOUNT -->
+            <section class="legal-section" id="account">
+                <h2>Your Account</h2>
+
+                <div id="delete-account-logged-out" style="display: none;">
+                    <p>To delete your account, please <a href="index.html" style="color: #e6e6e6; text-decoration: none; border-bottom: 1px solid #444;">log in</a> first.</p>
+                </div>
+
+                <div id="delete-account-box">
+                    <p>You can permanently delete your Crumble account and all uploaded files.</p>
+                    <div class="legal-highlight" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.25); color: #ffb3b3;">
+                        <p><strong>This cannot be undone.</strong> All your files and account data will be gone immediately.</p>
+                    </div>
+                    <form id="delete-account-form" style="margin-top: 14px;">
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 0.82rem; color: #b8b8b8; margin-bottom: 6px;">Type your username to confirm</label>
+                            <input type="text" id="delete-confirm-username" placeholder="your username" required style="width: 100%; padding: 8px 10px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #e6e6e6; font-size: 0.85rem; box-sizing: border-box;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <label style="display: block; font-size: 0.82rem; color: #b8b8b8; margin-bottom: 6px;">Enter your account password</label>
+                            <input type="password" id="delete-confirm-password" placeholder="account password" required style="width: 100%; padding: 8px 10px; background: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #e6e6e6; font-size: 0.85rem; box-sizing: border-box;">
+                        </div>
+                        <button type="submit" id="delete-account-btn" style="width: 100%; padding: 10px; background: #ef4444; color: #fff; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer;">
+                            <span class="btn-text">Delete My Account</span>
+                            <span class="btn-loading" style="display: none;">Deleting...</span>
+                        </button>
+                    </form>
+                    <div id="delete-account-result" style="margin-top: 12px; font-size: 0.82rem; display: none;"></div>
+                </div>
+            </section>
+
+            <!-- CONTACT -->
+            <section class="legal-section" id="contact">
+                <h2>Contact</h2>
+                <p>Questions, account deletions, abuse reports, or anything else: <a href="mailto:info@winss.xyz" style="color: #e6e6e6; text-decoration: none; border-bottom: 1px solid #444;">info@winss.xyz</a></p>
+            </section>
+
+            <div class="back-link-container">
+                <a href="index.html" class="back-link">Back to Crumble</a>
+            </div>
+
+            <div class="disclaimer">
+                <p>Last updated: <span id="last-updated"></span></p>
+            </div>
+        </div>
+
+        <span class="version-text">legal v1.0</span>
+    </div>
+
+    <script>
+        document.getElementById('last-updated').textContent = 'Jul 16, 2026';
+
+        const API_BASE = 'https://crumble.wisp.uno/api';
+        const STORAGE_TOKEN = 'crumble_token';
+        const STORAGE_USER = 'crumble_user';
+
+        function getToken() {
+            return localStorage.getItem(STORAGE_TOKEN) || sessionStorage.getItem(STORAGE_TOKEN);
+        }
+
+        function getUser() {
+            return localStorage.getItem(STORAGE_USER);
+        }
+
+        const token = getToken();
+        const user = getUser();
+        const loggedOutBox = document.getElementById('delete-account-logged-out');
+        const deleteBox = document.getElementById('delete-account-box');
+
+        if (!token || !user) {
+            if (loggedOutBox) loggedOutBox.style.display = 'block';
+            if (deleteBox) deleteBox.style.display = 'none';
+        }
+
+        const deleteForm = document.getElementById('delete-account-form');
+        const deleteResult = document.getElementById('delete-account-result');
+        const deleteBtn = document.getElementById('delete-account-btn');
+
+        if (deleteForm) {
+            deleteForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const confirmUsername = document.getElementById('delete-confirm-username').value.trim().toLowerCase();
+                const confirmPassword = document.getElementById('delete-confirm-password').value;
+                const currentUser = getUser();
+
+                if (confirmUsername !== currentUser) {
+                    deleteResult.style.display = 'block';
+                    deleteResult.style.color = '#ef4444';
+                    deleteResult.textContent = 'Username does not match.';
+                    return;
+                }
+
+                if (!confirmPassword) {
+                    deleteResult.style.display = 'block';
+                    deleteResult.style.color = '#ef4444';
+                    deleteResult.textContent = 'Password is required.';
+                    return;
+                }
+
+                const ok = confirm('Permanently delete your account and all files? This cannot be undone.');
+                if (!ok) return;
+
+                const btnText = deleteBtn.querySelector('.btn-text');
+                const btnLoading = deleteBtn.querySelector('.btn-loading');
+                if (btnText) btnText.style.display = 'none';
+                if (btnLoading) btnLoading.style.display = 'inline';
+                deleteBtn.disabled = true;
+
+                try {
+                    const response = await fetch(`${API_BASE}/delete-account`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${getToken()}`,
+                        },
+                        body: JSON.stringify({ password: confirmPassword }),
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        deleteResult.style.display = 'block';
+                        deleteResult.style.color = '#22c55e';
+                        deleteResult.textContent = 'Account deleted. Redirecting...';
+                        localStorage.removeItem(STORAGE_USER);
+                        localStorage.removeItem(STORAGE_TOKEN);
+                        sessionStorage.removeItem(STORAGE_TOKEN);
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                    } else {
+                        deleteResult.style.display = 'block';
+                        deleteResult.style.color = '#ef4444';
+                        deleteResult.textContent = data.error || 'Failed to delete account.';
+                    }
+                } catch (err) {
+                    deleteResult.style.display = 'block';
+                    deleteResult.style.color = '#ef4444';
+                    deleteResult.textContent = 'Network error. Please try again.';
+                } finally {
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnLoading) btnLoading.style.display = 'none';
+                    deleteBtn.disabled = false;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

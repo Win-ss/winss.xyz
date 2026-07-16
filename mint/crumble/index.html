@@ -110,6 +110,7 @@
                         <div class="form-group form-group-wide">
                             <label for="upload-file-password">File Password</label>
                             <input type="password" id="upload-file-password" placeholder="for receiver" minlength="4" maxlength="100" required autocomplete="new-password">
+                            <span class="form-hint">Used to encrypt the file and gate the download. Lose it = file is unrecoverable.</span>
                         </div>
                         <div class="form-group form-group-narrow">
                             <label for="upload-maxdownloads">Max DLs</label>
@@ -119,7 +120,7 @@
                     <div class="form-group checkbox-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="upload-no-password">
-                            <span>No password required (anyone with link can download)</span>
+                            <span>No password (no encryption, anyone with link can read)</span>
                         </label>
                     </div>
 
@@ -152,6 +153,12 @@
                         <span class="btn-text">Crumble It</span>
                         <span class="btn-loading" style="display: none;">Uploading...</span>
                     </button>
+                    <div id="upload-encrypt-notice" style="text-align: center; font-size: 0.72rem; color: #22c55e; opacity: 0.85; margin-top: 10px;">
+                        &#128274; Encrypted in your browser before upload
+                    </div>
+                    <div id="upload-no-encrypt-notice" style="display: none; text-align: center; font-size: 0.72rem; color: #f59e0b; opacity: 0.9; margin-top: 10px;">
+                        &#9888; No password = file is NOT encrypted
+                    </div>
                 </form>
 
                 <!-- Upload Success -->
@@ -264,6 +271,9 @@
 
             <div class="back-link-container">
                 <a href="../index.html" class="back-link">Back to Mint</a>
+                <div style="margin-top: 14px; font-size: 0.8rem; opacity: 0.5;">
+                    <a href="legal.html" style="color: #e6e6e6; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s;" onmouseover="this.style.borderBottomColor='#e6e6e6'" onmouseout="this.style.borderBottomColor='transparent'">Legal &amp; Privacy</a>
+                </div>
             </div>
 
             <div class="disclaimer">
