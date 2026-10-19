@@ -460,9 +460,9 @@
     }
     
     function displaySelectedFile(file) {
-        const maxSize = 100 * 1024 * 1024;
+        const maxSize = 200 * 1024 * 1024;
         if (file.size > maxSize) {
-            showMessage('File too large. Maximum size is 100MB.', 'error');
+            showMessage('File too large. Maximum size is 200MB.', 'error');
             clearFileSelection();
             return;
         }
