@@ -1,675 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Insomniac - Keep Screen Awake</title>
-    <link rel="icon" type="image/png" href="../assets/insomniac.png">
-    <link rel="shortcut icon" type="image/png" href="../assets/insomniac.png">
-    <link rel="apple-touch-icon" href="../assets/insomniac.png">
-    
-    <meta name="description" content="Keep your screen awake and prevent device sleep">
-    <meta property="og:title" content="Insomniac">
-    <meta property="og:description" content="Keep your screen awake and prevent device sleep">
-    <meta property="og:image" content="https://winss.xyz/assets/insomniac.png">
-    <meta property="og:url" content="https://winss.xyz/mint/Insomniac.html">
-    <meta property="og:type" content="website">
-    <meta name="theme-color" content="#000000">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="Insomniac">
-    <link rel="manifest" href="manifest.json">
-    
-    <link rel="stylesheet" href="mint.css">
-    <style>
-        :root {
-            background-color: #000000;
-        }
-        
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
-        
-        html {
-            background: #000000;
-            overflow: hidden;
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-        }
-        
-        body {
-            background: #000000;
-            overflow: hidden;
-            height: 100%;
-            width: 100%;
-            margin: 0;
-            padding: 0;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-            min-height: 100vh;
-            min-height: -webkit-fill-available;
-            min-height: 100dvh;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Insomniac</title>
+  <link rel="icon" type="image/png" href="../assets/insomniac.png" />
+  <link rel="apple-touch-icon" href="../assets/insomniac.png" />
+  <meta name="description" content="Keep your screen awake while this page is open." />
+  <meta property="og:title" content="Insomniac" />
+  <meta property="og:description" content="Keep your screen awake while this page is open." />
+  <meta property="og:image" content="https://winss.xyz/assets/insomniac.png" />
+  <meta property="og:url" content="https://winss.xyz/mint/Insomniac.html" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="Insomniac" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="base.css" />
+  <style>
+    html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 
-        .content {
-            padding: 0;
-            max-width: none;
-        }
+    body {
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: pointer;
+    }
 
-        .main-header {
-            display: none;
-        }
+    .eye {
+      display: grid;
+      grid-template-columns: repeat(7, 8px);
+      gap: 3px;
+      margin-bottom: 0.4rem;
+    }
 
-        .black-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #000000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1;
-        }
+    .eye i { width: 8px; height: 8px; background: rgba(255, 255, 255, 0.1); }
+    .eye i.on { background: var(--mint); }
+    .awake .eye i.on { animation: blink 6s steps(1) infinite; }
 
-        .status-indicator {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 3rem;
-            z-index: 2;
-            user-select: none;
-            pointer-events: none;
-        }
+    /* every so often the eye shuts for a moment */
+    @keyframes blink {
+      0%, 96% { opacity: 1; }
+      97%, 99% { opacity: 0; }
+    }
 
-        .sleeping {
-            animation: pulse 2s ease-in-out infinite;
-        }
+    .state { font-size: 0.85rem; color: var(--text-soft); }
+    .awake .state { color: var(--mint-light); }
+    .how { font-size: 0.65rem; color: var(--text-faint); min-height: 1em; margin-top: -0.6rem; }
 
-        .awake {
-            animation: glow 1.5s ease-in-out infinite;
-        }
+    .foot { cursor: default; }
+    .foot .link { font-size: inherit; }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; transform: translateX(-50%) scale(1); }
-            50% { opacity: 1; transform: translateX(-50%) scale(1.05); }
-        }
+    .blackout {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 50;
+      display: none;
+    }
 
-        @keyframes glow {
-            0%, 100% { opacity: 1; filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)); }
-            50% { opacity: 0.8; filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.8)); }
-        }
+    .blackout.on { display: block; }
 
-        .popup-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-        }
-
-        .popup-overlay.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .popup-container {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            padding: 40px 35px;
-            max-width: 500px;
-            width: 85%;
-            text-align: center;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            animation: popupSlide 0.4s ease;
-        }
-
-        @keyframes popupSlide {
-            from {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .popup-icon {
-            font-size: 4rem;
-            margin-bottom: 15px;
-        }
-
-        .popup-title {
-            font-size: 1.75rem;
-            margin-bottom: 10px;
-            letter-spacing: -1px;
-        }
-
-        .popup-subtitle {
-            font-size: 0.95rem;
-            opacity: 0.6;
-            margin-bottom: 20px;
-        }
-
-        .popup-description {
-            opacity: 0.8;
-            line-height: 1.5;
-            margin-bottom: 25px;
-            font-size: 0.9rem;
-        }
-
-        .popup-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 30px;
-        }
-
-        .popup-button {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-            padding: 14px 25px;
-            font-family: 'Monocraft', monospace;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .popup-button:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: translateY(-2px);
-        }
-
-        .popup-button.primary {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        .popup-button.secondary {
-            font-size: 0.8rem;
-            opacity: 0.7;
-            padding: 12px 20px;
-        }
-
-        .back-link {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ffffff;
-            text-decoration: none;
-            opacity: 0.3;
-            transition: opacity 0.3s ease, transform 0.3s ease;
-            font-size: 1rem;
-            z-index: 2;
-        }
-
-        .back-link:hover {
-            opacity: 0.7;
-            transform: translateX(-50%);
-        }
-
-        .blackout-mode {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: #000000;
-            z-index: 9999;
-            display: none;
-        }
-
-        .blackout-mode.active {
-            display: block;
-        }
-
-        /* Tablet landscape */
-        @media (max-width: 1024px) and (min-width: 769px) {
-            .status-indicator {
-                font-size: 2.2rem;
-                top: 20px;
-            }
-
-            .popup-container {
-                padding: 35px 30px;
-                max-width: 480px;
-                width: 80%;
-            }
-
-            .popup-icon {
-                font-size: 3.5rem;
-                margin-bottom: 12px;
-            }
-
-            .popup-title {
-                font-size: 1.5rem;
-                margin-bottom: 8px;
-            }
-
-            .popup-subtitle {
-                font-size: 0.85rem;
-                margin-bottom: 18px;
-            }
-
-            .popup-description {
-                font-size: 0.8rem;
-                line-height: 1.5;
-                margin-bottom: 20px;
-            }
-
-            .popup-button {
-                padding: 12px 22px;
-                font-size: 0.85rem;
-                letter-spacing: 0.5px;
-            }
-
-            .popup-button.secondary {
-                font-size: 0.75rem;
-                padding: 10px 18px;
-            }
-
-            .back-link {
-                font-size: 0.9rem;
-                bottom: 20px;
-            }
-        }
-
-        /* Mobile and small tablets */
-        @media (max-width: 768px) {
-            .status-indicator {
-                font-size: 1.8rem;
-                top: 15px;
-            }
-
-            .popup-container {
-                padding: 30px 25px;
-                width: 88%;
-            }
-
-            .popup-icon {
-                font-size: 3rem;
-                margin-bottom: 10px;
-            }
-
-            .popup-title {
-                font-size: 1.3rem;
-                margin-bottom: 8px;
-            }
-
-            .popup-subtitle {
-                font-size: 0.8rem;
-                margin-bottom: 15px;
-            }
-
-            .popup-description {
-                font-size: 0.75rem;
-                margin-bottom: 18px;
-            }
-
-            .popup-button {
-                padding: 11px 20px;
-                font-size: 0.8rem;
-            }
-
-            .popup-button.secondary {
-                font-size: 0.7rem;
-                padding: 9px 16px;
-            }
-        }
-
-        /* Small phones */
-        @media (max-width: 480px) {
-            .status-indicator {
-                font-size: 1.5rem;
-                top: 10px;
-            }
-
-            .popup-container {
-                padding: 25px 20px;
-                width: 92%;
-            }
-
-            .popup-icon {
-                font-size: 2.5rem;
-                margin-bottom: 8px;
-            }
-
-            .popup-title {
-                font-size: 1.1rem;
-                margin-bottom: 6px;
-            }
-
-            .popup-subtitle {
-                font-size: 0.75rem;
-                margin-bottom: 12px;
-            }
-
-            .popup-description {
-                font-size: 0.7rem;
-                margin-bottom: 15px;
-                line-height: 1.4;
-            }
-
-            .popup-button {
-                padding: 10px 18px;
-                font-size: 0.75rem;
-            }
-
-            .popup-button.secondary {
-                font-size: 0.65rem;
-                padding: 8px 14px;
-            }
-
-            .back-link {
-                font-size: 0.85rem;
-                bottom: 15px;
-            }
-        }
-    </style>
+    .blackout::after {
+      content: '';
+      position: absolute;
+      right: 14px;
+      bottom: 14px;
+      width: 3px;
+      height: 3px;
+      background: var(--mint-deep);
+    }
+  </style>
 </head>
 <body>
-    <div class="content">
-        <div class="black-screen">
-            <div class="status-indicator sleeping" id="statusIcon">💤</div>
-        </div>
+  <main class="wrap" id="wrap">
+    <div class="eye" id="eye" aria-hidden="true"></div>
+    <h1 class="tagline">insomniac</h1>
+    <p class="state" id="state" aria-live="polite">tap anywhere to keep the screen on</p>
+    <p class="how" id="how"></p>
+    <p class="foot">
+      <a href="./">← mint</a>
+      · <button type="button" class="link" id="dark">blackout</button>
+      <span id="install-wrap" hidden>· <button type="button" class="link" id="install">install</button></span>
+    </p>
+  </main>
+  <div class="blackout" id="blackout" title="double tap to leave"></div>
 
-        <div class="blackout-mode" id="blackoutMode"></div>
+  <script>
+    const $wrap = document.getElementById('wrap');
+    const $state = document.getElementById('state');
+    const $how = document.getElementById('how');
+    const $blackout = document.getElementById('blackout');
 
-        <div class="popup-overlay show" id="popupOverlay">
-            <div class="popup-container" id="popupContainer">
-                <div class="popup-icon">💤</div>
-                <h1 class="popup-title">Insomniac</h1>
-                <p class="popup-subtitle">Keep Your Screen Awake</p>
-                <p class="popup-description">
-                    This page prevents your device from sleeping while it's open. 
-                    <br><br>
-                    Your screen will stay awake automatically. Close this tab to allow normal sleep behavior.
-                </p>
-                <div class="popup-buttons">
-                    <button class="popup-button primary" id="continueButton">Continue</button>
-                    <button class="popup-button" id="pipButton">Enable Pip</button>
-                    <button class="popup-button" id="installButton" style="display: none;">📱 Install as App?</button>
-                    <button class="popup-button secondary" id="neverShowButton">Never Show This Again</button>
-                </div>
-            </div>
-        </div>
+    // 7x5 pixel eye
+    const EYE = ['..###..', '.#...#.', '#..#..#', '.#...#.', '..###..'].join('');
+    document.getElementById('eye').append(...[...EYE].map((c) => {
+      const i = document.createElement('i');
+      if (c === '#') i.className = 'on';
+      return i;
+    }));
 
-        <a href="index.html" class="back-link">← Back to Mint</a>
-    </div>
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    // iOS web apps added to the home screen accept a wake lock but don't honor it (fixed in 18.4),
+    // so iOS always gets the silent video too
+    const needVideo = isIOS || !('wakeLock' in navigator);
 
-    <script>
-        let wakeLock = null;
-        let videoElement = null;
-        let fallbackInterval = null;
-        let deferredPrompt = null;
-        let pipVideo = null;
+    let lock = null;
+    let video = null;
 
-        const statusIcon = document.getElementById('statusIcon');
-        const popupOverlay = document.getElementById('popupOverlay');
-        const popupContainer = document.getElementById('popupContainer');
-        const continueButton = document.getElementById('continueButton');
-        const pipButton = document.getElementById('pipButton');
-        const installButton = document.getElementById('installButton');
-        const neverShowButton = document.getElementById('neverShowButton');
-        const blackoutMode = document.getElementById('blackoutMode');
+    function render() {
+      const viaLock = lock && !lock.released;
+      const viaVideo = video && !video.paused;
+      const on = viaLock || viaVideo;
+      $wrap.classList.toggle('awake', on);
+      $state.textContent = on ? 'screen stays on while this is open'
+        : document.visibilityState !== 'visible' ? 'paused while hidden'
+        : 'tap anywhere to keep the screen on';
+      $how.textContent = on ? [viaLock && 'wake lock', viaVideo && 'video loop'].filter(Boolean).join(' + ') : '';
+    }
 
-        const STORAGE_KEY = 'insomniac_hide_popup';
+    function makeVideo() {
+      const v = document.createElement('video');
+      v.muted = true;
+      v.defaultMuted = true;
+      v.playsInline = true;
+      v.loop = true;
+      v.setAttribute('muted', '');
+      v.setAttribute('playsinline', '');
+      v.setAttribute('aria-hidden', 'true');
+      Object.assign(v.style, { position: 'fixed', left: '0', top: '0', width: '1px', height: '1px', opacity: '0.01', pointerEvents: 'none' });
+      for (const [src, type] of [['../assets/keepawake.webm', 'video/webm'], ['../assets/keepawake.mp4', 'video/mp4']]) {
+        const s = document.createElement('source');
+        s.src = src;
+        s.type = type;
+        v.appendChild(s);
+      }
+      v.addEventListener('playing', render);
+      v.addEventListener('pause', render);
+      document.body.appendChild(v);
+      return v;
+    }
 
-        document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-                e.preventDefault();
-                blackoutMode.classList.toggle('active');
-            }
-            
-            if (e.key === 'Escape' || e.key === 'Backspace' || e.key === 'Enter') {
-                if (!popupOverlay.classList.contains('show')) {
-                    e.preventDefault();
-                    popupOverlay.classList.add('show');
-                }
-            }
-        });
+    // play() has to be called straight from the tap on iOS, so this stays synchronous up to the call
+    function startVideo() {
+      if (!video) video = makeVideo();
+      if (!video.paused) return;
+      const p = video.play();
+      if (p) p.catch(render);
+    }
 
-        function checkPopupPreference() {
-            return localStorage.getItem(STORAGE_KEY) === 'true';
-        }
+    async function startLock() {
+      if (!('wakeLock' in navigator) || (lock && !lock.released)) return;
+      try {
+        lock = await navigator.wakeLock.request('screen');
+        lock.addEventListener('release', () => { lock = null; render(); });
+      } catch {
+        // no gesture yet, low battery mode, or blocked by the browser; fall back to the video
+        lock = null;
+        // muted video is allowed to autoplay nearly everywhere
+        if (document.visibilityState === 'visible') startVideo();
+      }
+      render();
+    }
 
-        function hidePopup() {
-            popupOverlay.classList.remove('show');
-        }
+    function wake() {
+      if (document.visibilityState !== 'visible') return;
+      if (needVideo) startVideo();
+      startLock();
+    }
 
-        function hidePopupForever() {
-            localStorage.setItem(STORAGE_KEY, 'true');
-            hidePopup();
-        }
+    // try straight away (Chrome allows it), and again on every tap or key until something sticks
+    wake();
+    for (const ev of ['pointerdown', 'touchend', 'keydown']) {
+      document.addEventListener(ev, () => {
+        if ((lock && !lock.released) || (video && !video.paused)) return;
+        wake();
+      }, { passive: true });
+    }
 
-        async function requestWakeLock() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                    wakeLock.addEventListener('release', () => {
-                        console.log('Wake Lock released');
-                    });
-                    return true;
-                }
-                return false;
-            } catch (err) {
-                console.log('Wake Lock API not available:', err);
-                return false;
-            }
-        }
+    // the browser drops the lock and pauses media when the tab is hidden; take it back on return
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        startLock();
+        if (video && video.paused && (needVideo || !lock)) startVideo();
+      }
+      render();
+    });
+    addEventListener('pageshow', wake);
 
-        function createVideoFallback() {
-            if (!videoElement) {
-                videoElement = document.createElement('video');
-                videoElement.style.position = 'fixed';
-                videoElement.style.opacity = '0';
-                videoElement.style.pointerEvents = 'none';
-                videoElement.style.width = '1px';
-                videoElement.style.height = '1px';
-                videoElement.setAttribute('playsinline', '');
-                videoElement.setAttribute('muted', '');
-                videoElement.loop = true;
-                
-                const source = document.createElement('source');
-                source.src = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAAu1tZGF0AAACrgYF//+q3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE0OCByMjc0MyA1Yzg1ZTA0IC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAxNSAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTEgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTI1IHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAA';
-                source.type = 'video/mp4';
-                videoElement.appendChild(source);
-                
-                document.body.appendChild(videoElement);
-            }
-            
-            videoElement.play().catch(() => {
-                console.log('Video fallback failed');
-            });
-        }
+    // blackout: plain black for OLED screens. b toggles, double tap or escape leaves.
+    function setBlackout(on) { $blackout.classList.toggle('on', on); }
+    document.getElementById('dark').addEventListener('click', (e) => { e.stopPropagation(); setBlackout(true); });
+    $blackout.addEventListener('dblclick', () => setBlackout(false));
+    let lastTap = 0;
+    $blackout.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 350) { e.preventDefault(); setBlackout(false); }
+      lastTap = now;
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'b' && !e.ctrlKey && !e.metaKey) setBlackout(!$blackout.classList.contains('on'));
+      if (e.key === 'Escape') setBlackout(false);
+    });
 
-        function startNoSleepFallback() {
-            createVideoFallback();
-            
-            fallbackInterval = setInterval(() => {
-                document.dispatchEvent(new Event('mousemove'));
-                document.dispatchEvent(new Event('keypress'));
-            }, 15000);
-        }
+    // install as an app when the browser offers it
+    let installPrompt = null;
+    const installed = matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || navigator.standalone === true;
+    addEventListener('beforeinstallprompt', (e) => {
+      if (installed) return;
+      e.preventDefault();
+      installPrompt = e;
+      document.getElementById('install-wrap').hidden = false;
+    });
+    document.getElementById('install').addEventListener('click', async () => {
+      if (!installPrompt) return;
+      installPrompt.prompt();
+      await installPrompt.userChoice.catch(() => {});
+      installPrompt = null;
+      document.getElementById('install-wrap').hidden = true;
+    });
 
-        async function activate() {
-            const wakeLockSuccess = await requestWakeLock();
-            
-            if (!wakeLockSuccess) {
-                startNoSleepFallback();
-            }
-            
-            statusIcon.textContent = '💤';
-            statusIcon.className = 'status-indicator awake';
-        }
-
-        async function enterPiPMode() {
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = 640;
-                canvas.height = 360;
-                const ctx = canvas.getContext('2d');
-                
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.01)'; 
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-                ctx.fillRect(canvas.width - 10, canvas.height - 10, 5, 5);
-                
-                pipVideo = document.createElement('video');
-                pipVideo.style.position = 'fixed';
-                pipVideo.style.opacity = '0';
-                pipVideo.style.pointerEvents = 'none';
-                pipVideo.style.width = '640px';
-                pipVideo.style.height = '360px';
-                pipVideo.setAttribute('playsinline', '');
-                pipVideo.setAttribute('muted', '');
-                pipVideo.loop = true;
-                pipVideo.muted = true;
-                
-                const stream = canvas.captureStream(1);
-                pipVideo.srcObject = stream;
-                
-                document.body.appendChild(pipVideo);
-                
-                await pipVideo.play();
-                
-                if (document.pictureInPictureEnabled) {
-                    await pipVideo.requestPictureInPicture();
-                    
-                    hidePopup();
-                    statusIcon.textContent = '🎬';
-                    statusIcon.className = 'status-indicator awake';
-                    
-                    pipVideo.addEventListener('leavepictureinpicture', () => {
-                        statusIcon.textContent = '💤';
-                        if (pipVideo) {
-                            pipVideo.srcObject.getTracks().forEach(track => track.stop());
-                            pipVideo.remove();
-                            pipVideo = null;
-                        }
-                    });
-                } else {
-                    alert('Picture-in-Picture is not supported in your browser. Try using Chrome, Edge, or Safari.');
-                    if (pipVideo) {
-                        pipVideo.remove();
-                        pipVideo = null;
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to enter PiP mode:', err);
-                alert('Could not enable floating mode. Make sure you allow Picture-in-Picture in your browser settings.');
-                if (pipVideo) {
-                    pipVideo.remove();
-                    pipVideo = null;
-                }
-            }
-        }
-
-        function isRunningAsApp() {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-            const isFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
-            const isMinimalUI = window.matchMedia('(display-mode: minimal-ui)').matches;
-            const isIOSStandalone = window.navigator.standalone === true;
-            const isAndroidTWA = document.referrer.includes('android-app://');
-            
-            const isProbablyInstalled = window.innerHeight === screen.height || 
-                                        window.outerHeight === screen.height;
-            
-            return isStandalone || isFullscreen || isMinimalUI || isIOSStandalone || isAndroidTWA;
-        }
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            if (isRunningAsApp()) {
-                return;
-            }
-            
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-            
-            if (isMobile || isTouchDevice) {
-                installButton.style.display = 'block';
-            }
-        });
-
-        installButton.addEventListener('click', async () => {
-            if (!deferredPrompt) {
-                alert('To install this app:\n\n' +
-                      'Android/Chrome: Tap the menu (⋮) and select "Install app" or "Add to Home screen"\n\n' +
-                      'iOS/Safari: Tap the Share button (⬆️) and select "Add to Home Screen"');
-                return;
-            }
-            
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            
-            if (outcome === 'accepted') {
-                installButton.style.display = 'none';
-            }
-            
-            deferredPrompt = null;
-        });
-
-        continueButton.addEventListener('click', () => {
-            hidePopup();
-        });
-
-        pipButton.addEventListener('click', async () => {
-            await enterPiPMode();
-        });
-
-        neverShowButton.addEventListener('click', () => {
-            hidePopupForever();
-        });
-
-        popupOverlay.addEventListener('click', (e) => {
-            if (e.target === popupOverlay) {
-                hidePopup();
-            }
-        });
-
-        if (checkPopupPreference()) {
-            hidePopup();
-        }
-
-        activate();
-
-        if (isRunningAsApp()) {
-            installButton.style.display = 'none';
-        }
-
-        document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
-                await requestWakeLock();
-            }
-        });
-    </script>
+    render();
+  </script>
 </body>
 </html>

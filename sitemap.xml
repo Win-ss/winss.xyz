@@ -107,26 +107,38 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://winss.xyz/mint/keycodes.html</loc>
-    <lastmod>2025-11-23T00:00:00+00:00</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://winss.xyz/mint/mazeify.html</loc>
     <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://winss.xyz/mint/qr-generator.html</loc>
+    <loc>https://winss.xyz/mint/qr.html</loc>
     <lastmod>2025-11-23T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://winss.xyz/mint/qr-reader.html</loc>
+    <loc>https://winss.xyz/mint/snippy.html</loc>
+    <lastmod>2026-10-19T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/webm2webp.html</loc>
     <lastmod>2025-11-23T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/pdf2png.html</loc>
+    <lastmod>2026-10-18T00:00:00+00:00</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://winss.xyz/mint/sumthing.html</loc>
+    <lastmod>2026-10-18T00:00:00+00:00</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

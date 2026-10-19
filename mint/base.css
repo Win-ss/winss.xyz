@@ -1,0 +1,238 @@
+/* shared look for the mint pages: black, square, mint */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../assets/Monocraft.woff2') format('woff2'),
+       url('../assets/Monocraft.woff') format('woff');
+  font-display: swap;
+}
+
+:root {
+  --bg: #000;
+  --text: #fff;
+  --text-soft: rgba(255, 255, 255, 0.55);
+  --text-muted: rgba(255, 255, 255, 0.38);
+  --text-faint: rgba(255, 255, 255, 0.28);
+  --line: rgba(255, 255, 255, 0.2);
+  --mint: #3ddc97;
+  --mint-light: #8ef5c5;
+  --mint-dark: #138a5c;
+  --mint-deep: #0a4a33;
+  --btn-text: #021a10;
+  --error: #f87171;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
+
+html { -webkit-tap-highlight-color: transparent; }
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Monocraft', ui-monospace, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+::selection { background: var(--mint); color: var(--btn-text); }
+
+:focus-visible { outline: 1px solid var(--mint); outline-offset: 2px; }
+
+#bg {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  z-index: -2;
+}
+
+.frost {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 0 1px, transparent 1px 3px),
+    repeating-conic-gradient(rgba(0, 0, 0, 0.3) 0 25%, transparent 0 50%) 0 0 / 2px 2px,
+    rgba(1, 8, 5, 0.2);
+}
+
+.wrap {
+  width: 100%;
+  max-width: 28rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.tagline {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: default;
+  user-select: none;
+}
+
+.tagline a { color: inherit; text-decoration: none; }
+.tagline a:hover { color: var(--mint-light); }
+
+.sub {
+  margin-top: -0.75rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.btn {
+  font: inherit;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  color: var(--btn-text);
+  background: var(--mint);
+  border: 1px solid var(--mint);
+  cursor: pointer;
+  padding: 0.7rem 1.5rem;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.2s ease;
+}
+
+.btn:hover:not(:disabled) { background: var(--mint-light); border-color: var(--mint-light); }
+.btn:active:not(:disabled) { background: var(--mint-dark); border-color: var(--mint-dark); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn.ghost {
+  color: var(--text);
+  background: transparent;
+  border-color: var(--line);
+}
+
+.btn.ghost:hover:not(:disabled) { color: var(--mint-light); background: transparent; border-color: var(--mint); }
+
+.link {
+  font: inherit;
+  color: var(--text-soft);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link:hover { color: var(--mint-light); }
+
+.status {
+  min-height: 1.4em;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+  width: 100%;
+  word-break: break-word;
+}
+
+.status.error { color: var(--error); }
+.status.ok { color: var(--mint-light); }
+
+/* bouncing pixel throbber */
+.comet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 10px;
+}
+
+.comet i {
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  transition: width 0.08s linear, height 0.08s linear, background-color 0.08s linear;
+}
+
+.comet i.tail { width: 6px; height: 6px; background: var(--mint-deep); }
+.comet i.mid { width: 8px; height: 8px; background: var(--mint-dark); }
+.comet i.head { width: 8px; height: 8px; background: var(--mint-light); }
+
+/* square-cell progress bar */
+.sqbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 10px;
+}
+
+.sqbar i {
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.14);
+  transition: width 0.12s ease, height 0.12s ease, background-color 0.12s ease;
+}
+
+.sqbar i.fill { width: 8px; height: 8px; background: var(--mint); }
+.sqbar i.fill.edge { background: var(--mint-light); }
+
+.foot {
+  margin-top: 1rem;
+  font-size: 0.62rem;
+  color: var(--text-faint);
+}
+
+.foot a { color: var(--text-soft); text-decoration: none; }
+.foot a:hover { color: var(--mint-light); }
+
+.hidden { display: none !important; }
+
+/* solid dithered backing for content that sits over the busy background */
+.panel {
+  --text-soft: rgba(255, 255, 255, 0.78);
+  --text-muted: rgba(255, 255, 255, 0.62);
+  --text-faint: rgba(255, 255, 255, 0.45);
+  --line: rgba(255, 255, 255, 0.26);
+  position: relative;
+  isolation: isolate;
+  padding: 1.6rem 1.4rem 1.2rem;
+  border: 1px solid var(--line);
+  background:
+    repeating-conic-gradient(rgba(36, 120, 84, 0.12) 0 25%, transparent 0 50%) 0 0 / 4px 4px,
+    rgba(1, 10, 6, 0.94);
+}
+
+/* a ragged pixel edge that dithers the scene out around the panel */
+.panel::before,
+.panel::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.panel::before {
+  inset: -6px;
+  background: repeating-conic-gradient(rgba(1, 10, 6, 0.9) 0 25%, transparent 0 50%) 0 0 / 4px 4px;
+}
+
+.panel::after {
+  inset: -12px;
+  background: repeating-conic-gradient(rgba(1, 10, 6, 0.6) 0 25%, transparent 0 50%) 2px 2px / 8px 8px;
+}
+
+@media (max-width: 420px) {
+  .panel { padding: 1.2rem 0.9rem 1rem; }
+  .panel::after { inset: -8px; }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}

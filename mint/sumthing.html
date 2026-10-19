@@ -1,0 +1,3841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Sumthing</title>
+  <link rel="icon" type="image/png" href="../assets/sumthing.png" />
+  <meta name="description" content="Sumthing: a notepad that does the math. Type it, it tallies. Units, money, splits, dates, time zones and odds." />
+  <meta property="og:title" content="Sumthing" />
+  <meta property="og:description" content="Type it, it tallies. A notepad that does the math." />
+  <meta property="og:image" content="https://winss.xyz/assets/sumthing.png" />
+  <meta property="og:url" content="https://winss.xyz/mint/sumthing.html" />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#3ddc97" />
+  <style>
+    /* ===================== look: black, square, mint ===================== */
+    @font-face {
+      font-family: 'Monocraft';
+      src: url('../assets/Monocraft.woff2') format('woff2'),
+           url('../assets/Monocraft.woff') format('woff');
+      font-display: swap;
+    }
+
+    :root {
+      --bg: #000;
+      --text: #fff;
+      --text-soft: rgba(255, 255, 255, 0.78);
+      --text-muted: rgba(255, 255, 255, 0.56);
+      --text-faint: rgba(255, 255, 255, 0.32);
+      --line: rgba(255, 255, 255, 0.2);
+      --mint: #3ddc97;
+      --mint-light: #8ef5c5;
+      --mint-pale: #c2fbe0;
+      --mint-dark: #138a5c;
+      --mint-deep: #0a4a33;
+      --btn-text: #021a10;
+      --kb: 0px;
+      color-scheme: dark;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
+
+    html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Monocraft', ui-monospace, monospace;
+      font-size: 14px;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2.4rem 1rem 2rem;
+    }
+
+    body.keyed { padding-bottom: calc(5rem + var(--kb)); }
+
+    ::selection { background: var(--mint); color: var(--btn-text); }
+    :focus-visible { outline: 1px solid var(--mint); outline-offset: 2px; }
+    button { font: inherit; color: inherit; }
+    [hidden] { display: none !important; }
+
+    #bg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      z-index: -2;
+    }
+
+    .frost {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 0 1px, transparent 1px 3px),
+        repeating-conic-gradient(rgba(0, 0, 0, 0.3) 0 25%, transparent 0 50%) 0 0 / 2px 2px,
+        rgba(1, 8, 5, 0.2);
+    }
+
+    /* solid dithered backing with a ragged pixel edge, same as the other mint pages */
+    .panel {
+      position: relative;
+      isolation: isolate;
+      border: 1px solid var(--line);
+      background:
+        repeating-conic-gradient(rgba(36, 120, 84, 0.12) 0 25%, transparent 0 50%) 0 0 / 4px 4px,
+        rgba(1, 10, 6, 0.94);
+    }
+
+    .panel::before,
+    .panel::after {
+      content: '';
+      position: absolute;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .panel::before {
+      inset: -6px;
+      background: repeating-conic-gradient(rgba(1, 10, 6, 0.9) 0 25%, transparent 0 50%) 0 0 / 4px 4px;
+    }
+
+    .panel::after {
+      inset: -12px;
+      background: repeating-conic-gradient(rgba(1, 10, 6, 0.6) 0 25%, transparent 0 50%) 2px 2px / 8px 8px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 58rem;
+      padding: 1.4rem 1.4rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* ===================== header ===================== */
+    .head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand { user-select: none; -webkit-user-select: none; }
+
+    .title {
+      display: inline-flex;
+      font-size: clamp(1.9rem, 7vw, 2.6rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: #effff7;
+      padding: 0.1em 0.12em 0.05em 0;
+      cursor: default;
+    }
+
+    .title span {
+      display: inline-block;
+      animation: idle 3.6s steps(1) infinite;
+    }
+
+    @keyframes idle {
+      0%, 88%, 100% { transform: translateY(0); }
+      90%, 94% { transform: translateY(-0.05em); }
+    }
+
+    .tagline {
+      margin-top: 0.45rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      color: var(--text-muted);
+    }
+
+    .hbtns { display: flex; gap: 0.5rem; }
+
+    .sq {
+      width: 2.75rem;
+      height: 2.75rem;
+      display: grid;
+      place-items: center;
+      font-size: 1rem;
+      color: var(--text-soft);
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--line);
+      cursor: pointer;
+      position: relative;
+      transition: color 0.12s, border-color 0.12s, background-color 0.12s;
+    }
+
+    .sq::after {
+      content: '';
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      width: 0;
+      height: 0;
+      background: var(--mint);
+      transition: width 0.15s steps(3), height 0.15s steps(3);
+    }
+
+    .sq:hover { color: var(--mint-light); border-color: var(--mint); background: rgba(6, 42, 29, 0.78); }
+    .sq:hover::after { width: 7px; height: 7px; }
+    .sq:active { background: var(--mint-deep); }
+
+    /* ===================== tabs ===================== */
+    .tabs {
+      display: flex;
+      gap: 1.6rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tab {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      padding: 0.55rem 0.2rem 0.5rem;
+      min-height: 2.75rem;
+      cursor: pointer;
+    }
+
+    .tab:hover { color: var(--mint-light); }
+    .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--mint); }
+
+    /* ===================== calculator lines ===================== */
+    .ed {
+      border: 1px solid var(--line);
+      background: rgba(0, 0, 0, 0.42);
+      min-height: 46vh;
+      cursor: text;
+      position: relative;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 2.4rem minmax(0, 1fr) minmax(9rem, 40%);
+      align-items: stretch;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      scroll-margin: 5rem 0 calc(6rem + var(--kb));
+    }
+
+    .row.on { background: rgba(61, 220, 151, 0.05); }
+    .row.flash { animation: flash 0.9s steps(4); }
+    @keyframes flash { 0% { background: rgba(61, 220, 151, 0.28); } 100% { background: transparent; } }
+
+    .ln {
+      font-size: 0.62rem;
+      color: var(--text-faint);
+      text-align: right;
+      padding: 1rem 0.65rem 0 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .row.on .ln { color: var(--mint); }
+
+    .src {
+      display: block;
+      width: 100%;
+      min-height: 2.9rem;
+      font: inherit;
+      font-size: 17px;
+      line-height: 1.5;
+      color: var(--text);
+      background: transparent;
+      border: 0;
+      outline: 0;
+      resize: none;
+      overflow: hidden;
+      padding: 0.6rem 0.6rem 0.6rem 0.2rem;
+      caret-color: var(--mint);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .src::placeholder { color: var(--text-faint); }
+
+    /* faint examples under an empty page; gone on the first keystroke */
+    .ghost { pointer-events: none; user-select: none; -webkit-user-select: none; opacity: 0.38; }
+    .ghost .row { border-bottom-color: transparent; }
+    .ghost .src { color: var(--text-soft); min-height: 0; padding-top: 0.45rem; padding-bottom: 0.45rem; }
+    .ghost .ln { padding-top: 0.75rem; }
+    .ghost .res { padding-top: 0.45rem; padding-bottom: 0.45rem; }
+    .ghost .val { color: var(--mint-light); cursor: default; }
+    .ghost-label { font-size: 0.62rem; letter-spacing: 0.06em; color: var(--mint); padding: 0.9rem 0 0.2rem 2.6rem; }
+    @media (max-width: 640px) {
+      .ghost-label { padding-left: 1.9rem; }
+      .ghost .res { margin-bottom: 0.4rem; }
+    }
+    .row.hdr .src { color: var(--mint-light); font-weight: 800; }
+    .row.cmt .src { color: var(--text-muted); }
+
+    .res {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-start;
+      gap: 0.1rem;
+      min-width: 0;
+      padding: 0.6rem 0.9rem 0.6rem 0.8rem;
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      text-align: right;
+    }
+
+    .vline { display: flex; align-items: center; gap: 0.45rem; max-width: 100%; }
+
+    .val {
+      font-size: 17px;
+      line-height: 1.5;
+      color: var(--mint-light);
+      background: none;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      text-align: inherit;
+      overflow-wrap: anywhere;
+      min-width: 0;
+    }
+
+    .val:hover { color: #fff; text-shadow: 1px 1px 0 var(--mint-dark); }
+    .val.pend, .val.pend:hover { color: var(--text-faint); text-shadow: none; }
+    .val.cyc::after { content: ' ⇄'; color: var(--mint-dark); font-size: 0.8em; }
+    .val.rnd::after { content: ' ↻'; color: var(--mint-dark); font-size: 0.8em; }
+    .val:hover::after { color: var(--mint); }
+
+    .cp {
+      flex: none;
+      width: 1.9rem;
+      height: 1.9rem;
+      display: grid;
+      place-items: center;
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text-faint);
+      cursor: pointer;
+    }
+
+    .cp svg { width: 12px; height: 12px; shape-rendering: crispEdges; }
+    .cp:hover { color: var(--mint-light); border-color: var(--mint-dark); }
+
+    .sub {
+      font-size: 0.7rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+      overflow-wrap: anywhere;
+    }
+
+    .q { font-size: 17px; color: var(--text-faint); }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.66rem;
+      color: var(--text-faint);
+    }
+
+    .link {
+      font: inherit;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      padding: 0.3rem 0;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .link:hover { color: var(--mint-light); }
+    .link.warn { color: #f87171; }
+
+    /* ===================== spreadsheet ===================== */
+    .gridwrap {
+      overflow: auto;
+      max-height: 68vh;
+      border: 1px solid var(--line);
+      background: rgba(0, 0, 0, 0.42);
+      scrollbar-width: thin;
+      scrollbar-color: var(--mint-dark) transparent;
+      overscroll-behavior: contain;
+    }
+
+    table.grid { border-collapse: collapse; min-width: 100%; }
+
+    .grid th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      font-weight: normal;
+      font-size: 0.66rem;
+      color: var(--text-muted);
+      background: #020d08;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.35rem;
+      user-select: none;
+    }
+
+    .grid th.rh { position: sticky; left: 0; z-index: 1; width: 2.4rem; min-width: 2.4rem; }
+    .grid thead th.rh { z-index: 3; }
+    .grid th.on { color: var(--mint); }
+
+    .grid td { border: 1px solid rgba(255, 255, 255, 0.08); padding: 0; min-width: 7.5rem; }
+
+    .cell {
+      display: block;
+      width: 100%;
+      min-width: 7.5rem;
+      height: 2.75rem;
+      font: inherit;
+      font-size: 16px;
+      color: var(--text);
+      background: transparent;
+      border: 0;
+      outline: 0;
+      padding: 0 0.6rem;
+      text-overflow: ellipsis;
+    }
+
+    .cell.num { text-align: right; color: var(--mint-light); }
+    .cell::placeholder { color: rgba(255, 255, 255, 0.24); }
+    .cell.num::placeholder { color: rgba(142, 245, 197, 0.34); }
+    .cell.txt { color: var(--text-soft); }
+    .cell.bad { color: var(--text-faint); }
+    .cell:focus { background: rgba(61, 220, 151, 0.08); box-shadow: inset 0 0 0 1px var(--mint); text-align: left; color: var(--text); }
+
+    /* ===================== popups ===================== */
+    .pop {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: repeating-conic-gradient(rgba(0, 0, 0, 0.78) 0 25%, rgba(0, 0, 0, 0.5) 0 50%) 0 0 / 4px 4px;
+    }
+
+    .box {
+      width: 100%;
+      max-width: 36rem;
+      max-height: min(82dvh, 44rem);
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 1.3rem 1.3rem 1.1rem;
+      animation: popin 0.18s steps(3);
+      scrollbar-width: thin;
+      scrollbar-color: var(--mint-dark) transparent;
+    }
+
+    @keyframes popin { from { transform: scale(0.94); opacity: 0.4; } }
+
+    .box.square {
+      max-width: 20rem;
+      aspect-ratio: 1 / 1;
+      max-height: none;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+    }
+
+    .boxhead { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.4rem; }
+    .boxhead h2 { font-size: 1.05rem; }
+    .boxhead .sq { width: 2.4rem; height: 2.4rem; }
+
+    .exgroup { margin-top: 0.9rem; }
+    .exgroup h3 { font-size: 0.66rem; font-weight: normal; letter-spacing: 0.06em; color: var(--mint); margin-bottom: 0.35rem; }
+    .exlist { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+    .ex {
+      font-size: 0.8rem;
+      color: var(--text-soft);
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid var(--line);
+      padding: 0.5rem 0.65rem;
+      min-height: 2.5rem;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .ex:hover { color: var(--mint-light); border-color: var(--mint); background: rgba(6, 42, 29, 0.78); }
+    .ex:active { background: var(--mint-deep); }
+
+    .about p { font-size: 0.74rem; line-height: 1.6; color: var(--text-soft); }
+    .about .dim { color: var(--text-muted); font-size: 0.66rem; }
+    .about a { color: var(--mint-light); text-decoration: none; }
+    .about a:hover { text-decoration: underline; }
+    .about .mark { font-size: 2rem; line-height: 1; color: var(--mint-light); text-shadow: 2px 2px 0 var(--mint), 4px 4px 0 var(--mint-dark); }
+
+    /* ===================== bits ===================== */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--kb) + 4.6rem);
+      z-index: 60;
+      transform: translate(-50%, 0.6rem);
+      opacity: 0;
+      pointer-events: none;
+      font-size: 0.8rem;
+      color: var(--btn-text);
+      background: var(--mint);
+      padding: 0.5rem 0.9rem;
+      transition: opacity 0.15s, transform 0.15s steps(3);
+    }
+
+    .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+    .keys {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: var(--kb);
+      z-index: 30;
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 1px;
+      background: rgba(255, 255, 255, 0.12);
+      border-top: 1px solid var(--mint-dark);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .keys button {
+      min-height: 46px;
+      font-size: 18px;
+      color: var(--text);
+      background: rgba(1, 10, 6, 0.97);
+      border: 0;
+      touch-action: manipulation;
+    }
+
+    .keys button:active { background: var(--mint); color: var(--btn-text); }
+    .keys .ret { color: var(--mint-light); }
+
+    .foot { margin-top: 1.4rem; font-size: 0.62rem; color: var(--text-faint); }
+    .foot a { color: var(--text-soft); text-decoration: none; }
+    .foot a:hover { color: var(--mint-light); }
+
+    /* ===================== phone: answer sits under its line ===================== */
+    @media (max-width: 640px) {
+      body { padding: 1.2rem 0.6rem 1.6rem; }
+      .app { padding: 1rem 0.75rem 0.8rem; gap: 0.85rem; }
+      .panel::after { inset: -8px; }
+      .row { grid-template-columns: 1.7rem minmax(0, 1fr); }
+      .ln { padding: 1rem 0.4rem 0 0; }
+      .res {
+        grid-column: 2;
+        align-items: flex-start;
+        text-align: left;
+        margin: 0 0.6rem 0.65rem 0.2rem;
+        padding: 0.45rem 0.6rem 0.45rem 0.7rem;
+        border-left: 2px solid var(--mint);
+        background:
+          repeating-conic-gradient(rgba(61, 220, 151, 0.09) 0 25%, transparent 0 50%) 0 0 / 4px 4px,
+          rgba(10, 74, 51, 0.38);
+      }
+      .res.qq { background: none; border-left-color: var(--line); padding-top: 0; padding-bottom: 0; }
+      .cp { width: 2.4rem; height: 2.4rem; color: var(--text-muted); }
+      .tabs { gap: 1.2rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .title span, .row.flash, .box { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="frost" aria-hidden="true"></div>
+
+  <main class="app panel" data-veil>
+    <header class="head">
+      <div class="brand">
+        <h1 class="title" id="title" aria-label="sumthing">sumthing</h1>
+        <p class="tagline">type it, it tallies</p>
+      </div>
+      <div class="hbtns">
+        <button type="button" class="sq" id="helpBtn" aria-label="examples" title="examples">?</button>
+        <button type="button" class="sq" id="aboutBtn" aria-label="about" title="about">i</button>
+      </div>
+    </header>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab" role="tab" id="tab-calc" data-tab="calc" aria-controls="calc" aria-selected="true">calculator</button>
+      <button type="button" class="tab" role="tab" id="tab-sheet" data-tab="sheet" aria-controls="sheet" aria-selected="false">spreadsheet</button>
+    </div>
+
+    <section id="calc" role="tabpanel" aria-labelledby="tab-calc">
+      <div class="ed" id="ed" aria-label="lines"></div>
+      <div class="meta" style="margin-top:0.7rem">
+        <span id="rateNote">rates: built-in</span>
+        <span><button type="button" class="link" id="clearBtn">clear all</button></span>
+      </div>
+    </section>
+
+    <section id="sheet" role="tabpanel" aria-labelledby="tab-sheet" hidden>
+      <div class="gridwrap" id="gridwrap"><table class="grid" id="grid"></table></div>
+      <div class="meta" style="margin-top:0.7rem">
+        <span>cells take the same lines · A1, sum(B2:B5)</span>
+        <span>
+          <button type="button" class="link" id="addRow">+ row</button> &nbsp;
+          <button type="button" class="link" id="addCol">+ col</button> &nbsp;
+          <button type="button" class="link" id="clearSheet">clear</button>
+        </span>
+      </div>
+    </section>
+  </main>
+
+  <p class="foot"><a href="./">← mint</a></p>
+
+  <!-- examples -->
+  <div class="pop" id="examples" hidden>
+    <div class="box panel" role="dialog" aria-modal="true" aria-labelledby="exTitle">
+      <div class="boxhead">
+        <h2 id="exTitle">try a line</h2>
+        <button type="button" class="sq" data-close aria-label="close">×</button>
+      </div>
+      <p class="sub">tap one to drop it in. then change the numbers.</p>
+      <div id="exBody"></div>
+    </div>
+  </div>
+
+  <!-- about -->
+  <div class="pop" id="about" hidden>
+    <div class="box panel square about" role="dialog" aria-modal="true" aria-labelledby="abTitle">
+      <div class="boxhead">
+        <span class="mark" aria-hidden="true">Σ</span>
+        <button type="button" class="sq" data-close aria-label="close">×</button>
+      </div>
+      <h2 id="abTitle" style="font-size:1.05rem">sumthing</h2>
+      <p>a notepad that answers back. write like you talk: money, units, splits, dates, odds.</p>
+      <p class="dim">it all stays on your device. rates from open.er-api.com, crypto from coingecko, refreshed every few hours.</p>
+      <p class="dim">made by <a href="../">winss</a> · part of <a href="./">mint</a></p>
+    </div>
+  </div>
+
+  <div class="keys" id="keys" hidden>
+    <button type="button" data-k="+">+</button>
+    <button type="button" data-k="-">−</button>
+    <button type="button" data-k="×">×</button>
+    <button type="button" data-k="÷">÷</button>
+    <button type="button" data-k="%">%</button>
+    <button type="button" data-k="(">(</button>
+    <button type="button" data-k=")">)</button>
+    <button type="button" data-k="^">^</button>
+    <button type="button" data-k="$">$</button>
+    <button type="button" data-k="&#10;" class="ret" aria-label="new line">⏎</button>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite">copied</div>
+
+  <!-- ============================================================
+       ENGINE: numbers, units, currency, dates, tokenizer, parser
+       (no DOM in here, so it can run anywhere)
+       ============================================================ -->
+  <script id="engine">
+  const Sum = (() => {
+    'use strict';
+    const FAIL = new Error('nope');
+    const fail = () => { throw FAIL; };
+
+    /* ---------------- numbers & formatting ---------------- */
+    const fix = (n) => (n === 0 || !isFinite(n) || (Number.isInteger(n) && Math.abs(n) <= Number.MAX_SAFE_INTEGER) ? n : +n.toPrecision(13));
+    const SUP = { '-': '⁻', '+': '', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+
+    // sig: max significant digits, dec: max decimals (for numbers >= 1)
+    function fmtNum(n, sig = 10, dec = 6) {
+      if (!isFinite(n)) return isNaN(n) ? '?' : n > 0 ? '∞' : '-∞';
+      n = fix(n);
+      if (Object.is(n, -0)) n = 0;
+      const a = Math.abs(n);
+      if (a !== 0 && (a >= 1e15 || a < 1e-7)) {
+        const [m, e] = n.toExponential(Math.max(0, Math.min(sig, 4) - 1)).split('e');
+        return +m + ' × 10' + [...e].map((c) => SUP[c] ?? '').join('');
+      }
+      let d;
+      if (a >= 1) d = Math.max(0, Math.min(dec, sig - (Math.floor(Math.log10(a)) + 1)));
+      else d = a === 0 ? 0 : Math.min(14, -Math.floor(Math.log10(a)) - 1 + Math.min(sig, 4));
+      return n.toLocaleString('en-US', { maximumFractionDigits: d });
+    }
+
+    // money-ish plain amounts: whole numbers stay whole, otherwise cents
+    function fmtCash(n) {
+      const r = Math.round(n * 100) / 100;
+      if (Math.abs(n) >= 1e15) return fmtNum(n);
+      if (Math.abs(n) > 0 && Math.abs(n) < 0.005) return fmtNum(n, 3);
+      return r.toLocaleString('en-US', Number.isInteger(r) ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    const plural = (n, w) => `${fmtNum(n, 6, 2)} ${w}${Math.abs(n) === 1 ? '' : 's'}`;
+
+    /* ---------------- dimensions ---------------- */
+    // [length, mass, time, temperature, data, angle, money]
+    const D = (L = 0, M = 0, T = 0, K = 0, B = 0, A = 0, C = 0) => [L, M, T, K, B, A, C];
+    const Z = D();
+    const dEq = (a, b) => a.every((x, i) => Math.abs(x - b[i]) < 1e-9);
+    const dZero = (a) => a.every((x) => x === 0);
+    const dAdd = (a, b, s = 1) => a.map((x, i) => x + s * b[i]);
+    const dMul = (a, p) => a.map((x) => x * p);
+    const dKey = (a) => a.join(',');
+
+    const LEN = D(1), AREA = D(2), VOL = D(3), MASS = D(0, 1), TIME = D(0, 0, 1), TEMP = D(0, 0, 0, 1);
+    const DATA = D(0, 0, 0, 0, 1), ANG = D(0, 0, 0, 0, 0, 1), MONEY = D(0, 0, 0, 0, 0, 0, 1);
+    const SPEED = D(1, 0, -1), FREQ = D(0, 0, -1), FORCE = D(1, 1, -2), ENERGY = D(2, 1, -2), POWER = D(2, 1, -3);
+    const PRESS = D(-1, 1, -2), FUEL = D(-2), FUELINV = D(2), RATE = D(0, 0, -1, 0, 1);
+
+    /* ---------------- units ---------------- */
+    const UNITS = [], UBY = new Map(), USYM = new Map();
+    function U(sym, dim, f, names = [], o = {}) {
+      const u = { sym, dim, f, off: 0, sys: 'm', ...o };
+      UNITS.push(u);
+      USYM.set(sym, u);
+      for (const n of o.nosym ? names : [sym.toLowerCase(), ...names]) if (!UBY.has(n)) UBY.set(n, u);
+      return u;
+    }
+    const I = { sys: 'i' }, R = { rare: true }, W = { pl: true }, IR = { sys: 'i', rare: true };
+
+    // length
+    U('mm', LEN, 1e-3, ['millimeter', 'millimetre']);
+    U('cm', LEN, 1e-2, ['centimeter', 'centimetre', 'cms']);
+    U('m', LEN, 1, ['meter', 'metre', 'mtr', 'mtrs', 'meters', 'metres']);
+    U('km', LEN, 1e3, ['kilometer', 'kilometre', 'kms', 'klick', 'klicks', 'kilometers', 'kilometres']);
+    U('µm', LEN, 1e-6, ['um', 'micrometer', 'micrometre', 'micron'], R);
+    U('nm', LEN, 1e-9, ['nanometer', 'nanometre'], R);
+    const IN = U('in', LEN, 0.0254, ['inch', 'inches', 'inchs'], I);
+    const FT = U('ft', LEN, 0.3048, ['foot', 'feet', 'feets', 'fts'], I);
+    U('yd', LEN, 0.9144, ['yard', 'yards', 'yds'], I);
+    U('mi', LEN, 1609.344, ['mile', 'miles'], I);
+    U('nmi', LEN, 1852, ['nautical mile', 'nautical miles'], R);
+    U('ly', LEN, 9.4607304725808e15, ['light year', 'light years', 'lightyear', 'lightyears'], R);
+    U('au', LEN, 1.495978707e11, ['astronomical unit', 'astronomical units'], R);
+    // area
+    U('mm²', AREA, 1e-6, ['mm2', 'sq mm'], R);
+    U('cm²', AREA, 1e-4, ['cm2', 'sq cm', 'sqcm', 'square centimeter', 'square centimeters']);
+    U('m²', AREA, 1, ['m2', 'sqm', 'sq m', 'square meter', 'square metre', 'square meters', 'square metres']);
+    U('km²', AREA, 1e6, ['km2', 'sqkm', 'sq km', 'square kilometer', 'square kilometers', 'square kilometre', 'square kilometres']);
+    U('ha', AREA, 1e4, ['hectare', 'hectares']);
+    U('in²', AREA, 0.00064516, ['in2', 'sq in', 'square inch', 'square inches'], I);
+    U('ft²', AREA, 0.09290304, ['ft2', 'sqft', 'sq ft', 'square foot', 'square feet'], I);
+    U('yd²', AREA, 0.83612736, ['yd2', 'sq yd', 'square yard', 'square yards'], I);
+    U('acre', AREA, 4046.8564224, ['acres', 'ac'], { sys: 'i', pl: true });
+    U('mi²', AREA, 2589988.110336, ['mi2', 'sq mi', 'square mile', 'square miles'], I);
+    // volume
+    U('mL', VOL, 1e-6, ['milliliter', 'millilitre', 'mls', 'cc', 'ccs']);
+    U('cL', VOL, 1e-5, ['centiliter', 'centilitre'], R);
+    U('dL', VOL, 1e-4, ['deciliter', 'decilitre'], R);
+    U('L', VOL, 1e-3, ['liter', 'litre', 'ltr', 'ltrs', 'lt', 'liters', 'litres']);
+    U('m³', VOL, 1, ['m3', 'cubic meter', 'cubic metre', 'cubic meters', 'cubic metres', 'cbm']);
+    U('cm³', VOL, 1e-6, ['cm3', 'cubic centimeter', 'cubic centimeters'], R);
+    U('ft³', VOL, 0.028316846592, ['ft3', 'cubic foot', 'cubic feet', 'cu ft'], IR);
+    U('in³', VOL, 1.6387064e-5, ['in3', 'cubic inch', 'cubic inches'], IR);
+    U('tsp', VOL, 4.92892159375e-6, ['teaspoon', 'tsps', 'tspn'], I);
+    U('tbsp', VOL, 1.478676478125e-5, ['tablespoon', 'tbsps', 'tbs', 'tbl', 'tbls'], I);
+    U('fl oz', VOL, 2.95735295625e-5, ['floz', 'fl. oz', 'fluid ounce', 'fluid ounces', 'fl ozs'], I);
+    U('cup', VOL, 2.365882365e-4, ['cups'], { sys: 'i', pl: true });
+    U('pt', VOL, 4.73176473e-4, ['pint', 'pints', 'pts'], I);
+    U('qt', VOL, 9.46352946e-4, ['quart', 'quarts', 'qts'], I);
+    U('gal', VOL, 3.785411784e-3, ['gallon', 'gallons', 'gals', 'us gallon', 'us gallons'], I);
+    U('imp gal', VOL, 4.54609e-3, ['imperial gallon', 'imperial gallons', 'uk gallon', 'uk gallons'], IR);
+    U('bbl', VOL, 0.158987294928, ['barrel', 'barrels'], IR);
+    // mass
+    U('mg', MASS, 1e-6, ['milligram', 'milligramme']);
+    U('g', MASS, 1e-3, ['gram', 'gramme', 'grams', 'gm', 'gms', 'gr', 'grm']);
+    U('kg', MASS, 1, ['kilogram', 'kilogramme', 'kilo', 'kilos', 'kgs']);
+    U('t', MASS, 1000, ['tonne', 'tonnes', 'metric ton', 'metric tons', 'metric tonne'], { nosym: true });
+    U('µg', MASS, 1e-9, ['ug', 'mcg', 'microgram'], R);
+    U('oz', MASS, 0.028349523125, ['ounce', 'ounces', 'ozs'], I);
+    const LB = U('lb', MASS, 0.45359237, ['lbs', 'pound', 'pounds', 'lbm'], I);
+    U('st', MASS, 6.35029318, ['stone', 'stones'], IR);
+    U('ton', MASS, 907.18474, ['tons', 'short ton', 'short tons', 'us ton', 'us tons'], { sys: 'i', pl: true, rare: true });
+    U('ct', MASS, 2e-4, ['carat', 'carats'], R);
+    // time
+    U('ns', TIME, 1e-9, ['nanosecond'], R);
+    U('µs', TIME, 1e-6, ['microsecond'], R);
+    U('ms', TIME, 1e-3, ['millisecond', 'msec', 'msecs']);
+    U('s', TIME, 1, ['sec', 'secs', 'second', 'seconds']);
+    U('min', TIME, 60, ['mins', 'minute', 'minutes', 'mn']);
+    U('h', TIME, 3600, ['hr', 'hrs', 'hour', 'hours']);
+    const DAY = U('day', TIME, 86400, ['days', 'd', 'dy'], W);
+    U('week', TIME, 604800, ['weeks', 'wk', 'wks', 'w'], W);
+    U('fortnight', TIME, 1209600, [], { pl: true, rare: true });
+    U('month', TIME, 2629746, ['months', 'mo', 'mos', 'mth', 'mths'], W);
+    U('year', TIME, 31556952, ['years', 'yr', 'yrs', 'y'], W);
+    U('decade', TIME, 315569520, [], { pl: true, rare: true });
+    U('century', TIME, 3155695200, ['centuries'], { pl: true, rare: true });
+    // temperature (offset units)
+    const KELVIN = U('K', TEMP, 1, ['kelvin', 'kelvins', '°k'], { nosym: true });
+    const CEL = U('°C', TEMP, 1, ['c', 'celsius', 'centigrade', 'degc', '°c', 'degrees c', 'degree c', 'degrees celsius', 'degree celsius', 'deg c'], { off: 273.15 });
+    const FAH = U('°F', TEMP, 5 / 9, ['f', 'fahrenheit', 'degf', '°f', 'degrees f', 'degree f', 'degrees fahrenheit', 'degree fahrenheit', 'deg f'], { off: 459.67 * 5 / 9, sys: 'i' });
+    // data
+    U('bit', DATA, 0.125, ['bits'], { pl: true, rare: true });
+    const BYTE = U('B', DATA, 1, ['byte', 'bytes'], { nosym: true });
+    U('kB', DATA, 1e3, ['kb', 'kilobyte', 'kilobytes', 'kbs']);
+    U('MB', DATA, 1e6, ['mb', 'megabyte', 'megabytes', 'mbs', 'meg', 'megs']);
+    U('GB', DATA, 1e9, ['gb', 'gigabyte', 'gigabytes', 'gbs', 'gig', 'gigs']);
+    U('TB', DATA, 1e12, ['tb', 'terabyte', 'terabytes']);
+    U('PB', DATA, 1e15, ['pb', 'petabyte', 'petabytes'], R);
+    U('KiB', DATA, 1024, ['kib', 'kibibyte'], R);
+    U('MiB', DATA, 1048576, ['mib', 'mebibyte'], R);
+    U('GiB', DATA, 1073741824, ['gib', 'gibibyte'], R);
+    U('TiB', DATA, 1099511627776, ['tib', 'tebibyte'], R);
+    const KBIT = U('kbit', DATA, 125, ['kilobit', 'kilobits', 'kbits'], R);
+    const MBIT = U('Mbit', DATA, 125000, ['megabit', 'megabits', 'mbits'], R);
+    const GBIT = U('Gbit', DATA, 1.25e8, ['gigabit', 'gigabits', 'gbits'], R);
+    U('kbps', RATE, 125, ['kbit/s']);
+    U('Mbps', RATE, 125000, ['mbit/s', 'megabits per second']);
+    U('Gbps', RATE, 1.25e8, ['gbit/s']);
+    // angle
+    U('°', ANG, Math.PI / 180, ['deg', 'degs', 'degree', 'degrees']);
+    U('rad', ANG, 1, ['radian', 'radians', 'rads']);
+    U('grad', ANG, Math.PI / 200, ['gradian', 'gradians', 'gon'], R);
+    U('turn', ANG, 2 * Math.PI, ['turns', 'rev', 'revs', 'revolution', 'revolutions'], { pl: true, rare: true });
+    U('arcmin', ANG, Math.PI / 10800, ['arcminute', 'arcminutes'], R);
+    U('arcsec', ANG, Math.PI / 648000, ['arcsecond', 'arcseconds'], R);
+    // speed
+    U('m/s', SPEED, 1, ['mps', 'meters per second', 'metres per second'], R);
+    U('km/h', SPEED, 1 / 3.6, ['kph', 'kmh', 'kmph', 'km/hr', 'kilometers per hour', 'kilometres per hour', 'km per hour']);
+    U('mph', SPEED, 0.44704, ['miles per hour', 'mi/h', 'mile per hour'], I);
+    U('kn', SPEED, 1852 / 3600, ['knot', 'knots', 'kt', 'kts'], IR);
+    U('ft/s', SPEED, 0.3048, ['fps', 'feet per second'], IR);
+    U('mach', SPEED, 340.29, [], R);
+    // frequency
+    U('Hz', FREQ, 1, ['hz', 'hertz']);
+    U('kHz', FREQ, 1e3, ['khz', 'kilohertz']);
+    U('MHz', FREQ, 1e6, ['mhz', 'megahertz']);
+    U('GHz', FREQ, 1e9, ['ghz', 'gigahertz']);
+    U('rpm', FREQ, 1 / 60, [], R);
+    // force, energy, power, pressure
+    const NEWTON = U('N', FORCE, 1, ['newton', 'newtons'], { nosym: true });
+    U('lbf', FORCE, 4.4482216152605, [], IR);
+    const JOULE = U('J', ENERGY, 1, ['joule', 'joules'], { nosym: true });
+    U('kJ', ENERGY, 1e3, ['kj', 'kilojoule', 'kilojoules']);
+    U('MJ', ENERGY, 1e6, ['mj', 'megajoule', 'megajoules'], R);
+    U('cal', ENERGY, 4.184, ['calorie', 'calories', 'cals']);
+    const KCAL = U('kcal', ENERGY, 4184, ['kcals', 'kilocalorie', 'kilocalories']);
+    U('Wh', ENERGY, 3600, ['wh', 'watt hour', 'watt hours']);
+    U('kWh', ENERGY, 3.6e6, ['kwh', 'kilowatt hour', 'kilowatt hours', 'kwhr']);
+    U('MWh', ENERGY, 3.6e9, ['mwh', 'megawatt hour', 'megawatt hours'], R);
+    U('eV', ENERGY, 1.602176634e-19, ['ev', 'electronvolt', 'electronvolts'], R);
+    U('BTU', ENERGY, 1055.05585262, ['btu', 'btus'], IR);
+    const WATT = U('W', POWER, 1, ['watt', 'watts'], { nosym: true });
+    U('kW', POWER, 1e3, ['kw', 'kilowatt', 'kilowatts']);
+    const MWATT = U('MW', POWER, 1e6, ['megawatt', 'megawatts'], { nosym: true, rare: true });
+    U('GW', POWER, 1e9, ['gw', 'gigawatt', 'gigawatts'], R);
+    U('hp', POWER, 745.69987158227, ['horsepower', 'bhp'], I);
+    U('Pa', PRESS, 1, ['pa', 'pascal', 'pascals'], R);
+    U('hPa', PRESS, 100, ['hpa', 'hectopascal', 'hectopascals'], R);
+    U('kPa', PRESS, 1e3, ['kpa', 'kilopascal', 'kilopascals']);
+    U('MPa', PRESS, 1e6, ['mpa', 'megapascal', 'megapascals'], R);
+    U('bar', PRESS, 1e5, ['bars']);
+    U('mbar', PRESS, 100, ['millibar', 'millibars'], R);
+    U('atm', PRESS, 101325, ['atmosphere', 'atmospheres'], R);
+    U('psi', PRESS, 6894.757293168, [], I);
+    U('mmHg', PRESS, 133.322387415, ['mmhg', 'torr'], R);
+    U('inHg', PRESS, 3386.389, ['inhg'], IR);
+    // fuel economy (mpg and km/L are distance per volume; L/100km is the inverse)
+    U('mpg', FUEL, 1609.344 / 3.785411784e-3, ['miles per gallon', 'mpg us'], I);
+    U('mpg (UK)', FUEL, 1609.344 / 4.54609e-3, ['mpg uk', 'mpg imperial', 'imperial mpg'], IR);
+    U('km/L', FUEL, 1e6, ['kmpl', 'km/l', 'km per liter', 'km per litre', 'kilometers per liter', 'kilometres per litre']);
+    U('L/100km', FUELINV, 1e-8, ['l/100km', 'l/100 km', 'l per 100km', 'l per 100 km', 'liters per 100 km', 'litres per 100 km', 'liters per 100km', 'litres per 100km']);
+
+    // case matters for a few symbols (Mb is megabits, K is kelvin, W is watts ...)
+    const CASE_UNITS = { K: KELVIN, B: BYTE, W: WATT, J: JOULE, N: NEWTON, MW: MWATT, Kb: KBIT, Mb: MBIT, Gb: GBIT, Cal: KCAL, Cals: KCAL, T: USYM.get('tbsp') };
+    const NOSTRIP = new Set(['has', 'pas', 'is', 'as', 'us', 'yes', 'its', 'ms', 'ins', 'ys', 'gs', 'ts', 'cs', 'fs', 'ds', 'hs', 'ws', 'ls']);
+
+    // anything that might be a typo of a unit (only long-ish words, one or two edits away)
+    function editDist(a, b, max) {
+      if (Math.abs(a.length - b.length) > max) return max + 1;
+      const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+      for (let j = 1; j <= b.length; j++) d[0][j] = j;
+      for (let i = 1; i <= a.length; i++) {
+        let best = Infinity;
+        for (let j = 1; j <= b.length; j++) {
+          const c = a[i - 1] === b[j - 1] ? 0 : 1;
+          d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+          if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+          best = Math.min(best, d[i][j]);
+        }
+        if (best > max) return max + 1;
+      }
+      return d[a.length][b.length];
+    }
+
+    function fuzzy(w, map) {
+      if (w.length < 6) return null;
+      const max = w.length >= 8 ? 2 : 1;
+      let best = null, bd = max + 1;
+      for (const [k, v] of map) {
+        if (k.length < 5 || k.includes(' ')) continue;
+        const dd = editDist(w, k, max);
+        if (dd < bd) { bd = dd; best = v; }
+      }
+      return best;
+    }
+
+    const stripPlural = (w, map) => {
+      if (NOSTRIP.has(w)) return null;
+      for (const s of ['es', 's']) if (w.endsWith(s) && w.length - s.length >= 2 && map.has(w.slice(0, -s.length))) return map.get(w.slice(0, -s.length));
+      return null;
+    };
+
+    function findUnit(w, orig) {
+      if (CASE_UNITS[orig]) return CASE_UNITS[orig];
+      return UBY.get(w) || stripPlural(w, UBY) || fuzzy(w, UBY);
+    }
+
+    /* ---------------- currency ---------------- */
+    // units per 1 USD; replaced by live rates when they arrive
+    const FALLBACK = {
+      USD: 1, EUR: 0.86, GBP: 0.75, JPY: 150, CNY: 7.1, INR: 88, SAR: 3.75, AED: 3.6725, QAR: 3.64, KWD: 0.306, BHD: 0.376,
+      OMR: 0.3845, JOD: 0.709, EGP: 47.5, CAD: 1.39, AUD: 1.53, NZD: 1.73, CHF: 0.8, SEK: 9.4, NOK: 10, DKK: 6.4, PLN: 3.65,
+      CZK: 20.9, HUF: 335, TRY: 41.8, RUB: 80, UAH: 41.5, BRL: 5.4, MXN: 18.4, ARS: 1450, CLP: 950, COP: 3900, PEN: 3.45,
+      ZAR: 17.3, NGN: 1500, KES: 129, MAD: 9.1, KRW: 1400, SGD: 1.29, HKD: 7.78, TWD: 30.5, THB: 32.5, MYR: 4.22, IDR: 16500,
+      PHP: 58, VND: 26300, PKR: 281, BDT: 122, LKR: 302, ILS: 3.3, IQD: 1310, LBP: 89500, DZD: 130, TND: 2.92,
+      BTC: 1 / 110000, ETH: 1 / 4000, SOL: 1 / 190, DOGE: 1 / 0.2, XRP: 1 / 2.4, ADA: 1 / 0.7, LTC: 1 / 90, BNB: 1 / 650, XAU: 1 / 4000,
+    };
+    let RATES = { ...FALLBACK };
+    const CRYPTO = new Set(['BTC', 'ETH', 'SOL', 'DOGE', 'XRP', 'ADA', 'LTC', 'BNB', 'XAU']);
+    const CUR_SYM = {
+      'us$': 'USD', 'ca$': 'CAD', 'c$': 'CAD', 'au$': 'AUD', 'a$': 'AUD', 'nz$': 'NZD', 'hk$': 'HKD', 's$': 'SGD', 'r$': 'BRL',
+      '$': 'USD', '€': 'EUR', '£': 'GBP', '¥': 'JPY', '₹': 'INR', '₩': 'KRW', '₽': 'RUB', '₺': 'TRY', '₪': 'ILS', '₦': 'NGN',
+      '₱': 'PHP', '₫': 'VND', '฿': 'THB', '₴': 'UAH', '₿': 'BTC', '﷼': 'SAR', 'Ξ': 'ETH',
+    };
+    const CUR_SYM_KEYS = Object.keys(CUR_SYM).sort((a, b) => b.length - a.length);
+    const CUR_NAMES = new Map(Object.entries({
+      dollar: 'USD', dollars: 'USD', buck: 'USD', bucks: 'USD', 'us dollar': 'USD', 'us dollars': 'USD', 'american dollar': 'USD', greenback: 'USD', usd: 'USD',
+      euro: 'EUR', euros: 'EUR', quid: 'GBP', sterling: 'GBP', 'british pound': 'GBP', 'british pounds': 'GBP', 'pound sterling': 'GBP', 'pounds sterling': 'GBP', gbp: 'GBP',
+      yen: 'JPY', 'japanese yen': 'JPY', yuan: 'CNY', rmb: 'CNY', renminbi: 'CNY', 'chinese yuan': 'CNY',
+      riyal: 'SAR', riyals: 'SAR', ryal: 'SAR', rial: 'SAR', rials: 'SAR', sr: 'SAR', 'saudi riyal': 'SAR', 'saudi riyals': 'SAR', 'saudi rial': 'SAR',
+      'qatari riyal': 'QAR', 'qatari riyals': 'QAR', 'omani rial': 'OMR', 'omani rials': 'OMR', 'iranian rial': 'IRR', 'yemeni rial': 'YER',
+      rupee: 'INR', rupees: 'INR', 'indian rupee': 'INR', 'indian rupees': 'INR', 'pakistani rupee': 'PKR', 'pakistani rupees': 'PKR', 'sri lankan rupee': 'LKR',
+      'korean won': 'KRW', ruble: 'RUB', rubles: 'RUB', rouble: 'RUB', roubles: 'RUB', franc: 'CHF', francs: 'CHF', 'swiss franc': 'CHF', 'swiss francs': 'CHF',
+      peso: 'MXN', pesos: 'MXN', 'mexican peso': 'MXN', 'mexican pesos': 'MXN', 'philippine peso': 'PHP', 'philippine pesos': 'PHP', 'argentine peso': 'ARS',
+      real: 'BRL', reais: 'BRL', 'brazilian real': 'BRL', dirham: 'AED', dirhams: 'AED', dhs: 'AED', dh: 'AED', 'uae dirham': 'AED', 'emirati dirham': 'AED', 'moroccan dirham': 'MAD',
+      dinar: 'KWD', dinars: 'KWD', 'kuwaiti dinar': 'KWD', 'bahraini dinar': 'BHD', 'jordanian dinar': 'JOD', 'iraqi dinar': 'IQD', 'algerian dinar': 'DZD', 'tunisian dinar': 'TND',
+      lira: 'TRY', liras: 'TRY', 'turkish lira': 'TRY', rand: 'ZAR', 'south african rand': 'ZAR', krona: 'SEK', kronor: 'SEK', krone: 'NOK', kroner: 'NOK', 'danish krone': 'DKK',
+      zloty: 'PLN', baht: 'THB', ringgit: 'MYR', rupiah: 'IDR', shekel: 'ILS', shekels: 'ILS', nis: 'ILS', naira: 'NGN', 'egyptian pound': 'EGP', 'egyptian pounds': 'EGP',
+      'canadian dollar': 'CAD', 'canadian dollars': 'CAD', loonie: 'CAD', loonies: 'CAD', 'australian dollar': 'AUD', 'australian dollars': 'AUD', 'aussie dollar': 'AUD', 'aussie dollars': 'AUD',
+      'hong kong dollar': 'HKD', 'hong kong dollars': 'HKD', 'singapore dollar': 'SGD', 'singapore dollars': 'SGD', 'new zealand dollar': 'NZD', 'new zealand dollars': 'NZD',
+      'taiwan dollar': 'TWD', 'taiwan dollars': 'TWD', dong: 'VND', hryvnia: 'UAH', forint: 'HUF', koruna: 'CZK', shilling: 'KES', shillings: 'KES', taka: 'BDT',
+      bitcoin: 'BTC', bitcoins: 'BTC', btc: 'BTC', ether: 'ETH', ethereum: 'ETH', eth: 'ETH', solana: 'SOL', dogecoin: 'DOGE', doge: 'DOGE',
+      ripple: 'XRP', xrp: 'XRP', cardano: 'ADA', ada: 'ADA', litecoin: 'LTC', ltc: 'LTC', bnb: 'BNB', 'binance coin': 'BNB',
+      gold: 'XAU', xau: 'XAU', 'ounce of gold': 'XAU', 'oz of gold': 'XAU', 'gold ounce': 'XAU', 'ounces of gold': 'XAU',
+      local: '@LOCAL', 'local currency': '@LOCAL', 'my currency': '@LOCAL', 'home currency': '@LOCAL', 'my money': '@LOCAL',
+    }));
+    // three letter codes that are also everyday words; only count them when typed in CAPS
+    const CODE_WORDS = new Set(['all', 'top', 'cup', 'mop', 'bob', 'gel', 'pen', 'try', 'mad', 'sos', 'bam', 'lak', 'nad', 'cad', 'gip', 'mur', 'srd', 'php', 'ang', 'awg', 'fok', 'kid', 'tvd', 'mga', 'mvr', 'sle', 'sll', 'ttd', 'xcd', 'xof', 'xaf', 'xpf', 'yer', 'zmw', 'lsl', 'scr', 'pab', 'hnl', 'jep', 'imp', 'ggp', 'cve', 'kmf']);
+
+    function findCur(w, orig) {
+      if (/^[A-Z]{3,4}$/.test(orig) && RATES[orig]) return orig;
+      const up = w.toUpperCase();
+      if (w.length === 3 && RATES[up] && !CODE_WORDS.has(w)) return up;
+      const c = CUR_NAMES.get(w) || stripPlural(w, CUR_NAMES) || fuzzy(w, CUR_NAMES);
+      return c === '@LOCAL' ? localCur() : c;
+    }
+
+    // your own currency: from the time zone, then the browser's region, else dollars
+    const TZ_CUR = {
+      'Asia/Riyadh': 'SAR', 'Asia/Dubai': 'AED', 'Asia/Qatar': 'QAR', 'Asia/Kuwait': 'KWD', 'Asia/Bahrain': 'BHD', 'Asia/Muscat': 'OMR', 'Asia/Amman': 'JOD',
+      'Asia/Beirut': 'LBP', 'Asia/Baghdad': 'IQD', 'Africa/Cairo': 'EGP', 'Europe/London': 'GBP', 'Europe/Zurich': 'CHF', 'Europe/Stockholm': 'SEK',
+      'Europe/Oslo': 'NOK', 'Europe/Copenhagen': 'DKK', 'Europe/Warsaw': 'PLN', 'Europe/Prague': 'CZK', 'Europe/Budapest': 'HUF', 'Europe/Bucharest': 'RON',
+      'Europe/Istanbul': 'TRY', 'Europe/Moscow': 'RUB', 'Europe/Kyiv': 'UAH', 'Europe/Kiev': 'UAH', 'America/Toronto': 'CAD', 'America/Vancouver': 'CAD',
+      'America/Edmonton': 'CAD', 'America/Winnipeg': 'CAD', 'America/Halifax': 'CAD', 'America/St_Johns': 'CAD', 'America/Mexico_City': 'MXN',
+      'America/Sao_Paulo': 'BRL', 'America/Argentina/Buenos_Aires': 'ARS', 'America/Buenos_Aires': 'ARS', 'America/Bogota': 'COP', 'America/Lima': 'PEN',
+      'America/Santiago': 'CLP', 'Asia/Tokyo': 'JPY', 'Asia/Seoul': 'KRW', 'Asia/Shanghai': 'CNY', 'Asia/Hong_Kong': 'HKD', 'Asia/Taipei': 'TWD',
+      'Asia/Singapore': 'SGD', 'Asia/Kuala_Lumpur': 'MYR', 'Asia/Bangkok': 'THB', 'Asia/Jakarta': 'IDR', 'Asia/Manila': 'PHP', 'Asia/Ho_Chi_Minh': 'VND',
+      'Asia/Saigon': 'VND', 'Asia/Kolkata': 'INR', 'Asia/Calcutta': 'INR', 'Asia/Karachi': 'PKR', 'Asia/Dhaka': 'BDT', 'Asia/Colombo': 'LKR',
+      'Asia/Jerusalem': 'ILS', 'Asia/Tel_Aviv': 'ILS', 'Pacific/Auckland': 'NZD', 'Africa/Johannesburg': 'ZAR', 'Africa/Lagos': 'NGN',
+      'Africa/Nairobi': 'KES', 'Africa/Casablanca': 'MAD', 'Africa/Algiers': 'DZD', 'Africa/Tunis': 'TND',
+    };
+    const REGION_CUR = { US: 'USD', GB: 'GBP', SA: 'SAR', AE: 'AED', QA: 'QAR', KW: 'KWD', BH: 'BHD', OM: 'OMR', EG: 'EGP', JO: 'JOD', CA: 'CAD', AU: 'AUD', NZ: 'NZD',
+      IN: 'INR', PK: 'PKR', JP: 'JPY', KR: 'KRW', CN: 'CNY', TR: 'TRY', CH: 'CHF', SE: 'SEK', NO: 'NOK', DK: 'DKK', PL: 'PLN', BR: 'BRL', MX: 'MXN', ZA: 'ZAR', NG: 'NGN',
+      MA: 'MAD', SG: 'SGD', MY: 'MYR', ID: 'IDR', PH: 'PHP', TH: 'THB', VN: 'VND', IL: 'ILS', RU: 'RUB', UA: 'UAH', HK: 'HKD', TW: 'TWD' };
+    const EURO = /^Europe\/(Paris|Berlin|Madrid|Rome|Amsterdam|Brussels|Vienna|Helsinki|Athens|Dublin|Lisbon|Luxembourg|Bratislava|Ljubljana|Tallinn|Riga|Vilnius|Valletta|Zagreb|Monaco|Andorra|Vatican|San_Marino)$/;
+    let LOCAL = null;
+    function localCur() {
+      if (LOCAL) return LOCAL;
+      let c = TZ_CUR[LOCAL_TZ] || (EURO.test(LOCAL_TZ) ? 'EUR' : /^Australia\//.test(LOCAL_TZ) ? 'AUD' : null);
+      if (!c) {
+        const langs = typeof navigator !== 'undefined' ? navigator.languages || [navigator.language] : [];
+        for (const l of langs) { const m = /-([A-Z]{2})$/i.exec(l || ''); if (m && REGION_CUR[m[1].toUpperCase()]) { c = REGION_CUR[m[1].toUpperCase()]; break; } }
+      }
+      if (!c && /^America\//.test(LOCAL_TZ)) c = 'USD';
+      return (LOCAL = c || 'USD');
+    }
+    // where a currency most usefully converts to
+    function sensible(code) {
+      const L = localCur();
+      if (CRYPTO.has(code)) return L === 'USD' ? ['USD'] : ['USD', L];
+      if (code === L) return [code === 'USD' ? 'EUR' : 'USD'];
+      return [L];
+    }
+    // money units hide inside combos ("$/h" times "h"): dig the code out
+    function curOf(u) {
+      if (!u) return null;
+      if (u.cur) return u.cur;
+      if (u.top && u.top.cur) return u.top.cur;
+      if (u.k) for (const [x] of u.k) { const c = curOf(x); if (c) return c; }
+      return null;
+    }
+
+    const CUR_UNITS = new Map();
+    function curUnit(code) {
+      let u = CUR_UNITS.get(code);
+      if (!u) { u = { sym: code, dim: MONEY, cur: code, sys: 'm' }; CUR_UNITS.set(code, u); }
+      return u;
+    }
+    const GBP_ALT = () => curUnit('GBP');
+    const BLANK = { sym: '', dim: D(), f: 1, sys: 'm' };
+
+    const CUR_INFO = new Map();
+    function curInfo(code) {
+      let ci = CUR_INFO.get(code);
+      if (ci) return ci;
+      ci = { sym: code, pre: false, dec: 2 };
+      if (CRYPTO.has(code)) ci.dec = 8, ci.crypto = true;
+      else {
+        try {
+          const f = new Intl.NumberFormat('en-US', { style: 'currency', currency: code });
+          const parts = f.formatToParts(1);
+          const cp = parts.find((p) => p.type === 'currency');
+          ci.dec = f.resolvedOptions().maximumFractionDigits;
+          ci.sym = cp.value;
+          ci.pre = parts.indexOf(cp) === 0;
+          if (/^[A-Z]{2,4}$/.test(ci.sym)) ci.pre = false, ci.sym = code;
+        } catch { /* unknown to Intl, keep the code */ }
+      }
+      CUR_INFO.set(code, ci);
+      return ci;
+    }
+
+    function fmtMoney(x, code) {
+      const ci = curInfo(code);
+      const a = Math.abs(x);
+      let s;
+      if (ci.crypto) s = fmtNum(a, 8, 8);
+      else if (a >= 1e15) s = fmtNum(a);
+      else if (a > 0 && a < 1 / 10 ** ci.dec) s = fmtNum(a, 3);
+      else s = a.toLocaleString('en-US', { minimumFractionDigits: ci.dec, maximumFractionDigits: ci.dec });
+      const sign = x < 0 && fix(x) !== 0 ? '-' : '';
+      return ci.pre ? sign + ci.sym + s : sign + s + ' ' + ci.sym;
+    }
+
+    function setRates(rates, crypto) {
+      const next = { ...FALLBACK };
+      if (rates) for (const [k, v] of Object.entries(rates)) if (v > 0) next[k] = v;
+      if (crypto) for (const [k, v] of Object.entries(crypto)) if (v > 0) next[k] = 1 / v;
+      RATES = next;
+    }
+
+    /* ---------------- unit helpers ---------------- */
+    // conversion factor to SI base (money: to USD)
+    function uf(u) {
+      if (u.cur) return 1 / (RATES[u.cur] || NaN);
+      if (u.k) return u.k.reduce((p, [x, e]) => p * uf(x) ** e, 1);
+      return u.f;
+    }
+
+    function findNamed(dim, f) {
+      return UNITS.find((u) => dEq(u.dim, dim) && Math.abs(u.f / f - 1) < 1e-9) || null;
+    }
+
+    function powUnit(u, p) {
+      if (p === 1) return u;
+      const named = USYM.get(u.sym + (p === 2 ? '²' : p === 3 ? '³' : '')) || (!u.cur && !u.k ? findNamed(dMul(u.dim, p), u.f ** p) : null);
+      if (named) return named;
+      return { sym: u.sym + (p === 2 ? '²' : p === 3 ? '³' : '^' + p), dim: dMul(u.dim, p), k: [[u, p]], sys: u.sys };
+    }
+
+    function comboUnit(a, b, s) {
+      const dim = dAdd(a.dim, b.dim, s);
+      if (!a.cur && !b.cur && !a.k && !b.k) {
+        const named = findNamed(dim, s === 1 ? a.f * b.f : a.f / b.f);
+        if (named) return named;
+      }
+      return { sym: a === BLANK ? '/ ' + b.sym : a.sym + (s === 1 ? '·' : '/') + b.sym, dim, k: [[a, 1], [b, s]], sys: a.sys, per: s === -1 ? b : null, top: a };
+    }
+
+    /* ---------------- values ---------------- */
+    // {t:'n', n (SI base), d (dims), u (display unit)} | {t:'p', n (percent)} | {t:'d', ms (date)}
+    const num = (n) => ({ t: 'n', n, d: Z, u: null });
+    const qty = (n, u) => ({ t: 'n', n: n * uf(u) + (u.off || 0), d: u.dim, u });
+    const valIn = (v, u) => (v.n - (u.off || 0)) / uf(u);
+    const isPlain = (v) => v && v.t === 'n' && dZero(v.d);
+    const isMoney = (v) => v && v.t === 'n' && dEq(v.d, MONEY);
+    const sysOf = (v) => (v.u ? v.u.sys : v.sys) || 'm';
+    // scale a quantity, keeping offset units (°C, °F) sane
+    const scale = (v, k) => (v.u && v.u.off ? { ...qty(valIn(v, v.u) * k, v.u), mixed: v.mixed } : { ...v, n: v.n * k });
+
+    const A = {
+      add(a, b, s = 1) {
+        if (a.t === 'p' && b.t === 'p') return { t: 'p', n: a.n + s * b.n };
+        if (a.t === 'n' && b.t === 'p') return scale(a, 1 + (s * b.n) / 100);
+        if (a.t === 'd' && b.t === 'n') return dateAdd(a, b, s);
+        if (a.t === 'n' && b.t === 'd' && s === 1) return dateAdd(b, a, 1);
+        if (a.t === 'd' && b.t === 'd' && s === -1) return dateDiff(a, b);
+        if (a.t !== 'n' || b.t !== 'n') fail();
+        if (dZero(a.d) && !dZero(b.d)) {
+          if (!b.u) fail();
+          return { ...b, n: qty(a.n, b.u).n + s * (b.n - (b.u.off || 0)) - (s === -1 ? 0 : 0) * 0 - (b.u.off && s === 1 ? 0 : 0) };
+        }
+        if (!dZero(a.d) && dZero(b.d)) {
+          if (!a.u) fail();
+          return { ...a, n: a.n + s * b.n * uf(a.u) };
+        }
+        if (!dEq(a.d, b.d)) fail();
+        if ((a.u && a.u.off) || (b.u && b.u.off)) {
+          const u = a.u || b.u;
+          return qty(valIn(a, u) + s * valIn(b, u), u);
+        }
+        const same = a.u && b.u && a.u.sym === b.u.sym && !a.mixed && !b.mixed;
+        const r = { t: 'n', n: a.n + s * b.n, d: a.d, u: a.u || b.u, c2: a.c2 || b.c2 };
+        if (!same && !isMoney(a)) {
+          r.mixed = true;
+          r.sys = sysOf(a) === 'i' && sysOf(b) === 'i' ? 'i' : 'm';
+        }
+        if (a.dens || b.dens) r.dens = a.dens || b.dens;
+        return r;
+      },
+      sub(a, b) { return A.add(a, b, -1); },
+      mul(a, b) {
+        if (a.t === 'p' && b.t === 'p') return { t: 'p', n: (a.n * b.n) / 100 };
+        if (a.t === 'p') [a, b] = [b, a];
+        if (b.t === 'p') { if (a.t !== 'n') fail(); return scale(a, b.n / 100); }
+        if (a.t !== 'n' || b.t !== 'n') fail();
+        if (dZero(a.d) && dZero(b.d)) return { ...num(a.n * b.n), c2: a.c2 || b.c2 };
+        // rate × "50 hours a week": same value, but say it per week
+        for (const [r, k] of [[a, b], [b, a]]) {
+          if (dZero(k.d) && k.u && k.u.per && r.t === 'n' && r.d[2] < 0 && dEq(dMul(k.u.per.dim, -1), dAdd(Z, D(0, 0, -1)))) {
+            const top = r.u && r.u.top ? r.u.top : r.u && r.u.cur ? r.u : BLANK;
+            return { ...scale(r, k.n), u: comboUnit(top, k.u.per, -1), mixed: false };
+          }
+        }
+        if (dZero(a.d)) return scale(b, a.n);
+        if (dZero(b.d)) return scale(a, b.n);
+        let u = null;
+        if (a.u && b.u && !a.mixed && !b.mixed) u = a.u.sym === b.u.sym ? powUnit(a.u, 2) : comboUnit(a.u, b.u, 1);
+        return { t: 'n', n: a.n * b.n, d: dAdd(a.d, b.d), u };
+      },
+      div(a, b) {
+        if (b.t === 'p') {
+          if (a.t === 'p') return num(a.n / b.n);
+          if (a.t !== 'n' || b.n === 0) fail();
+          return scale(a, 100 / b.n);
+        }
+        if (a.t === 'p') { if (!isPlain(b) || b.n === 0) fail(); return { t: 'p', n: a.n / b.n }; }
+        if (a.t !== 'n' || b.t !== 'n' || b.n === 0) fail();
+        if (dZero(b.d)) return scale(a, 1 / b.n);
+        const d = dAdd(a.d, b.d, -1);
+        let u = null;
+        if (!dZero(d) && a.u && b.u && !a.mixed && !b.mixed) u = comboUnit(a.u, b.u, -1);
+        else if (dZero(a.d) && b.u && !b.mixed && !b.u.off) u = comboUnit(BLANK, b.u, -1); // 60000 / year
+        return { t: 'n', n: a.n / b.n, d, u };
+      },
+      mod(a, b) {
+        if (a.t !== 'n' || b.t !== 'n' || b.n === 0) fail();
+        if (!dEq(a.d, b.d) && !dZero(b.d)) fail();
+        const m = dZero(b.d) && !dZero(a.d) ? b.n * uf(a.u || fail()) : b.n;
+        return { ...a, n: ((a.n % m) + m) % m };
+      },
+      pow(a, e) {
+        if (!isPlain(e)) fail();
+        if (a.t === 'p') return { t: 'p', n: 100 * (a.n / 100) ** e.n };
+        if (a.t !== 'n') fail();
+        if (dZero(a.d)) return num(a.n ** e.n);
+        const d = dMul(a.d, e.n);
+        if (!d.every((x) => Math.abs(x - Math.round(x)) < 1e-9)) fail();
+        const u = a.u && !a.mixed && Number.isInteger(e.n) && e.n > 0 && e.n <= 3 ? powUnit(a.u, e.n) : null;
+        return { t: 'n', n: a.n ** e.n, d: d.map(Math.round), u };
+      },
+      neg(a) {
+        if (a.t === 'p') return { t: 'p', n: -a.n };
+        if (a.t !== 'n') fail();
+        return scale(a, -1);
+      },
+      pct(a) { if (!isPlain(a)) fail(); return { t: 'p', n: a.n }; },
+      of(a, b) {
+        if (a.t === 'p') { if (b.t === 'p') return { t: 'p', n: (a.n * b.n) / 100 }; if (b.t !== 'n') fail(); return scale(b, a.n / 100); }
+        return A.mul(a, b);
+      },
+      fact(a) { if (!isPlain(a) || a.n < 0) fail(); return num(factorial(a.n)); },
+    };
+
+    /* ---------------- probability & math helpers ---------------- */
+    function gamma(x) {
+      if (x < 0.5) return Math.PI / (Math.sin(Math.PI * x) * gamma(1 - x));
+      const g = 7, c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+      x -= 1;
+      let s = c[0];
+      for (let i = 1; i < g + 2; i++) s += c[i] / (x + i);
+      const t = x + g + 0.5;
+      return Math.sqrt(2 * Math.PI) * t ** (x + 0.5) * Math.exp(-t) * s;
+    }
+    function factorial(n) {
+      if (Number.isInteger(n)) { if (n > 170) return Infinity; let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
+      return gamma(n + 1);
+    }
+    function choose(n, k) {
+      if (k < 0 || k > n) return 0;
+      k = Math.min(k, n - k);
+      let r = 1;
+      for (let i = 1; i <= k; i++) r = (r * (n - k + i)) / i;
+      return r < 2 ** 53 ? Math.round(r) : r;
+    }
+    function lnChoose(n, k) { let r = 0; k = Math.min(k, n - k); for (let i = 1; i <= k; i++) r += Math.log(n - k + i) - Math.log(i); return r; }
+    function binom(n, k, p) {
+      if (k < 0 || k > n) return 0;
+      if (p === 0) return k === 0 ? 1 : 0;
+      if (p === 1) return k === n ? 1 : 0;
+      return Math.exp(lnChoose(n, k) + k * Math.log(p) + (n - k) * Math.log(1 - p));
+    }
+    function gcd(a, b) { a = Math.abs(Math.round(a)); b = Math.abs(Math.round(b)); while (b) [a, b] = [b, a % b]; return a; }
+    function diceDist(n, s) {
+      let dist = [1];
+      for (let i = 0; i < n; i++) {
+        const next = new Array(dist.length + s).fill(0);
+        for (let a = 0; a < dist.length; a++) if (dist[a]) for (let f = 1; f <= s; f++) next[a + f] += dist[a] / s;
+        dist = next;
+      }
+      return dist; // index = total
+    }
+
+    /* ---------------- dates & time zones ---------------- */
+    const DAYMS = 864e5;
+    const startOfDay = (ms) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+    const dayDiff = (a, b) => Math.round((startOfDay(b) - startOfDay(a)) / DAYMS);
+    const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+    const MONTH_RX = '(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)';
+    const monthIdx = (s) => MONTHS.indexOf(s.slice(0, 3));
+    const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+    function mkDate(y, m, d, noYear) {
+      const dt = new Date(y, m, d);
+      if (dt.getMonth() !== ((m % 12) + 12) % 12) fail();
+      return { t: 'd', ms: dt.getTime(), noYear: !!noYear };
+    }
+    // a month/day with no year: this year, or next year if it already passed
+    function upcoming(m, d) {
+      const now = new Date();
+      let v = mkDate(now.getFullYear(), m, d, true);
+      if (v.ms < startOfDay(Date.now())) v = mkDate(now.getFullYear() + 1, m, d, true);
+      return v;
+    }
+    function todayAt(h, m) { const d = new Date(); d.setHours(h, m, 0, 0); return d.getTime(); }
+    function weekday(idx, mode) {
+      const t = new Date(startOfDay(Date.now()));
+      const cur = t.getDay();
+      let diff = (idx - cur + 7) % 7;
+      if (mode === 'next' && diff === 0) diff = 7;
+      if (mode === 'last') diff = diff === 0 ? -7 : diff - 7;
+      t.setDate(t.getDate() + diff);
+      return { t: 'd', ms: t.getTime() };
+    }
+
+    const HOLIDAYS = {
+      christmas: [11, 25], xmas: [11, 25], 'christmas day': [11, 25], 'christmas eve': [11, 24], 'new year': [0, 1], 'new years': [0, 1], "new year's": [0, 1],
+      "new year's day": [0, 1], 'new years day': [0, 1], 'new years eve': [11, 31], "new year's eve": [11, 31], nye: [11, 31], halloween: [9, 31],
+      valentines: [1, 14], "valentine's": [1, 14], 'valentines day': [1, 14], "valentine's day": [1, 14], 'saudi national day': [8, 23], 'national day': [8, 23],
+      'founding day': [1, 22], 'pi day': [2, 14],
+    };
+
+    function dateAdd(dv, dur, s) {
+      if (isPlain(dur)) dur = qty(dur.n, DAY);
+      if (dur.t !== 'n' || !dEq(dur.d, TIME)) fail();
+      const out = new Date(dv.ms);
+      const cal = dur.u && !dur.mixed && ['day', 'week', 'month', 'year', 'decade', 'century', 'fortnight'].includes(dur.u.sym) ? dur.u.sym : null;
+      const k = cal ? valIn(dur, dur.u) * s : 0;
+      if (cal && Number.isInteger(fix(k))) {
+        const kk = Math.round(k);
+        if (cal === 'day') out.setDate(out.getDate() + kk);
+        else if (cal === 'week') out.setDate(out.getDate() + kk * 7);
+        else if (cal === 'fortnight') out.setDate(out.getDate() + kk * 14);
+        else {
+          const months = kk * ({ month: 1, year: 12, decade: 120, century: 1200 })[cal];
+          const day = out.getDate();
+          out.setDate(1);
+          out.setMonth(out.getMonth() + months);
+          out.setDate(Math.min(day, new Date(out.getFullYear(), out.getMonth() + 1, 0).getDate()));
+        }
+        return { t: 'd', ms: out.getTime(), time: dv.time, clock: dv.clock };
+      }
+      const ms = dv.ms + s * dur.n * 1000;
+      return { t: 'd', ms, time: dv.time || dur.n % 86400 !== 0, clock: dv.clock };
+    }
+    function dateDiff(a, b) {
+      if (a.time || b.time) return { t: 'n', n: (a.ms - b.ms) / 1000, d: TIME, u: null, mixed: true };
+      return { t: 'n', n: dayDiff(b.ms, a.ms) * 86400, d: TIME, u: DAY };
+    }
+
+    // time zones: "IANA:name,name,..."
+    const ZONE_SRC = `America/New_York:new york,nyc,ny,boston,miami,washington,dc,washington dc,atlanta,philadelphia,toronto,montreal,ottawa,detroit,orlando,eastern,est,edt,et
+America/Chicago:chicago,dallas,houston,austin,new orleans,minneapolis,san antonio,winnipeg,central,cst,cdt
+America/Denver:denver,salt lake city,calgary,edmonton,mountain,mst,mdt
+America/Phoenix:phoenix,arizona
+America/Los_Angeles:los angeles,la,san francisco,sf,seattle,portland,las vegas,vegas,san diego,vancouver,silicon valley,california,hollywood,pacific,pst,pdt,pt
+America/Anchorage:anchorage,alaska,akst
+Pacific/Honolulu:honolulu,hawaii,hst
+America/Mexico_City:mexico city,mexico,cdmx,guadalajara
+America/Sao_Paulo:sao paulo,são paulo,rio,rio de janeiro,brazil,brasilia
+America/Argentina/Buenos_Aires:buenos aires,argentina
+America/Bogota:bogota,colombia
+America/Lima:lima,peru
+America/Santiago:santiago,chile
+America/Caracas:caracas,venezuela
+America/Halifax:halifax,atlantic
+Europe/London:london,uk,england,britain,great britain,united kingdom,manchester,liverpool,birmingham,edinburgh,scotland,glasgow,wales,cardiff,bst
+Europe/Dublin:dublin,ireland
+Europe/Lisbon:lisbon,portugal,porto
+Europe/Paris:paris,france,lyon,marseille,nice,monaco,cet,cest
+Europe/Berlin:berlin,germany,munich,frankfurt,hamburg,cologne
+Europe/Madrid:madrid,spain,barcelona,valencia,seville
+Europe/Rome:rome,italy,milan,venice,florence,naples
+Europe/Amsterdam:amsterdam,netherlands,holland,rotterdam
+Europe/Brussels:brussels,belgium
+Europe/Zurich:zurich,geneva,switzerland,bern,basel
+Europe/Vienna:vienna,austria
+Europe/Stockholm:stockholm,sweden
+Europe/Oslo:oslo,norway
+Europe/Copenhagen:copenhagen,denmark
+Europe/Helsinki:helsinki,finland
+Europe/Warsaw:warsaw,poland,krakow
+Europe/Prague:prague,czechia,czech republic
+Europe/Budapest:budapest,hungary
+Europe/Athens:athens,greece,eet
+Europe/Bucharest:bucharest,romania
+Europe/Kyiv:kyiv,kiev,ukraine
+Europe/Istanbul:istanbul,turkey,türkiye,ankara
+Europe/Moscow:moscow,russia,st petersburg,msk
+Africa/Cairo:cairo,egypt,alexandria
+Africa/Johannesburg:johannesburg,south africa,cape town,pretoria,durban
+Africa/Lagos:lagos,nigeria,abuja
+Africa/Nairobi:nairobi,kenya,addis ababa,ethiopia
+Africa/Casablanca:casablanca,morocco,rabat,marrakech
+Africa/Algiers:algiers,algeria
+Africa/Tunis:tunis,tunisia
+Africa/Khartoum:khartoum,sudan
+Asia/Riyadh:riyadh,saudi,saudi arabia,ksa,jeddah,jedda,mecca,makkah,medina,madinah,dammam,khobar,al khobar,taif,abha,tabuk,yanbu,ast,arabia,yemen,sanaa
+Asia/Kuwait:kuwait,kuwait city
+Asia/Bahrain:bahrain,manama
+Asia/Qatar:doha,qatar
+Asia/Dubai:dubai,abu dhabi,uae,emirates,sharjah,gst
+Asia/Muscat:muscat,oman
+Asia/Amman:amman,jordan
+Asia/Beirut:beirut,lebanon
+Asia/Damascus:damascus,syria
+Asia/Baghdad:baghdad,iraq,erbil
+Asia/Jerusalem:jerusalem,tel aviv,israel
+Asia/Gaza:gaza,palestine,ramallah
+Asia/Tehran:tehran,iran
+Asia/Kabul:kabul,afghanistan
+Asia/Karachi:karachi,pakistan,islamabad,lahore
+Asia/Kolkata:india,delhi,new delhi,mumbai,bombay,bangalore,bengaluru,kolkata,calcutta,chennai,hyderabad,pune,ist
+Asia/Kathmandu:kathmandu,nepal
+Asia/Colombo:colombo,sri lanka
+Asia/Dhaka:dhaka,bangladesh
+Asia/Bangkok:bangkok,thailand,phuket
+Asia/Ho_Chi_Minh:vietnam,hanoi,ho chi minh,saigon
+Asia/Jakarta:jakarta,indonesia
+Asia/Makassar:bali
+Asia/Singapore:singapore,sgt
+Asia/Kuala_Lumpur:kuala lumpur,malaysia,kl
+Asia/Manila:manila,philippines
+Asia/Hong_Kong:hong kong,hk
+Asia/Shanghai:shanghai,beijing,china,shenzhen,guangzhou,chengdu
+Asia/Taipei:taipei,taiwan
+Asia/Tokyo:tokyo,japan,osaka,kyoto,jst
+Asia/Seoul:seoul,korea,south korea,busan,kst
+Australia/Perth:perth
+Australia/Adelaide:adelaide
+Australia/Brisbane:brisbane,queensland
+Australia/Sydney:sydney,melbourne,canberra,australia,aest,aedt
+Pacific/Auckland:auckland,wellington,new zealand,nz
+UTC:utc,gmt,z,zulu,universal`;
+    const ZONES = new Map();
+    for (const line of ZONE_SRC.split('\n')) {
+      const [id, names] = line.split(':');
+      for (const n of names.split(',')) ZONES.set(n.trim(), id);
+    }
+    const LOCAL_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; } })();
+    const cap = (s) => s.replace(/\b\p{L}/gu, (c) => c.toUpperCase());
+
+    function zone(name) {
+      let s = (name || '').toLowerCase().replace(/\b(?:the|time|zone|city|in)\b/g, '').replace(/\s+/g, ' ').trim();
+      if (!s) return null;
+      if (/^(?:here|local|me|my|my time|home|mine)$/.test(s)) return { id: LOCAL_TZ, label: 'here' };
+      let m = s.match(/^(?:utc|gmt)\s*([+-])\s*(\d{1,2})(?::?(\d{2}))?$/);
+      if (m) {
+        const mins = (m[1] === '-' ? -1 : 1) * (+m[2] * 60 + +(m[3] || 0));
+        return { fixed: mins, label: `UTC${m[1]}${+m[2]}${m[3] && m[3] !== '00' ? ':' + m[3] : ''}` };
+      }
+      const id = ZONES.get(s);
+      if (id) return { id, label: s.length <= 4 ? s.toUpperCase() : cap(s) };
+      try { const f = new Intl.DateTimeFormat('en-US', { timeZone: s }); return { id: f.resolvedOptions().timeZone, label: s }; } catch { return null; }
+    }
+
+    const DTF = new Map();
+    function zoneParts(z, ms) {
+      if (z.fixed != null) {
+        const d = new Date(ms + z.fixed * 60000);
+        return { y: d.getUTCFullYear(), mo: d.getUTCMonth(), d: d.getUTCDate(), h: d.getUTCHours(), mi: d.getUTCMinutes(), s: d.getUTCSeconds() };
+      }
+      let f = DTF.get(z.id);
+      if (!f) {
+        f = new Intl.DateTimeFormat('en-US', { timeZone: z.id, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+        DTF.set(z.id, f);
+      }
+      const p = {};
+      for (const x of f.formatToParts(new Date(ms))) p[x.type] = +x.value;
+      return { y: p.year, mo: p.month - 1, d: p.day, h: p.hour % 24, mi: p.minute, s: p.second };
+    }
+    function zoneOffset(z, ms) {
+      if (z.fixed != null) return z.fixed;
+      const p = zoneParts(z, ms);
+      return Math.round((Date.UTC(p.y, p.mo, p.d, p.h, p.mi, p.s) - Math.floor(ms / 1000) * 1000) / 60000);
+    }
+    function wallToUtc(z, y, mo, d, h, mi) {
+      let t = Date.UTC(y, mo, d, h, mi);
+      for (let i = 0; i < 3; i++) t = Date.UTC(y, mo, d, h, mi) - zoneOffset(z, t) * 60000;
+      return t;
+    }
+    const fmtOff = (m) => `UTC${m < 0 ? '-' : '+'}${Math.floor(Math.abs(m) / 60)}${Math.abs(m) % 60 ? ':' + String(Math.abs(m) % 60).padStart(2, '0') : ''}`;
+    function fmtClock(p) {
+      const h12 = p.h % 12 || 12;
+      return `${h12}:${String(p.mi).padStart(2, '0')} ${p.h < 12 ? 'AM' : 'PM'}`;
+    }
+    const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const wdOf = (p) => WD[new Date(Date.UTC(p.y, p.mo, p.d)).getUTCDay()];
+    function hoursApart(m) {
+      if (m === 0) return 'same time as you';
+      const h = Math.abs(m) / 60;
+      return `${fmtNum(h, 4, 2)} h ${m > 0 ? 'ahead of' : 'behind'} you`;
+    }
+
+    /* ---------------- tokenizer ---------------- */
+    const KW = {
+      to: 'conv', into: 'conv', as: 'conv', in: 'in', of: 'of', per: 'per', and: 'and', '&': 'and',
+    };
+    const OPW = { plus: '+', add: '+', minus: '-', times: '*', multiply: '*', mod: 'mod', modulo: 'mod', percent: '%', pct: '%', choose: 'choose', ncr: 'choose', npr: 'permute', permute: 'permute' };
+    const FNW = {
+      sqrt: 'sqrt', root: 'sqrt', cbrt: 'cbrt', abs: 'abs', round: 'round', rounded: 'round', floor: 'floor', ceil: 'ceil', ceiling: 'ceil',
+      sin: 'sin', cos: 'cos', tan: 'tan', asin: 'asin', acos: 'acos', atan: 'atan', arcsin: 'asin', arccos: 'acos', arctan: 'atan',
+      sinh: 'sinh', cosh: 'cosh', tanh: 'tanh', log: 'log', log10: 'log', ln: 'ln', log2: 'log2', exp: 'exp', fact: 'fact', factorial: 'fact',
+      gcd: 'gcd', gcf: 'gcd', hcf: 'gcd', lcm: 'lcm', max: 'max', maximum: 'max', min: 'min', minimum: 'min', median: 'median',
+      stdev: 'stdev', sd: 'stdev', std: 'stdev', product: 'product', count: 'count', comb: 'ncr', perm: 'npr', range: 'range',
+    };
+    const CONSTS = { pi: Math.PI, 'π': Math.PI, tau: 2 * Math.PI, e: Math.E, phi: (1 + Math.sqrt(5)) / 2, 'φ': (1 + Math.sqrt(5)) / 2 };
+    const MULW = { hundred: 100, hundreds: 100, thousand: 1e3, thousands: 1e3, million: 1e6, millions: 1e6, mil: 1e6, mn: 1e6, billion: 1e9, billions: 1e9, bn: 1e9, trillion: 1e12, lakh: 1e5, lakhs: 1e5, crore: 1e7, crores: 1e7, dozen: 12, dozens: 12, grand: 1e3, score: 20 };
+    const NUMW = { zero: 0, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90, couple: 2 };
+    const PREW = { half: 0.5, double: 2, twice: 2, triple: 3, thrice: 3, quadruple: 4, quarter: 0.25, third: 1 / 3 };
+    const AGGW = { sum: 'sum', total: 'sum', subtotal: 'sum', tally: 'sum', average: 'avg', avg: 'avg', mean: 'avg' };
+    const ANSW = new Set(['ans', 'prev', 'previous', 'above', 'last', 'that', 'it', 'result', 'answer']);
+    const FMTW = { hex: 'hex', hexadecimal: 'hex', binary: 'bin', bin: 'bin', octal: 'oct', oct: 'oct', roman: 'roman', fraction: 'frac', fractions: 'frac', sci: 'sci', scientific: 'sci', decimal: 'dec', decimals: 'dec', number: 'dec' };
+    const ING = {
+      flour: 0.53, 'all purpose flour': 0.53, 'all-purpose flour': 0.53, 'plain flour': 0.53, 'bread flour': 0.55, 'whole wheat flour': 0.51, 'almond flour': 0.41,
+      sugar: 0.845, 'white sugar': 0.845, 'granulated sugar': 0.845, 'caster sugar': 0.85, 'brown sugar': 0.93, 'powdered sugar': 0.56, 'icing sugar': 0.56,
+      butter: 0.911, water: 1, milk: 1.03, cream: 1.0, 'heavy cream': 1.0, 'sour cream': 1.0, oil: 0.92, 'olive oil': 0.91, 'vegetable oil': 0.92, 'coconut oil': 0.92,
+      honey: 1.42, 'maple syrup': 1.32, syrup: 1.33, rice: 0.78, oats: 0.38, 'rolled oats': 0.38, salt: 1.22, 'table salt': 1.22, cocoa: 0.42, 'cocoa powder': 0.42,
+      'chocolate chips': 0.72, 'peanut butter': 1.08, yogurt: 1.03, yoghurt: 1.03, 'baking soda': 0.92, 'baking powder': 0.81, cornstarch: 0.54, 'corn starch': 0.54,
+    };
+
+    // multi-word phrases, indexed by their first word
+    const PHRASES = new Map();
+    function phrase(text, tok) {
+      const first = text.match(/^[^\s/.]+/)[0];
+      if (!PHRASES.has(first)) PHRASES.set(first, []);
+      PHRASES.get(first).push([text, tok]);
+    }
+    for (const [n, u] of UBY) if (/[\s/.]/.test(n)) phrase(n, { t: 'unit', u });
+    for (const [n, c] of CUR_NAMES) if (n.includes(' ')) phrase(n, { t: 'cur', code: c });
+    for (const [n, d] of Object.entries(ING)) if (/[\s-]/.test(n)) phrase(n, { t: 'ing', d, w: n });
+    for (const [n, md] of Object.entries(HOLIDAYS)) if (/[\s']/.test(n)) phrase(n, { t: 'hol', md });
+    [['divided by', { t: 'op', v: '/' }], ['multiplied by', { t: 'op', v: '*' }], ['to the power of', { t: 'op', v: '^' }], ['raised to the power of', { t: 'op', v: '^' }],
+      ['raised to', { t: 'op', v: '^' }], ['to the', { t: 'op', v: '^' }], ['square root of', { t: 'fn', f: 'sqrt' }], ['square root', { t: 'fn', f: 'sqrt' }],
+      ['cube root of', { t: 'fn', f: 'cbrt' }], ['cube root', { t: 'fn', f: 'cbrt' }], ['absolute value of', { t: 'fn', f: 'abs' }], ['natural log of', { t: 'fn', f: 'ln' }],
+      ['natural log', { t: 'fn', f: 'ln' }], ['per cent', { t: 'op', v: '%' }], ['grand total', { t: 'agg', k: 'sum' }], ['golden ratio', { t: 'const', v: CONSTS.phi }],
+      ['roman numerals', { t: 'fmt', f: 'roman' }], ['scientific notation', { t: 'fmt', f: 'sci' }], ['day after tomorrow', { t: 'dw', w: 'dat' }],
+      ['day before yesterday', { t: 'dw', w: 'dby' }],
+    ].forEach(([a, b]) => phrase(a, b));
+    for (const [i, d] of WEEKDAYS.entries()) for (const m of ['next', 'last', 'this', 'coming']) phrase(`${m} ${d}`, { t: 'wd', i, m });
+    for (const ps of PHRASES.values()) ps.sort((a, b) => b[0].length - a[0].length);
+
+    const RX = {
+      hex: /^0x[0-9a-f]+/, bin: /^0b[01]+/,
+      num: /^(?:(?:\d{1,3}(?:,\d{3})+(?!\d)|\d+)(?:\.\d+)?|\.\d+)(?:e[+-]?\d+(?![a-z]))?/,
+      iso: /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?!\d)/,
+      dmy: /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})(?!\d)/,
+      dayMon: new RegExp(`^(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:of\\s+)?${MONTH_RX}\\.?(?:,?\\s*(\\d{4}))?(?![a-z\\d])`),
+      monDay: new RegExp(`^${MONTH_RX}\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?(?![\\d:a-z])`),
+      ampm: /^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)(?![a-z])/,
+      h24: /^(\d{1,2}):(\d{2})(?!\d)/,
+      word: /^[\p{L}_][\p{L}\p{N}_]*(?:'s)?/u,
+      cell: /^([a-z])(\d{1,3})(?::([a-z])(\d{1,3}))?(?![\p{L}\d])/u,
+    };
+    const MDY = (() => { try { return /^en-us$/i.test((typeof navigator !== 'undefined' && navigator.language) || 'en-US'); } catch { return true; } })();
+    const boundary = (s, i) => i >= s.length || !/[\p{L}\p{N}]/u.test(s[i]);
+
+    const dtok = (...a) => { const v = a.length === 1 ? a[0] : mkDate(...a); return { t: 'date', ms: v.ms, noYear: v.noYear }; };
+    function tokenize(src, ctx) {
+      const out = [], s = src, lo = src.toLowerCase(), n = s.length;
+      let i = 0, m;
+      const prev = () => out[out.length - 1];
+      while (i < n) {
+        const c = s[i];
+        if (/\s/.test(c)) { i++; continue; }
+        const r = lo.slice(i);
+        // dates and clock times (they start with digits, so look before plain numbers)
+        if (/\d/.test(c)) {
+          if ((m = r.match(RX.iso))) { out.push(dtok(+m[1], +m[2] - 1, +m[3])); i += m[0].length; continue; }
+          if ((m = r.match(RX.dmy))) {
+            let a = +m[1], b = +m[2];
+            const mdy = a > 12 ? false : b > 12 ? true : MDY;
+            out.push(dtok(mdy ? mkDate(+m[3], a - 1, b) : mkDate(+m[3], b - 1, a)));
+            i += m[0].length; continue;
+          }
+          if ((m = r.match(RX.dayMon))) { out.push(dtok(m[3] ? +m[3] : new Date().getFullYear(), monthIdx(m[2]), +m[1], !m[3])); i += m[0].length; continue; }
+          if ((m = r.match(RX.ampm))) {
+            let h = +m[1] % 12;
+            if (m[3][0] === 'p') h += 12;
+            if (+m[1] > 12 || +(m[2] || 0) > 59) fail();
+            out.push({ t: 'time', h, m: +(m[2] || 0) }); i += m[0].length; continue;
+          }
+          if ((m = r.match(RX.h24)) && +m[1] < 24 && +m[2] < 60) { out.push({ t: 'time', h: +m[1], m: +m[2] }); i += m[0].length; continue; }
+          if ((m = r.match(RX.hex))) { out.push({ t: 'num', v: parseInt(m[0].slice(2), 16) }); i += m[0].length; continue; }
+          if ((m = r.match(RX.bin))) { out.push({ t: 'num', v: parseInt(m[0].slice(2), 2) }); i += m[0].length; continue; }
+        }
+        if ((m = r.match(RX.num))) {
+          let v = parseFloat(m[0].replace(/,/g, ''));
+          let len = m[0].length;
+          if (r[len] === 'k' && boundary(r, len + 1)) { v *= 1000; len++; }
+          out.push({ t: 'num', v, c2: /\.\d\d$/.test(m[0]) }); i += len; continue;
+        }
+        // month-first dates ("dec 25", "december 25th, 2026")
+        if ((m = r.match(RX.monDay))) { out.push(dtok(m[3] ? +m[3] : new Date().getFullYear(), monthIdx(m[1]), +m[2], !m[3])); i += m[0].length; continue; }
+        // currency symbols
+        const sym = CUR_SYM_KEYS.find((k) => r.startsWith(k) && (k.length === 1 || boundary(r, k.length) || /[\d\s.]/.test(r[k.length] || ' ')));
+        if (sym && (sym.length === 1 || !/[\p{L}]/u.test(lo[i - 1] || ''))) { out.push({ t: 'cur', code: CUR_SYM[sym] }); i += sym.length; continue; }
+        // 5'11"
+        if ((c === "'" || c === '"') && prev() && prev().t === 'num') { out.push({ t: 'unit', u: c === "'" ? FT : IN }); i++; continue; }
+        if (c === '°') {
+          const t = r.match(/^°\s*([cfk])(?![\p{L}])/u);
+          if (t) { out.push({ t: 'unit', u: t[1] === 'c' ? CEL : t[1] === 'f' ? FAH : KELVIN }); i += t[0].length; continue; }
+          out.push({ t: 'unit', u: USYM.get('°') }); i++; continue;
+        }
+        if (r.startsWith('**')) { out.push({ t: 'op', v: '^' }); i += 2; continue; }
+        if (r.startsWith('->') || c === '→' || r.startsWith('=>')) { out.push({ t: 'conv' }); i += c === '→' ? 1 : 2; continue; }
+        if ('+-*/^(),%!'.includes(c)) { out.push({ t: 'op', v: c }); i++; continue; }
+        if (c === '²' || c === '³') { out.push({ t: 'post', p: c === '²' ? 2 : 3 }); i++; continue; }
+        if (c === '&') { out.push({ t: 'and' }); i++; continue; }
+        if (c === '@') { out.push({ t: 'unk', w: '@' }); i++; continue; }
+        if (/[\p{L}_]/u.test(c)) {
+          // "3x4"
+          if (c === 'x' && prev() && /^(num|unit|const|var)$|\)/.test(prev().t + (prev().v === ')' ? ')' : '')) && /^\s*[\d.(]/.test(r.slice(1))) { out.push({ t: 'op', v: '*' }); i++; continue; }
+          if (ctx.cells && (m = r.match(RX.cell))) {
+            const ref = m[1].toUpperCase() + m[2];
+            out.push(m[3] ? { t: 'range', a: ref, b: m[3].toUpperCase() + m[4] } : { t: 'cell', ref });
+            i += m[0].length; continue;
+          }
+          // user variables with spaces in the name
+          const mv = ctx.multi && ctx.multi.find((v) => r.startsWith(v) && boundary(r, v.length));
+          if (mv) { out.push({ t: 'var', name: mv }); i += mv.length; continue; }
+          const wm = r.match(RX.word);
+          const first = wm[0].replace(/'s$/, '');
+          const ph = PHRASES.get(first) || PHRASES.get(wm[0]);
+          const hit = ph && ph.find(([p]) => r.startsWith(p) && boundary(r, p.length));
+          if (hit && !(ctx.vars && ctx.vars.has(first))) { out.push(hit[1].code === '@LOCAL' ? { t: 'cur', code: localCur(), w: hit[0] } : { ...hit[1], w: hit[0] }); i += hit[0].length; continue; }
+          const orig = s.substr(i, wm[0].length);
+          out.push(classify(wm[0], orig, ctx, r.slice(wm[0].length)));
+          i += wm[0].length; continue;
+        }
+        i++; // anything else (emoji, stray punctuation) is ignored
+      }
+      return post(out);
+    }
+
+    function classify(w, orig, ctx, rest) {
+      if (ctx.vars && ctx.vars.has(w)) return { t: 'var', name: w };
+      if (KW[w]) return { t: KW[w], w };
+      if (OPW[w]) return { t: 'op', v: OPW[w], w };
+      if (w === 'x' || w === '×') return { t: 'x' };
+      if (w === 'squared' || w === 'cubed') return { t: 'post', p: w === 'squared' ? 2 : 3 };
+      if (FNW[w] && !((w === 'min' || w === 'max' || w === 'range' || w === 'count') && !/^\s*(\(|of\b)/.test(rest))) return { t: 'fn', f: FNW[w] };
+      if (w in CONSTS) return { t: 'const', v: CONSTS[w], pi: w !== 'e' && w !== 'phi' && w !== 'φ' };
+      if (MULW[w]) return { t: 'mulw', v: MULW[w] };
+      if (w in NUMW) return { t: 'num', v: NUMW[w], word: true };
+      if (PREW[w]) return { t: 'pre', v: PREW[w] };
+      if (AGGW[w]) return { t: 'agg', k: AGGW[w] };
+      if (ANSW.has(w)) return { t: 'ans', w };
+      if (w === 'today' || w === 'now' || w === 'tomorrow' || w === 'yesterday' || w === 'tonight') return { t: 'dw', w };
+      if (WEEKDAYS.includes(w)) return { t: 'wd', i: WEEKDAYS.indexOf(w), m: 'this' };
+      if (HOLIDAYS[w]) return { t: 'hol', md: HOLIDAYS[w] };
+      if (w === 'a' || w === 'an') return { t: 'a' };
+      if (FMTW[w]) return { t: 'fmt', f: FMTW[w] };
+      if (w === 'sq' || w === 'square' || w === 'cubic' || w === 'cu') return { t: 'sqp', p: w[1] === 'q' ? 2 : 3 };
+      if (w === 'pound' || w === 'pounds') return { t: 'unit', u: LB, alt: GBP_ALT() };
+      const code = /^[A-Z]{3,4}$/.test(orig) ? findCur(w, orig) : null;
+      if (code) return { t: 'cur', code };
+      const u = findUnit(w, orig);
+      if (u) return { t: 'unit', u };
+      const cur = findCur(w, orig);
+      if (cur) return { t: 'cur', code: cur };
+      if (ING[w]) return { t: 'ing', d: ING[w], w };
+      return { t: 'unk', w };
+    }
+
+    const isTarget = (t) => t && (t.t === 'unit' || t.t === 'cur' || t.t === 'fmt' || t.t === 'sqp' || (t.t === 'op' && t.v === '%'));
+    function post(out) {
+      for (let k = 0; k < out.length; k++) {
+        const t = out[k], p = out[k - 1], nx = out[k + 1];
+        if (t.t === 'in') {
+          // "11 in" is inches, "5 km in miles" is a conversion
+          if ((p && p.t === 'num' && !isTarget(nx)) || (p && p.t === 'and' && out[k - 2] && out[k - 2].t === 'unit' && !nx)) out[k] = { t: 'unit', u: IN };
+          else out[k] = { t: 'conv', w: 'in' };
+        } else if (t.t === 'x') {
+          out[k] = p && /^(num|unit|const|var|cell|ans)$/.test(p.t) || (p && p.t === 'op' && p.v === ')') ? { t: 'op', v: '*' } : { t: 'unk', w: 'x' };
+        } else if (t.t === 'a') {
+          const afterValue = p && (/^(num|unit|cur|var|ans|cell)$/.test(p.t) || (p.t === 'op' && p.v === ')'));
+          if (afterValue && nx && (nx.t === 'unit' || nx.t === 'sqp')) out[k] = { t: 'per' };
+          else if (nx && (nx.t === 'unit' || nx.t === 'mulw' || nx.t === 'cur' || nx.t === 'sqp')) out[k] = { t: 'num', v: 1 };
+        } else if (t.t === 'unk' && (t.w === 'line' || t.w === 'ln') && nx && nx.t === 'num') {
+          out[k] = { t: 'lineref', n: nx.v };
+          out.splice(k + 1, 1);
+        } else if (t.t === 'num' && t.word && p && p.t === 'num' && p.word && p.v >= 20 && p.v % 10 === 0 && t.v < 10) {
+          p.v += t.v; out.splice(k--, 1);
+        }
+      }
+      const kept = out.filter((t) => t.t !== 'unk' && t.t !== 'a');
+      // "is it raining": a lone it/that among plain words is just English
+      if (kept.length === 1 && kept[0].t === 'ans' && /^(it|that|result|answer|last|above)$/.test(kept[0].w || '') && out.some((t) => t.t === 'unk')) return [];
+      return kept;
+    }
+
+    /* ---------------- parser / evaluator ---------------- */
+    function parse(toks, ctx) {
+      let i = 0, sawPi = false;
+      const pk = (k = 0) => toks[i + k];
+      const isOp = (t, v) => t && t.t === 'op' && t.v === v;
+      const startsValue = (t) => t && (/^(num|const|var|fn|ans|cell|date|time|dw|wd|hol|cur)$/.test(t.t) || isOp(t, '('));
+
+      function line() {
+        let v = expr();
+        for (;;) {
+          const t = pk();
+          if (!t) break;
+          // "60k a year per month"
+          if (t.t === 'per' && v.t === 'n' && v.d[2] < 0) { i++; v = perTarget(v, unitExpr().u); continue; }
+          if (t.t === 'conv') {
+            i++;
+            if (pk() && (pk().t === 'per' || (pk().t === 'num' && pk().v === 1 && pk(1) && pk(1).t === 'unit'))) { i++; v = perTarget(v, unitExpr().u); continue; }
+            const tg = target();
+            if (tg) { v = convertTo(v, tg); continue; } // "5 ft to cm to meters" just converts again
+            const w = expr();
+            if (v.t === 'd' && w.t === 'd') {
+              v = dateDiff(w, v);
+              if (w.clock && v.n < 0) v.n += 86400; // overnight: 10pm to 6am
+              continue;
+            }
+            fail();
+          }
+          // keep going after a conversion: "18 years to days + 18 weeks" stays in days
+          if (v.explicit && t.t === 'op' && '+-*/'.includes(t.v)) {
+            i++;
+            const w = t.v === '+' || t.v === '-' ? mul() : unary();
+            let r = t.v === '+' ? A.add(v, w) : t.v === '-' ? A.sub(v, w) : t.v === '*' ? A.mul(v, w) : A.div(v, w);
+            if (r.t === 'n' && v.u && dEq(r.d, v.u.dim)) r = { ...r, u: v.u, cmp: v.cmp, mixed: false, explicit: true };
+            v = r;
+            continue;
+          }
+          break;
+        }
+        if (i < toks.length) fail();
+        return v;
+      }
+
+      // what comes after "to" / "in" / "as": a unit, a currency, "ft and in", "%", "hex" ...
+      function target() {
+        const t = pk();
+        if (!t) return fail();
+        if (t.t === 'fmt') { i++; return { kind: 'fmt', f: t.f }; }
+        if (isOp(t, '%')) { i++; return { kind: 'pct' }; }
+        if (t.t === 'unit' || t.t === 'cur' || t.t === 'sqp') {
+          const a = unitExpr();
+          const k = pk() && pk().t === 'and' ? 1 : 0;
+          let b = pk(k);
+          // "ft in" at the very end reads as inches
+          if (b && b.t === 'conv' && b.w === 'in' && !pk(k + 1)) b = toks[i + k] = { t: 'unit', u: IN };
+          if (b && b.t === 'unit' && dEq(b.u.dim, a.u.dim) && !a.u.off) {
+            i += k;
+            const c = unitExpr();
+            return { kind: 'cmp', parts: [a.u, c.u] };
+          }
+          return { kind: 'unit', u: a.u, alt: a.alt };
+        }
+        return null;
+      }
+
+      function expr(noAnd) {
+        let a = mul();
+        for (;;) {
+          const t = pk();
+          if (isOp(t, '+') || (!noAnd && t && t.t === 'and')) { i++; a = A.add(a, mul()); }
+          else if (isOp(t, '-')) { i++; a = A.sub(a, mul()); }
+          else return a;
+        }
+      }
+
+      function mul() {
+        let a = unary();
+        for (;;) {
+          const t = pk();
+          if (isOp(t, '*')) { i++; a = A.mul(a, unary()); }
+          else if (isOp(t, '/')) { i++; a = A.div(a, unary()); }
+          else if (isOp(t, 'mod')) { i++; a = A.mod(a, unary()); }
+          else if (isOp(t, 'choose') || isOp(t, 'permute')) {
+            i++;
+            const b = unary();
+            if (!isPlain(a) || !isPlain(b)) fail();
+            a = num(t.v === 'choose' ? choose(a.n, b.n) : choose(a.n, b.n) * factorial(b.n));
+          }
+          else if (t && t.t === 'per' && !(a.t === 'n' && a.d[2] < 0)) { i++; a = A.div(a, pk() && (pk().t === 'unit' || pk().t === 'sqp') ? qty(1, unitAtom().u) : unary()); }
+          else if (t && t.t === 'of') { i++; a = A.of(a, unary()); }
+          // a rate followed by an amount multiplies: "25 an hour 50 hours a week"
+          else if (t && t.t === 'num' && a.t === 'n' && a.d[2] < 0 && pk(1) && (pk(1).t === 'unit' || pk(1).t === 'sqp')) a = A.mul(a, unary());
+          else if (startsValue(t) && !/^(num|date|time|cur|dw|wd|hol)$/.test(t.t) && a.t !== 'd') a = A.mul(a, unary());
+          else return a;
+        }
+      }
+
+      function unary() {
+        const t = pk();
+        if (isOp(t, '-')) { i++; return A.neg(unary()); }
+        if (isOp(t, '+')) { i++; return unary(); }
+        if (t && t.t === 'pre') { i++; if (pk() && pk().t === 'of') i++; return A.mul(num(t.v), unary()); }
+        return power();
+      }
+
+      function power() {
+        const b = postfix();
+        if (isOp(pk(), '^')) { i++; return A.pow(b, unary()); }
+        return b;
+      }
+
+      function postfix() {
+        let v = primary();
+        for (;;) {
+          const t = pk();
+          if (!t) break;
+          if (isOp(t, '!')) { i++; v = A.fact(v); continue; }
+          if (isOp(t, '%')) { i++; v = A.pct(v); continue; }
+          if (t.t === 'post') { i++; v = A.pow(v, num(t.p)); continue; }
+          if (t.t === 'mulw') { i++; v = A.mul(v, num(t.v)); continue; }
+          if (isPlain(v) && (t.t === 'unit' || t.t === 'cur' || t.t === 'sqp')) { v = attach(v); continue; }
+          break;
+        }
+        return v;
+      }
+
+      // "5 ft 11 in", "2 cups of flour", "1 h 45 min"
+      function attach(v) {
+        const uu = unitExpr();
+        let q = qty(v.n, uu.u);
+        if (uu.alt) q.alt = uu.alt;
+        if (pk() && pk().t === 'of' && pk(1) && pk(1).t === 'ing') { q.dens = pk(1).d; q.ing = pk(1).w; i += 2; }
+        else if (pk() && pk().t === 'ing') { q.dens = pk().d; q.ing = pk().w; i++; }
+        for (;;) {
+          const k = pk() && pk().t === 'and' ? 1 : 0;
+          const a = pk(k), b = pk(k + 1);
+          if (a && a.t === 'num' && b && b.t === 'unit' && dEq(b.u.dim, q.d) && !b.u.off && !(pk(k + 2) && pk(k + 2).t === 'op' && pk(k + 2).v === '/')) {
+            i += k + 1;
+            const u2 = unitExpr();
+            const dens = q.dens;
+            q = A.add(q, qty(a.v, u2.u));
+            if (dens) q.dens = dens;
+            continue;
+          }
+          break;
+        }
+        return q;
+      }
+
+      function unitAtom() {
+        let p = 1, t = pk();
+        if (t && t.t === 'sqp') { p = t.p; i++; t = pk(); }
+        if (t && t.t === 'unit') {
+          i++;
+          const n = pk();
+          if (n && n.t === 'post') { p *= n.p; i++; }
+          else if (isOp(n, '^') && pk(1) && pk(1).t === 'num' && [2, 3].includes(pk(1).v)) { p *= pk(1).v; i += 2; }
+          return { u: powUnit(t.u, p), alt: p === 1 ? t.alt : null };
+        }
+        if (t && t.t === 'cur' && p === 1) { i++; return { u: curUnit(t.code) }; }
+        return fail();
+      }
+
+      function unitExpr() {
+        let a = unitAtom();
+        for (;;) {
+          const t = pk(), n = pk(1);
+          if ((isOp(t, '/') || (t && t.t === 'per')) && n && (n.t === 'unit' || n.t === 'sqp' || n.t === 'cur')) {
+            i++;
+            const b = unitAtom();
+            a = { u: comboUnit(a.u, b.u, -1) };
+            continue;
+          }
+          break;
+        }
+        return a;
+      }
+
+      function primary() {
+        const t = pk();
+        if (!t) fail();
+        switch (t.t) {
+          case 'num': i++; return t.c2 ? { ...num(t.v), c2: true } : num(t.v);
+          case 'op':
+            if (t.v === '(') { i++; const v = expr(); if (isOp(pk(), ')')) i++; return v; }
+            return fail();
+          case 'const': i++; if (t.pi) sawPi = true; return num(t.v);
+          case 'var': i++; return ctx.vars.get(t.name);
+          case 'ans': i++; return ctx.prev || fail();
+          case 'lineref': i++; return (ctx.lineVal && ctx.lineVal(t.n)) || fail();
+          case 'cell': i++; return ctx.cell ? ctx.cell(t.ref) : fail();
+          case 'date': i++; return { t: 'd', ms: t.ms, noYear: t.noYear };
+          case 'time': i++; return { t: 'd', ms: todayAt(t.h, t.m), time: true, clock: true };
+          case 'dw': {
+            i++;
+            const now = Date.now(), base = startOfDay(now);
+            if (t.w === 'now') return { t: 'd', ms: now, time: true };
+            if (t.w === 'tonight') return { t: 'd', ms: todayAt(21, 0), time: true };
+            const off = { today: 0, tomorrow: 1, yesterday: -1, dat: 2, dby: -2 }[t.w];
+            const d = new Date(base); d.setDate(d.getDate() + off);
+            return { t: 'd', ms: d.getTime() };
+          }
+          case 'wd': i++; return weekday(t.i, t.m === 'coming' ? 'next' : t.m);
+          case 'hol': i++; return upcoming(t.md[0], t.md[1]);
+          case 'cur': {
+            i++;
+            const inner = startsValue(pk()) && pk().t !== 'cur' ? postfix() : num(1);
+            if (!isPlain(inner)) fail();
+            return qty(inner.n, curUnit(t.code));
+          }
+          case 'unit': case 'sqp': {
+            const uu = unitExpr();
+            const q = qty(1, uu.u);
+            if (uu.alt) q.alt = uu.alt;
+            return q;
+          }
+          case 'agg': {
+            i++;
+            if ((pk() && pk().t === 'of') || isOp(pk(), '(')) return listFn(t.k === 'avg' ? 'avg' : 'sum', args());
+            ctx.usedAgg = true;
+            return ctx.agg ? ctx.agg(t.k) : fail();
+          }
+          case 'fn': i++; return call(t.f);
+        }
+        return fail();
+      }
+
+      // (a, b, c) or "of a, b and c"; cell ranges expand in place
+      function args() {
+        const list = [];
+        const paren = isOp(pk(), '(');
+        i++;
+        for (;;) {
+          const t = pk();
+          if (!t || (paren && isOp(t, ')'))) break;
+          if (t.t === 'range') { i++; list.push(...(ctx.range ? ctx.range(t.a, t.b) : fail())); }
+          else list.push(expr(true));
+          if (isOp(pk(), ',') || (pk() && pk().t === 'and')) { i++; continue; }
+          break;
+        }
+        if (paren) { if (isOp(pk(), ')')) i++; }
+        return list;
+      }
+
+      function call(f) {
+        let list;
+        const save = sawPi;
+        sawPi = false;
+        if (isOp(pk(), '(') || (['max', 'min', 'median', 'stdev', 'product', 'count', 'gcd', 'lcm', 'range'].includes(f) && pk() && pk().t === 'of')) list = args();
+        else { if (pk() && pk().t === 'of') i++; list = [unary()]; }
+        const piHere = sawPi;
+        sawPi = save || piHere;
+        const x = list[0];
+        if (!x) fail();
+        const plainN = () => (isPlain(x) ? x.n : fail());
+        const trig = (fn) => {
+          let r;
+          if (x.t === 'n' && dEq(x.d, ANG)) r = x.n;
+          else r = piHere ? plainN() : (plainN() * Math.PI) / 180;
+          const out = fn(r);
+          return num(Math.abs(out) < 1e-12 ? 0 : Math.abs(out) > 1e15 ? Infinity : out);
+        };
+        const inv = (fn) => qty((fn(plainN()) * 180) / Math.PI, USYM.get('°'));
+        switch (f) {
+          case 'sqrt': return A.pow(x, num(0.5));
+          case 'cbrt': return x.t === 'n' && dZero(x.d) ? num(Math.cbrt(x.n)) : A.pow(x, num(1 / 3));
+          case 'abs': return x.t === 'p' ? { t: 'p', n: Math.abs(x.n) } : { ...x, n: Math.abs(x.n) };
+          case 'round': case 'floor': case 'ceil': {
+            const places = list[1] && isPlain(list[1]) ? list[1].n : 0;
+            const k = 10 ** places;
+            const fn = Math[f];
+            if (x.t === 'p') return { t: 'p', n: fn(x.n * k) / k };
+            if (x.t !== 'n') fail();
+            if (dZero(x.d)) return num(fn(fix(x.n * k)) / k);
+            const u = x.u && !x.mixed ? x.u : fail();
+            return qty(fn(fix(valIn(x, u) * k)) / k, u);
+          }
+          case 'sin': return trig(Math.sin);
+          case 'cos': return trig(Math.cos);
+          case 'tan': return trig(Math.tan);
+          case 'sinh': return num(Math.sinh(plainN()));
+          case 'cosh': return num(Math.cosh(plainN()));
+          case 'tanh': return num(Math.tanh(plainN()));
+          case 'asin': return inv(Math.asin);
+          case 'acos': return inv(Math.acos);
+          case 'atan': return inv(Math.atan);
+          case 'log': return list[1] ? num(Math.log(plainN()) / Math.log(list[1].n)) : num(Math.log10(plainN()));
+          case 'ln': return num(Math.log(plainN()));
+          case 'log2': return num(Math.log2(plainN()));
+          case 'exp': return num(Math.exp(plainN()));
+          case 'fact': return A.fact(x);
+          case 'ncr': return num(choose(plainN(), list[1].n));
+          case 'npr': return num(choose(plainN(), list[1].n) * factorial(list[1].n));
+          case 'gcd': return num(list.reduce((g, v) => gcd(g, v.n), 0));
+          case 'lcm': return num(list.reduce((l, v) => (l * v.n) / gcd(l, v.n), 1));
+          default: return listFn(f, list);
+        }
+      }
+
+      return line();
+    }
+
+    function listFn(f, list) {
+      const vals = list.filter((v) => v && (v.t === 'n' || v.t === 'p'));
+      if (!vals.length) fail();
+      const sum = () => vals.reduce((a, b) => A.add(a, b));
+      const sorted = () => [...vals].sort((a, b) => a.n - b.n);
+      switch (f) {
+        case 'sum': return sum();
+        case 'avg': return scale(sum(), 1 / vals.length);
+        case 'count': return num(vals.length);
+        case 'max': return sorted()[vals.length - 1];
+        case 'min': return sorted()[0];
+        case 'range': { const s = sorted(); return A.sub(s[s.length - 1], s[0]); }
+        case 'product': return vals.reduce((a, b) => A.mul(a, b));
+        case 'median': {
+          const s = sorted(), h = Math.floor(s.length / 2);
+          return s.length % 2 ? s[h] : scale(A.add(s[h - 1], s[h]), 0.5);
+        }
+        case 'stdev': {
+          if (vals.length < 2) fail();
+          const mean = vals.reduce((a, v) => a + v.n, 0) / vals.length;
+          const sd = Math.sqrt(vals.reduce((a, v) => a + (v.n - mean) ** 2, 0) / (vals.length - 1));
+          return { ...vals[0], n: sd, u: vals[0].u && vals[0].u.off ? null : vals[0].u };
+        }
+      }
+      return fail();
+    }
+
+    // sum / average of the lines above
+    function aggregate(k, items) {
+      let total = null, count = 0;
+      for (const v of items) {
+        if (!v || v.t !== 'n') continue;
+        try { total = total ? A.add(total, v) : v; count++; } catch { /* skip things that don't add up */ }
+      }
+      if (!total) fail();
+      return k === 'avg' ? scale(total, 1 / count) : total;
+    }
+
+    /* ---------------- conversion ---------------- */
+    // a rate shown per some other unit: $15/h -> per year, 60 km/h -> per minute
+    function perTarget(v, u) {
+      if (v.t !== 'n' || !(v.d[2] < 0) || !dEq(u.dim, TIME)) fail();
+      const restDim = dAdd(v.d, u.dim);
+      if (dZero(restDim)) return { ...v, u: comboUnit(BLANK, u, -1), mixed: false, explicit: true };
+      const top = v.u && v.u.top && dEq(v.u.top.dim, restDim) ? v.u.top : isMoneyDim(restDim) ? curUnit('USD') : pickUnit({ t: 'n', n: v.n * uf(u), d: restDim, u: null });
+      if (!top) fail();
+      return { ...v, u: comboUnit(top, u, -1), mixed: false, explicit: true, fromPer: v.u && v.u.per };
+    }
+    const isMoneyDim = (d) => dEq(d, MONEY);
+    function convertTo(v, tg) {
+      if (tg.kind === 'fmt') { if (!isPlain(v) && tg.f !== 'sci') fail(); return { ...v, fmt: tg.f }; }
+      if (tg.kind === 'pct') { if (v.t === 'p') return v; if (isPlain(v)) return { t: 'p', n: v.n * 100 }; return fail(); }
+      if (v.t !== 'n' || dZero(v.d)) fail();
+      const tu = tg.kind === 'cmp' ? tg.parts[0] : tg.u;
+      let x = v, note = null;
+      if (!dEq(x.d, tu.dim)) {
+        if (tg.alt && dEq(tg.alt.dim, x.d)) return convertTo(v, { kind: 'unit', u: tg.alt });
+        if (x.alt && dEq(x.alt.dim, tu.dim)) x = qty(valIn(x, x.u), x.alt);
+        else if (dEq(x.d, VOL) && dEq(tu.dim, MASS)) { x = { ...x, n: x.n * (x.dens || 1) * 1000, d: MASS, u: null }; note = x.dens ? `as ${x.ing}` : 'assuming water'; }
+        else if (dEq(x.d, MASS) && dEq(tu.dim, VOL)) { x = { ...x, n: x.n / ((x.dens || 1) * 1000), d: VOL, u: null }; note = x.dens ? `as ${x.ing}` : 'assuming water'; }
+        else if (!dZero(x.d) && dEq(x.d, dMul(tu.dim, -1))) x = { ...x, n: 1 / x.n, d: tu.dim, u: null };
+        else fail();
+      }
+      return { ...x, from: v.u, u: tu, cmp: tg.kind === 'cmp' ? tg.parts : null, mixed: false, explicit: true, note: note || x.note };
+    }
+
+    /* ---------------- display ---------------- */
+    const CYC = {
+      [dKey(LEN)]: ['m', 'cm', 'mm', 'km', 'in', 'ft', 'yd', 'mi', 'ft+in'],
+      [dKey(AREA)]: ['m²', 'cm²', 'km²', 'ha', 'ft²', 'in²', 'yd²', 'acre', 'mi²'],
+      [dKey(VOL)]: ['L', 'mL', 'm³', 'cup', 'fl oz', 'tbsp', 'tsp', 'pt', 'qt', 'gal'],
+      [dKey(MASS)]: ['kg', 'g', 'mg', 't', 'lb', 'oz', 'st', 'lb+oz'],
+      [dKey(TIME)]: ['s', 'min', 'h', 'day', 'week', 'month', 'year', 'h+min'],
+      [dKey(TEMP)]: ['°C', '°F', 'K'],
+      [dKey(DATA)]: ['B', 'kB', 'MB', 'GB', 'TB', 'KiB', 'MiB', 'GiB', 'bit'],
+      [dKey(SPEED)]: ['km/h', 'm/s', 'mph', 'kn', 'ft/s'],
+      [dKey(ENERGY)]: ['J', 'kJ', 'cal', 'kcal', 'Wh', 'kWh', 'BTU'],
+      [dKey(POWER)]: ['W', 'kW', 'hp'],
+      [dKey(PRESS)]: ['kPa', 'Pa', 'bar', 'atm', 'psi', 'mmHg'],
+      [dKey(ANG)]: ['°', 'rad', 'turn', 'grad'],
+      [dKey(FREQ)]: ['Hz', 'kHz', 'MHz', 'GHz', 'rpm'],
+      [dKey(FUEL)]: ['mpg', 'km/L', 'L/100km', 'mpg (UK)'],
+      [dKey(FUELINV)]: ['L/100km', 'mpg', 'km/L', 'mpg (UK)'],
+      [dKey(RATE)]: ['Mbps', 'kbps', 'Gbps'],
+    };
+    const BREAK = {
+      [dKey(LEN)]: ['m', 'ft', 'in', 'yd'], [dKey(MASS)]: ['kg', 'lb', 'oz', 'g'], [dKey(VOL)]: ['L', 'cup', 'fl oz', 'gal'],
+      [dKey(AREA)]: ['m²', 'ft²', 'ha', 'acre'], [dKey(DATA)]: ['MB', 'GB', 'MiB'], [dKey(ENERGY)]: ['kJ', 'kcal', 'kWh'],
+    };
+    const POP_CUR = ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'JPY', 'CNY', 'INR', 'CAD', 'AUD', 'TRY', 'EGP', 'BTC'];
+
+    function pickUnit(v) {
+      if (v.u && !v.mixed && dEq(v.u.dim, v.d)) {
+        // a made-up combo like GB/Mbps loses to a real unit for the same thing (seconds)
+        const madeUp = v.u.k && !v.explicit && !(v.u.top && (v.u.top.cur || v.u.top === BLANK)) && UNITS.some((u) => !u.rare && dEq(u.dim, v.d));
+        if (!madeUp) return v.u;
+      }
+      const cands = UNITS.filter((u) => dEq(u.dim, v.d) && !u.rare);
+      if (!cands.length) return null;
+      const sys = v.sys || sysOf(v);
+      let pool = cands.filter((u) => u.sys === sys);
+      if (!pool.length) pool = cands;
+      pool.sort((a, b) => a.f - b.f);
+      let best = pool[0];
+      for (const u of pool) if (Math.abs(valIn(v, u)) >= 1) best = u;
+      return best;
+    }
+
+    const label = (u, x) => (u.sym === '°' ? '°' : ' ' + (u.pl && Math.abs(fix(x)) !== 1 ? (u.sym === 'century' ? 'centuries' : u.sym + 's') : u.sym));
+    const fmtU = (x, u) => (u.cur ? fmtMoney(x, u.cur) : fmtNum(x, 6, 2) + label(u, x));
+
+    function compound(v, a, b) {
+      let x = valIn(v, a);
+      const sign = x < 0 ? '-' : '';
+      x = Math.abs(x);
+      let big = Math.floor(fix(x));
+      let small = fix(((x - big) * uf(a)) / uf(b));
+      const ratio = uf(a) / uf(b);
+      small = Math.round(small * 10) / 10;
+      if (small >= ratio - 0.05) { big++; small = 0; }
+      const parts = [];
+      if (big) parts.push(fmtNum(big, 15, 0) + label(a, big));
+      if (small || !big) parts.push(fmtNum(small, 4, 1) + label(b, small));
+      return sign + parts.join(' ');
+    }
+
+    const TIME_PARTS = [['year', 31556952], ['day', 86400], ['h', 3600], ['min', 60], ['s', 1]];
+    function compoundTime(sec, fromSym) {
+      const sign = sec < 0 ? '-' : '';
+      let rest = Math.abs(fix(sec));
+      let parts = TIME_PARTS;
+      if (fromSym) { const k = parts.findIndex(([s]) => s === fromSym); if (k >= 0) parts = parts.slice(k); }
+      const out = [];
+      for (let k = 0; k < parts.length && out.length < 3; k++) {
+        const [sym, f] = parts[k];
+        const last = k === parts.length - 1 || out.length === 2;
+        if (rest >= f || (last && out.length === 0)) {
+          let c = last ? fix(rest / f) : Math.floor(fix(rest / f));
+          if (last) c = out.length ? Math.round(c) : Math.round(c * 100) / 100;
+          if (c) out.push(fmtNum(c, 6, 2) + label(USYM.get(sym), c));
+          rest = fix(rest - c * f);
+          if (rest <= 1e-9) break;
+        } else if (out.length) break;
+      }
+      return sign + (out.join(' ') || '0 s');
+    }
+
+    function toRoman(n) {
+      if (!Number.isInteger(n) || n < 1 || n > 3999) fail();
+      const map = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+      let s = '';
+      for (const [v, r] of map) while (n >= v) { s += r; n -= v; }
+      return s;
+    }
+    function toFrac(x) {
+      const sign = x < 0 ? '-' : '';
+      x = Math.abs(x);
+      let h1 = 1, h0 = 0, k1 = 0, k0 = 1, b = x;
+      for (let i = 0; i < 20; i++) {
+        const a = Math.floor(b);
+        [h1, h0] = [a * h1 + h0, h1];
+        [k1, k0] = [a * k1 + k0, k1];
+        if (k1 > 10000 || Math.abs(x - h1 / k1) < 1e-9) break;
+        b = 1 / (b - a);
+      }
+      if (k1 === 1) return sign + h1;
+      const whole = Math.floor(h1 / k1);
+      return { main: `${sign}${h1}/${k1}`, sub: whole ? `${sign}${whole} ${h1 - whole * k1}/${k1}` : null };
+    }
+
+    function showFmt(v) {
+      const n = v.n;
+      const int = () => (Number.isInteger(fix(n)) ? Math.round(n) : fail());
+      switch (v.fmt) {
+        case 'hex': { const k = int(); return (k < 0 ? '-' : '') + '0x' + Math.abs(k).toString(16).toUpperCase(); }
+        case 'bin': { const k = int(); return (k < 0 ? '-' : '') + '0b' + Math.abs(k).toString(2); }
+        case 'oct': { const k = int(); return (k < 0 ? '-' : '') + '0o' + Math.abs(k).toString(8); }
+        case 'roman': return toRoman(int());
+        case 'sci': return n.toExponential(4).replace(/\.?0+e/, 'e').replace(/e\+?/, ' × 10^');
+        case 'frac': return toFrac(n);
+        default: return fmtNum(n, 15, 10);
+      }
+    }
+
+    function showDate(v) {
+      const d = new Date(v.ms);
+      const dateS = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      const timeS = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const days = dayDiff(Date.now(), v.ms);
+      let rel = days === 0 ? 'today' : days === 1 ? 'tomorrow' : days === -1 ? 'yesterday' : days > 0 ? `in ${plural(days, 'day')}` : `${plural(-days, 'day')} ago`;
+      if (Math.abs(days) >= 14) rel += ` · ${weeksDays(Math.abs(days))}`;
+      if (v.clock && Math.abs(days) <= 1) return { main: timeS, sub: rel, copy: timeS };
+      const main = v.time ? `${dateS}, ${timeS}` : dateS;
+      return { main, sub: rel, copy: main };
+    }
+    const weeksDays = (d) => { const w = Math.floor(d / 7), r = d % 7; return `${plural(w, 'week')}${r ? ' ' + plural(r, 'day') : ''}`; };
+
+    function show(v, tg) {
+      if (!v) return null;
+      if (v.t === 'p') { const t = fmtNum(v.n, 10, 4) + '%'; return { main: t, copy: t }; }
+      if (v.t === 'd') return showDate(v);
+      if (v.t !== 'n') return null;
+      if (tg) { try { v = convertTo(v, tg); } catch { /* keep as is */ } }
+      if (dZero(v.d)) {
+        if (v.fmt) {
+          const f = showFmt(v);
+          return typeof f === 'object' ? { main: f.main, sub: f.sub, copy: f.main } : { main: String(f), copy: String(f) };
+        }
+        const t = v.c2 && !Number.isInteger(fix(v.n)) && Math.abs(v.n) < 1e15 ? fmtCash(v.n) : fmtNum(v.n);
+        return { main: t, sub: bigWords(v.n), copy: t };
+      }
+      if (isMoney(v)) {
+        const code = curOf(v.u) || 'USD';
+        const t = fmtMoney(v.n * RATES[code], code) + (code === 'XAU' && Math.abs(v.n * RATES[code] - 1) < 1e-9 ? '' : '');
+        const subs = [bigWords(v.n * RATES[code])];
+        if (v.explicit && v.from && v.from.cur && v.from.cur !== code) subs.push(`1 ${v.from.cur} = ${fmtNum(RATES[code] / RATES[v.from.cur], 6, 4)} ${code}`);
+        // foreign money also says what it is in your own currency
+        else if (!v.explicit && code !== localCur() && RATES[localCur()]) subs.push('≈ ' + fmtMoney(v.n * RATES[localCur()], localCur()));
+        return { main: t, sub: subs.filter(Boolean).join(' · ') || null, copy: t };
+      }
+      // money per something ("$15/h")
+      if (v.u && v.u.top && v.u.top.cur && v.u.per && dEq(v.u.dim, v.d)) {
+        const t = fmtMoney(valIn(v, v.u), v.u.top.cur) + '/' + v.u.per.sym;
+        // hourly pay shown per week/month/year: also give the 40-hour-week figure
+        const weeks = { week: 1, month: 52 / 12, year: 52 }[v.u.per.sym];
+        const sub = v.fromPer && v.fromPer.sym === 'h' && weeks ? `working 40 h a week: ${fmtMoney(v.n * 3600 * RATES[v.u.top.cur] * 40 * weeks, v.u.top.cur)}/${v.u.per.sym}` : null;
+        return { main: t, sub, copy: t };
+      }
+      if (v.cmp) { const t = compound(v, v.cmp[0], v.cmp[1]); return { main: t, sub: v.note, copy: t }; }
+      const isTime = dEq(v.d, TIME);
+      const loose = !v.explicit && v.u && (v.u.k || (['h', 'min', 'day'].includes(v.u.sym) && !Number.isInteger(fix(valIn(v, v.u)))));
+      if (isTime && !v.explicit && (v.mixed || !v.u || loose) && Math.abs(v.n) >= 60) {
+        const t = compoundTime(v.n);
+        const alts = ['min', 'h', 'day'].map((s) => USYM.get(s)).filter((u) => v.n / uf(u) >= 1 && v.n / uf(u) < 1e5).map((u) => fmtU(valIn(v, u), u)).filter((x) => x !== t);
+        return { main: t, sub: alts.length ? alts.join(' · ') : null, copy: t };
+      }
+      const u = pickUnit(v);
+      if (!u) {
+        const t = fmtNum(v.n, 6, 4) + ' ' + baseLabel(v.d);
+        return { main: t, copy: t };
+      }
+      const x = valIn(v, u);
+      if (isTime && v.explicit && ['h', 'min', 'day'].includes(u.sym) && !Number.isInteger(fix(x)) && Math.abs(x) < 1000) {
+        const t = compoundTime(v.n, u.sym);
+        return { main: t, sub: fmtU(x, u), copy: t };
+      }
+      const t = fmtU(x, u);
+      const subs = [];
+      if (v.mixed && BREAK[dKey(v.d)]) subs.push(BREAK[dKey(v.d)].filter((s) => s !== u.sym).slice(0, 3).map((s) => fmtU(valIn(v, USYM.get(s)), USYM.get(s))).join(' · '));
+      if (v.note) subs.push(v.note);
+      if (isTime && !v.explicit && ['s', 'min', 'ms'].includes(u.sym) && Math.abs(v.n) >= 3600) subs.push('≈ ' + compoundTime(v.n));
+      if (v.explicit && dEq(v.d, DATA) && ['kB', 'MB', 'GB', 'TB'].includes(u.sym)) {
+        const bu = USYM.get(u.sym[0].toUpperCase() + 'iB');
+        if (bu) subs.push(`${fmtU(valIn(v, bu), bu)} (binary)`);
+      }
+      return { main: t, sub: subs.join(' · ') || null, copy: t };
+    }
+
+    function bigWords(n) {
+      const a = Math.abs(n);
+      if (a < 1e6 || a >= 1e15) return null;
+      const [d, w] = a >= 1e12 ? [1e12, 'trillion'] : a >= 1e9 ? [1e9, 'billion'] : [1e6, 'million'];
+      return `${n < 0 ? '-' : ''}${fmtNum(a / d, 4, 2)} ${w}`;
+    }
+
+    function baseLabel(d) {
+      const names = ['m', 'kg', 's', 'K', 'B', 'rad', 'USD'];
+      const top = [], bot = [];
+      d.forEach((e, k) => {
+        if (!e) return;
+        const s = names[k] + (Math.abs(e) === 1 ? '' : Math.abs(e) === 2 ? '²' : Math.abs(e) === 3 ? '³' : '^' + Math.abs(e));
+        (e > 0 ? top : bot).push(s);
+      });
+      return (top.join('·') || '1') + (bot.length ? '/' + bot.join('·') : '');
+    }
+
+    function cycleTargets(v) {
+      if (!v || v.t !== 'n' || dZero(v.d)) return [];
+      if (isMoney(v)) {
+        const code = curOf(v.u) || 'USD';
+        const pool = [...new Set([localCur(), ...POP_CUR])];
+        return pool.filter((c) => c !== code && RATES[c]).map((c) => ({ kind: 'unit', u: curUnit(c) }));
+      }
+      const list = CYC[dKey(v.d)];
+      if (!list) return [];
+      const cur = v.cmp ? v.cmp.map((u) => u.sym).join('+') : (pickUnit(v) || {}).sym;
+      const k = list.indexOf(cur);
+      const order = k >= 0 ? [...list.slice(k + 1), ...list.slice(0, k + 1)] : list;
+      // "16,404 ft 2 in" helps nobody: only offer ft+in, lb+oz, h+min while the big part stays small
+      return order
+        .filter((s) => !s.includes('+') || Math.abs(valIn(v, USYM.get(s.split('+')[0]))) < 100)
+        .map((s) => (s.includes('+') ? { kind: 'cmp', parts: s.split('+').map((x) => USYM.get(x)) } : { kind: 'unit', u: USYM.get(s) }));
+    }
+
+    /* ---------------- natural phrases ---------------- */
+    const RAND = new Map();
+    const rnd = (key, gen) => { if (!RAND.has(key)) RAND.set(key, gen()); return RAND.get(key); };
+    const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+
+    function EV(str, ctx) {
+      if (str == null || !String(str).trim()) return null;
+      try { return parse(tokenize(String(str), ctx), ctx); } catch { return null; }
+    }
+    const asPct = (s, ctx) => { const v = EV(s, ctx); return v && (v.t === 'p' || isPlain(v)) ? v.n : null; };
+    const asNum = (s, ctx) => { const v = EV(s, ctx); return isPlain(v) ? v.n : null; };
+    const asAmt = (s, ctx) => { const v = EV(s, ctx); return v && v.t === 'n' ? v : null; };
+    function asProb(s, ctx) {
+      let m = String(s).trim().match(/^(\d+(?:\.\d+)?)\s+in\s+(\d+(?:\.\d+)?)$/i);
+      if (m) return +m[1] / +m[2];
+      const v = EV(s, ctx);
+      if (!v) return null;
+      if (v.t === 'p') return v.n / 100;
+      if (isPlain(v)) return v.n <= 1 ? v.n : v.n / 100;
+      return null;
+    }
+    const moneyCode = (v) => (isMoney(v) ? curOf(v.u) || 'USD' : null);
+    const amtOf = (v) => (isMoney(v) ? v.n * RATES[moneyCode(v)] : isPlain(v) ? v.n : valIn(v, pickUnit(v)));
+    const fmtAmt = (v, x = amtOf(v)) => (isMoney(v) ? fmtMoney(x, moneyCode(v)) : isPlain(v) ? fmtCash(x) : fmtU(x, pickUnit(v)));
+    const mkAmt = (v, x) => (isMoney(v) ? qty(x, curUnit(moneyCode(v))) : isPlain(v) ? num(x) : qty(x, pickUnit(v)));
+    const res = (main, sub, value, extra) => ({ main, sub: sub || null, copy: (extra && extra.copy) || main, value, ...extra });
+
+    function pctRes(p, sub) {
+      const x = p * 100;
+      const t = (x !== 0 && Math.abs(x) < 0.01 ? fmtNum(x, 3) : fmtNum(x, 6, 2)) + '%';
+      const odds = p > 0 && p < 1 ? `about 1 in ${fmtNum(1 / p, 3, 1)}` : null;
+      return res(t, [sub, odds].filter(Boolean).join(' · '), { t: 'p', n: x });
+    }
+
+    const RULES = [];
+    const rule = (re, fn) => RULES.push([re, fn]);
+    // split rules try every place the separator shows up: "5 km in 25 min" splits at the second "in"
+    const splitRule = (sep, fn) => RULES.push([new RegExp(sep.source, sep.flags.includes('g') ? sep.flags : sep.flags + 'g'), fn, true]);
+    const PEOPLE = '(?:people|persons|person|ppl|ways|friends|guys|of\\s+us|shares|each)';
+    const TIPX = '(?:\\s*,?\\s+(?:with|plus|\\+|and|incl(?:uding|\\.)?|adding)\\s+(?:a\\s+)?(.+?)\\s*(?:%|percent)?\\s*(?:tip|gratuity|service|tax))?';
+    const SPLITW = '(?:between|among(?:st)?|into|by|with|in|across|for|over|amid|evenly\\s+(?:between|among|into|by))';
+
+    // --- random things (stay put until the line changes; tap rerolls)
+    function diceSpec(s) {
+      s = s.trim().toLowerCase();
+      let m = s.match(/^(\d*)\s*d\s*(\d+)$/);
+      if (m) return { n: +(m[1] || 1), s: +m[2] };
+      m = s.match(/^(?:a|an|one|1|the)?\s*(?:(\d+)[- ]sided\s+)?(?:die|dice)$/);
+      if (m) return { n: 1, s: +(m[1] || 6) };
+      m = s.match(/^(\d+|two|three|four|five|six)\s+(?:(\d+)[- ]sided\s+)?(?:dice|die)$/);
+      if (m) return { n: NUMW[m[1]] || +m[1], s: +(m[2] || 6) };
+      return null;
+    }
+    rule(/^(?:roll|throw)\s+(?:a\s+|an\s+|some\s+)?(.+)$|^(\d*d\d+)$/i, (m, ctx) => {
+      if (m[2] && ctx.cells) return null; // "D3" in the sheet is a cell, not a die
+      const d = diceSpec(m[1] || m[2]);
+      if (!d || d.n < 1 || d.n > 100 || d.s < 2 || d.s > 1000) return null;
+      const rolls = rnd(ctx.key, () => Array.from({ length: d.n }, () => randInt(1, d.s)));
+      const tot = rolls.reduce((a, b) => a + b, 0);
+      const name = `${d.n}d${d.s}`;
+      const sub = d.n > 1 ? `${rolls.length <= 8 ? rolls.join(' + ') + ' · ' : ''}${name} · range ${d.n}–${d.n * d.s}, avg ${fmtNum((d.n * (d.s + 1)) / 2)}` : `${name} · tap to reroll`;
+      return res(String(tot), sub, num(tot), { rand: true });
+    });
+    rule(/^(?:flip|toss)\s+(?:a\s+)?coin$|^coin\s*(?:flip|toss)$|^heads\s+or\s+tails$/i, (m, ctx) => {
+      const h = rnd(ctx.key, () => Math.random() < 0.5);
+      return res(h ? 'heads' : 'tails', '50 / 50 · tap to flip again', null, { rand: true });
+    });
+    rule(/^(?:random|rand|random\s+number|pick\s+a\s+number|rng)(?:\s+(?:between|from)?\s*(-?\d+)\s*(?:and|to|-|–|\.\.)\s*(-?\d+))?$/i, (m, ctx) => {
+      const a = m[1] != null ? Math.min(+m[1], +m[2]) : 1, b = m[1] != null ? Math.max(+m[1], +m[2]) : 100;
+      const r = rnd(ctx.key, () => randInt(a, b));
+      return res(fmtNum(r), `random ${fmtNum(a)}–${fmtNum(b)} · tap to reroll`, num(r), { rand: true });
+    });
+    rule(/^(?:pick|choose)\s+(?:one\s+|1\s+|someone\s+|something\s+)?(?:from|between|out\s+of|of)?\s*:?\s*(.+)$/i, (m, ctx) => {
+      const opts = m[1].split(/\s*,\s*|\s+or\s+/i).map((x) => x.trim()).filter(Boolean);
+      if (opts.length < 2) return null;
+      const k = rnd(ctx.key, () => Math.floor(Math.random() * opts.length));
+      return res(opts[k % opts.length], `1 of ${opts.length} · tap to pick again`, null, { rand: true });
+    });
+
+    // --- time zones
+    const TIMEX = '(\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|a\\.m\\.|p\\.m\\.)?|noon|midday|midnight|now)';
+    function tzNow(name) {
+      const z = zone(name);
+      if (!z) return null;
+      const now = Date.now();
+      const p = zoneParts(z, now);
+      const here = zoneParts({ id: LOCAL_TZ }, now);
+      const off = zoneOffset(z, now), offHere = zoneOffset({ id: LOCAL_TZ }, now);
+      const day = p.d !== here.d ? ` ${wdOf(p)}` : '';
+      return res(fmtClock(p) + day, `${z.label} · ${fmtOff(off)} · ${hoursApart(off - offHere)}`, null);
+    }
+    rule(/^(?:what\s+)?(?:(?:current|local)\s+)?time\s+(?:is\s+it\s+|now\s+)?(?:in|at)\s+(.+)$/i, (m) => tzNow(m[1]));
+    rule(/^now\s+in\s+(.+)$/i, (m) => tzNow(m[1]));
+    rule(/^(?:what\s+)?(?:(?:the|current)\s+)?time(?:\s+is\s+it)?(?:\s+(?:now|here))?$/i, () => {
+      const d = { t: 'd', ms: Date.now(), time: true, clock: true };
+      return res(showDate(d).main, new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }), d);
+    });
+    rule(/^(.+?)\s+time(?:\s+now)?$/i, (m) => tzNow(m[1]));
+    rule(new RegExp(`^${TIMEX}\\s+(?:(.+?)\\s+)?(?:time\\s+)?(?:in|to|at|->|→|as|for)\\s+(.+?)(?:\\s+time)?$`, 'i'), (m) => {
+      const t = m[1].toLowerCase();
+      const hasMark = /am|pm|a\.m|p\.m|:|noon|midday|midnight|now/.test(t);
+      const src = m[2] ? zone(m[2]) : { id: LOCAL_TZ, label: 'here' };
+      const dst = zone(m[3]);
+      if (!src || !dst || (!hasMark && !m[2])) return null;
+      let h, mi;
+      if (t === 'now') { const p = zoneParts(src, Date.now()); h = p.h; mi = p.mi; }
+      else if (t === 'noon' || t === 'midday') { h = 12; mi = 0; }
+      else if (t === 'midnight') { h = 0; mi = 0; }
+      else {
+        const mm = t.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?$/);
+        if (!mm) return null;
+        h = +mm[1]; mi = +(mm[2] || 0);
+        if (mm[3]) { if (h > 12) return null; h = (h % 12) + (mm[3][0] === 'p' ? 12 : 0); }
+        if (h > 23 || mi > 59) return null;
+      }
+      const today = zoneParts(src, Date.now());
+      const utc = wallToUtc(src, today.y, today.mo, today.d, h, mi);
+      const a = zoneParts(src, utc), b = zoneParts(dst, utc);
+      const diff = (zoneOffset(dst, utc) - zoneOffset(src, utc)) / 60;
+      const dayNote = b.d !== a.d ? ` ${wdOf(b)}` : '';
+      const rel = diff === 0 ? 'same time' : `${fmtNum(Math.abs(diff), 4, 2)} h ${diff > 0 ? 'ahead' : 'behind'}`;
+      return res(fmtClock(b) + dayNote, `${fmtClock(a)} ${src.label} → ${dst.label} · ${rel}`, null);
+    });
+
+    // --- dates
+    const DURW = '(days?|weeks?|months?|years?|hours?|hrs?|minutes?|mins?|seconds?|secs?|sleeps?|nights?|weekends?)';
+    function spanRes(from, to, unitWord, dv) {
+      const ms = to - from;
+      const days = dayDiff(from, to);
+      const w = (unitWord || 'days').toLowerCase().replace(/s$/, '');
+      let main;
+      const ago = days < 0 || (days === 0 && ms < 0);
+      const ad = Math.abs(days);
+      if (/^(hour|hr)$/.test(w)) main = plural(Math.abs(ms) / 3.6e6, 'hour');
+      else if (/^(minute|min)$/.test(w)) main = plural(Math.round(Math.abs(ms) / 6e4), 'minute');
+      else if (/^(second|sec)$/.test(w)) main = plural(Math.round(Math.abs(ms) / 1e3), 'second');
+      else if (w === 'week') main = plural(+(ad / 7).toFixed(1), 'week');
+      else if (w === 'month') main = plural(+(ad / 30.436875).toFixed(1), 'month');
+      else if (w === 'year') main = plural(+(ad / 365.2425).toFixed(2), 'year');
+      else if (w === 'weekend') main = plural(Math.floor((ad + ((new Date(from).getDay() + 1) % 7)) / 7), 'weekend');
+      else if (w === 'sleep' || w === 'night') main = plural(ad, w);
+      else main = plural(ad, 'day');
+      if (ago) main += ' ago';
+      const sub = [showDate(dv).main];
+      if (ad >= 14 && !/week/.test(w)) sub.push(weeksDays(ad));
+      if (!/day|sleep|night/.test(w)) sub.push(plural(ad, 'day'));
+      return res(main, sub.join(' · '), { t: 'n', n: (ago ? -ad : ad) * 86400, d: TIME, u: DAY });
+    }
+    function toDate(s, ctx) { const v = EV(s, ctx); return v && v.t === 'd' ? v : null; }
+    function until(unitWord, s, ctx) {
+      const d = toDate(s, ctx);
+      if (!d) return null;
+      let ms = d.ms;
+      if (d.noYear && ms < startOfDay(Date.now())) { const x = new Date(ms); x.setFullYear(x.getFullYear() + 1); ms = x.getTime(); }
+      return spanRes(d.time ? Date.now() : startOfDay(Date.now()), ms, unitWord, { ...d, ms });
+    }
+    rule(new RegExp(`^(?:how\\s+(?:many|long)\\s+)?(?:${DURW}\\s+)?(?:are\\s+)?(?:left\\s+)?(?:until|till|til|'til|untill|before)\\s+(.+)$`, 'i'), (m, ctx) => until(m[1], m[2], ctx));
+    rule(new RegExp(`^${DURW}\\s+(?:left\\s+)?to\\s+(.+)$`, 'i'), (m, ctx) => until(m[1], m[2], ctx));
+    rule(new RegExp(`^(?:how\\s+(?:many|long)\\s+)?(?:${DURW}\\s+)?(?:since|from|after)\\s+(.+?)(?:\\s+(?:until|till|to|and)\\s+(.+))?$`, 'i'), (m, ctx) => {
+      const a = toDate(m[2], ctx);
+      if (!a) return null;
+      if (m[3]) {
+        const b = toDate(m[3], ctx);
+        if (!b) return null;
+        if (a.clock && b.clock && !m[1]) return clockSpan(a, b);
+        return spanRes(a.ms, b.ms, m[1], b);
+      }
+      if (!m[1] && !/^since/i.test(m[0])) return null;
+      return spanRes(a.ms, a.time ? Date.now() : startOfDay(Date.now()), m[1], a);
+    });
+    rule(new RegExp(`^(?:how\\s+(?:many|long)\\s+)?(?:${DURW}|time)\\s+(?:is\\s+it\\s+)?(?:between|from)\\s+(.+?)\\s+(?:and|to|till|until)\\s+(.+)$`, 'i'), (m, ctx) => {
+      const a = toDate(m[2], ctx), b = toDate(m[3], ctx);
+      if (!a || !b) return null;
+      if (a.clock && b.clock) return clockSpan(a, b);
+      return spanRes(a.ms, b.ms, m[1], b);
+    });
+    function clockSpan(a, b) {
+      let sec = (b.ms - a.ms) / 1000;
+      if (sec < 0) sec += 86400;
+      return fromValue({ t: 'n', n: sec, d: TIME, u: null, mixed: true });
+    }
+    rule(/^in\s+(.+)$/i, (m, ctx) => {
+      const v = EV(m[1], ctx);
+      if (!v || v.t !== 'n' || !dEq(v.d, TIME)) return null;
+      const dt = dateAdd({ t: 'd', ms: Date.now(), time: v.n < 86400 }, v, 1);
+      if (v.n >= 86400) dt.ms = startOfDay(dt.ms), dt.time = false;
+      return res(showDate(dt).main, showDate(dt).sub, dt);
+    });
+    rule(/^(.+?)\s+(from\s+now|from\s+today|later|ago|before\s+today|back)$/i, (m, ctx) => {
+      const v = EV(m[1], ctx);
+      if (!v || v.t !== 'n' || !dEq(v.d, TIME)) return null;
+      const back = /ago|before|back/i.test(m[2]);
+      const short = v.n < 86400;
+      const dt = dateAdd({ t: 'd', ms: short ? Date.now() : startOfDay(Date.now()), time: short }, v, back ? -1 : 1);
+      const s = showDate(dt);
+      return res(s.main, s.sub, dt);
+    });
+    function ageRes(s, ctx) {
+      let d = toDate(s, ctx);
+      const yr = !d && /^\d{4}$/.test(s.trim()) ? +s.trim() : null;
+      if (!d && !yr) return null;
+      const now = new Date();
+      if (yr) {
+        const a = now.getFullYear() - yr;
+        if (a < 0 || a > 150) return null;
+        return res(`${a - 1}–${a} years old`, `${a} this year`, num(a));
+      }
+      const b = new Date(d.ms);
+      if (b > now) return null;
+      let y = now.getFullYear() - b.getFullYear(), mo = now.getMonth() - b.getMonth(), dd = now.getDate() - b.getDate();
+      if (dd < 0) { mo--; dd += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+      if (mo < 0) { y--; mo += 12; }
+      const next = upcoming(b.getMonth(), b.getDate());
+      const nd = dayDiff(Date.now(), next.ms);
+      const total = dayDiff(b.getTime(), Date.now());
+      const bday = nd === 0 ? 'happy birthday!' : `turns ${y + 1} in ${plural(nd, 'day')}`;
+      return res(`${y} years old`, `${y} y ${mo} mo ${dd} d · ${fmtNum(total)} days · ${bday}`, num(y));
+    }
+    rule(/^how\s+old\s+.*?\b(?:born|b\.)\s+(?:on\s+|in\s+)?(.+)$/i, (m, ctx) => ageRes(m[1], ctx));
+    rule(/^(?:age|aged)\s+(?:of\s+(?:someone|somebody|a\s+person)\s+)?(?:born\s+)?(?:on\s+|in\s+)?(.+)$/i, (m, ctx) => ageRes(m[1], ctx));
+    rule(/^born\s+(?:on\s+|in\s+)?(.+?)(?:\s+(?:age|how\s+old))?$/i, (m, ctx) => ageRes(m[1], ctx));
+    rule(/^(?:what\s+)?day\s+(?:of\s+the\s+week\s+)?(?:is|was|will\s+be|falls\s+on|is\s+it)(?:\s+(.+))?$/i, (m, ctx) => {
+      const d = m[1] ? toDate(m[1], ctx) : { t: 'd', ms: Date.now() };
+      if (!d) return null;
+      const name = new Date(d.ms).toLocaleDateString('en-US', { weekday: 'long' });
+      return res(name, showDate(d).main + ' · ' + showDate(d).sub, d);
+    });
+
+    // --- how many X in Y
+    rule(/^how\s+many\s+(.+?)\s+(?:are\s+|is\s+)?(?:in|per|make(?:s)?(?:\s+up)?|fit\s+in(?:to)?|to)\s+(.+)$/i, (m, ctx) => {
+      const amount = /^[\d.(a]|^an?\b|^one\b/i.test(m[2].trim()) ? m[2] : '1 ' + m[2];
+      const v = EV(`${amount} to ${m[1]}`, ctx);
+      return v ? fromValue(v) : null;
+    });
+
+    rule(/^(.+?)\s+(?:is|are|=|equals|makes?)\s+how\s+many\s+(.+)$/i, (m, ctx) => {
+      const v = EV(`${m[1]} to ${m[2]}`, ctx);
+      return v ? fromValue(v) : null;
+    });
+
+    // --- prices: "price of btc", "usd rate", "gold", "100 usd" on a line by itself
+    function curCode(str, ctx) {
+      let toks;
+      try { toks = tokenize(String(str).trim(), ctx); } catch { return null; }
+      if (toks.length !== 1) return null;
+      const t = toks[0];
+      if (t.t === 'cur') return t.code;
+      if (t.t === 'unit' && t.alt && t.alt.cur) return t.alt.cur; // "pound"
+      return null;
+    }
+    function priceRes(code, amount, to) {
+      if (!RATES[code]) return null;
+      const targets = to ? [to] : sensible(code);
+      if (!targets.every((c) => RATES[c])) return null;
+      const [t0, ...rest] = targets;
+      const val = qty(amount, curUnit(code));
+      const main = fmtMoney(amount * RATES[t0] / RATES[code], t0) + (code === 'XAU' && amount === 1 ? ' / oz' : '');
+      const sub = [fmtMoney(amount, code) + (code === 'XAU' ? ' (troy oz of gold)' : ''), ...rest.map((c) => '≈ ' + fmtMoney(amount * RATES[c] / RATES[code], c))];
+      return res(main, sub.join(' · '), val, { cyc: true, copy: fmtMoney(amount * RATES[t0] / RATES[code], t0) });
+    }
+    const PRICEW = '(?:price|value|rate|cost|worth|exchange\\s+rate|going\\s+rate)';
+    rule(new RegExp(`^(?:the\\s+)?(?:current\\s+|live\\s+|today'?s\\s+)?${PRICEW}\\s+(?:of\\s+|for\\s+|on\\s+)?(?:1\\s+|one\\s+|a\\s+|an\\s+)?(.+?)(?:\\s+(?:now|today|right\\s+now))?(?:\\s+(?:in|to)\\s+(.+))?$`, 'i'), (m, ctx) => {
+      const c = curCode(m[1], ctx), to = m[2] ? curCode(m[2], ctx) : null;
+      return c && (!m[2] || to) ? priceRes(c, 1, to) : null;
+    });
+    rule(new RegExp(`^(?:1\\s+|one\\s+|a\\s+|an\\s+)?(.+?)\\s+${PRICEW}(?:\\s+(?:now|today|right\\s+now))?(?:\\s+(?:in|to)\\s+(.+))?$`, 'i'), (m, ctx) => {
+      const c = curCode(m[1], ctx), to = m[2] ? curCode(m[2], ctx) : null;
+      return c && (!m[2] || to) ? priceRes(c, 1, to) : null;
+    });
+    rule(/^(?:1\s+|one\s+|a\s+|an\s+)?([^\d]+)$/, (m, ctx) => {
+      if (ctx.labeled) return null;
+      const c = curCode(m[1], ctx);
+      return c ? priceRes(c, 1, null) : null;
+    });
+    // an amount of some other currency, alone on its line, shows in yours
+    rule(/^(.+)$/, (m, ctx) => {
+      if (ctx.labeled || !/\d/.test(m[1])) return null;
+      let toks;
+      try { toks = tokenize(m[1], ctx); } catch { return null; }
+      const kinds = toks.map((t) => t.t).join(' ');
+      if (!/^(cur num( mulw)?|num( mulw)? cur)$/.test(kinds)) return null;
+      const code = toks.find((t) => t.t === 'cur').code;
+      if (code === localCur() && !CRYPTO.has(code)) return null;
+      const v = EV(m[1], ctx);
+      return v && isMoney(v) ? priceRes(code, v.n * RATES[code], null) : null;
+    });
+
+    // --- splitting the bill
+    function split(as, ns, ts, mode, ctx) {
+      const a = asAmt(as, ctx), n = asNum(ns, ctx);
+      if (!a || !n || n < 1 || !Number.isInteger(fix(n)) || (!isMoney(a) && !isPlain(a))) return null;
+      let total = a, tip = null;
+      if (ts) { const p = asPct(ts, ctx); if (p == null) return null; tip = scale(a, p / 100); total = A.add(a, tip); }
+      const code = moneyCode(total);
+      const dec = code ? curInfo(code).dec : 2;
+      const f = 10 ** dec;
+      const T = Math.round(amtOf(total) * f);
+      const per = Math.round(T / n);
+      const diff = T - per * n;
+      const each = mkAmt(total, per / f);
+      const pay = mode === 'pay';
+      const main = `${fmtAmt(each)} ${pay ? 'per payment' : 'each'}`;
+      const sub = [];
+      if (diff !== 0) sub.push(`${pay ? 'last payment is' : 'one person pays'} ${fmtAmt(each, (per + diff) / f)}`);
+      if (tip) sub.push(`total ${fmtAmt(total)} incl. ${fmtAmt(tip)} tip`);
+      else if (n > 1) sub.push(`${fmtNum(n)} × ${fmtAmt(each)}`);
+      return res(main, sub.join(' · '), each, { copy: fmtAmt(each) });
+    }
+    rule(new RegExp(`^split\\s+(?:the\\s+|a\\s+|our\\s+)?(?:bill\\s+(?:of\\s+)?)?(.+?)\\s+${SPLITW}\\s+(.+?)(?:\\s+${PEOPLE})?${TIPX}$`, 'i'), (m, ctx) => split(m[1], m[2], m[3], null, ctx));
+    rule(new RegExp(`^(.+?)\\s+split\\s+(?:${SPLITW}\\s+)?(.+?)(?:\\s+${PEOPLE})?${TIPX}$`, 'i'), (m, ctx) => split(m[1], m[2], m[3], null, ctx));
+    rule(new RegExp(`^(.+?)\\s*(?:\\/|divided\\s+(?:by|between|among)|between|among(?:st)?|for|per)\\s*(\\d+)\\s+${PEOPLE}${TIPX}$`, 'i'), (m, ctx) => split(m[1], m[2], m[3], null, ctx));
+    rule(/^(.+?)\s+(?:in|into|over|across|as|split\s+into)\s+(.+?)\s+(?:equal\s+|monthly\s+|weekly\s+)?(?:payments?|installments?|instalments?|parts?|pieces?|chunks?)$/i, (m, ctx) => split(m[1], m[2], null, 'pay', ctx));
+
+    // --- tips & discounts
+    function tipRes(ps, as, ctx) {
+      const p = asPct(ps, ctx), a = asAmt(as, ctx);
+      if (p == null || !a || (!isMoney(a) && !isPlain(a))) return null;
+      const t = scale(a, p / 100), tot = A.add(a, t);
+      return res(`${fmtAmt(t)} tip`, `total ${fmtAmt(tot)}`, t, { copy: fmtAmt(t) });
+    }
+    rule(/^(?:a\s+)?(.+?)\s*(?:%|percent)?\s+(?:tip|gratuity)\s+(?:on|for|of|from)\s+(?:a\s+|the\s+)?(.+)$/i, (m, ctx) => tipRes(m[1], m[2], ctx));
+    rule(/^tip\s+(?:of\s+)?(.+?)\s+(?:on|for)\s+(?:a\s+|the\s+)?(.+)$/i, (m, ctx) => tipRes(m[1], m[2], ctx));
+    rule(/^tip\s+(?:on|for)\s+(.+?)\s+(?:at|of|@)\s+(.+)$/i, (m, ctx) => tipRes(m[2], m[1], ctx));
+    function offRes(as, ps, ctx) {
+      const a = asAmt(as, ctx), p = asPct(ps, ctx);
+      if (!a || p == null) return null;
+      const save = scale(a, p / 100);
+      const out = A.sub(a, save);
+      return res(fmtAmt(out), `you save ${fmtAmt(save)}`, out);
+    }
+    rule(/^(.+?)\s+(?:after|with|minus|less|at)\s+(?:a\s+)?(.+?)\s*(?:%|percent)?\s*(?:off|discount|discounted|sale)$/i, (m, ctx) => offRes(m[1], m[2], ctx));
+    rule(/^(.+?)\s*(?:%|percent)\s+off\s+(?:of\s+)?(?:a\s+|the\s+)?(.+)$/i, (m, ctx) => offRes(m[2], m[1], ctx));
+    rule(/^(.+?)\s+(?:discounted|reduced|marked\s+down)\s+by\s+(.+)$/i, (m, ctx) => offRes(m[1], m[2], ctx));
+
+    // --- loans & installments
+    rule(/^(.+?)\s+(?:at|@)\s+(.+?)\s*(?:%|percent)\s*(?:(?:interest|apr|a\s+year|per\s+year|yearly|annual(?:ly)?|p\.?a\.?|per\s+annum)\s*)*(?:for|over)\s+(.+?)\s*(years?|yrs?|y|months?|mos?|mo)(?:\s+compounded\s+(monthly|yearly|annually|daily|quarterly|weekly))?$/i, (m, ctx) => {
+      const P = asAmt(m[1], ctx), r = asNum(m[2], ctx) / 100, t = asNum(m[3], ctx);
+      if (!P || (!isMoney(P) && !isPlain(P)) || !(r >= 0) || !(t > 0)) return null;
+      const years = /^m/i.test(m[4]) ? t / 12 : t;
+      const N = Math.round(years * 12);
+      const p = amtOf(P);
+      const k = { monthly: 12, daily: 365, quarterly: 4, weekly: 52 }[(m[5] || '').toLowerCase()] || 1;
+      const simple = p * (1 + r * years);
+      const comp = p * (1 + r / k) ** (k * years);
+      const i = r / 12;
+      const pmt = i === 0 ? p / N : (p * i) / (1 - (1 + i) ** -N);
+      const per = mkAmt(P, pmt);
+      return res(`${fmtAmt(P, pmt)} / month`,
+        `simple ${fmtAmt(P, simple)} · compound ${fmtAmt(P, comp)}${k === 1 ? ' (yearly)' : ''} · ${N} payments, ${fmtAmt(P, pmt * N - p)} interest`,
+        per, { copy: fmtAmt(P, pmt) });
+    });
+    rule(/^(.+?)\s+(?:over|across|for|spread\s+over|spread\s+across)\s+(.+?)\s*(months?|mos?|years?|yrs?|weeks?|wks?|days?)$/i, (m, ctx) => {
+      const a = asAmt(m[1], ctx), n = asNum(m[2], ctx);
+      if (!a || !(n > 0) || (!isMoney(a) && !isPlain(a))) return null;
+      const w = m[3].toLowerCase()[0] === 'y' ? 'year' : m[3].toLowerCase()[0] === 'w' ? 'week' : m[3].toLowerCase()[0] === 'd' ? 'day' : 'month';
+      const per = scale(a, 1 / n);
+      const days = { year: 365.2425, month: 30.436875, week: 7, day: 1 }[w];
+      const sub = [];
+      if (w !== 'week' && w !== 'day') sub.push(`${fmtAmt(scale(per, 7 / days))} / week`);
+      if (w !== 'day') sub.push(`${fmtAmt(scale(per, 1 / days))} / day`);
+      return res(`${fmtAmt(per)} / ${w}`, `${fmtNum(n)} ${w}s · ` + sub.join(' · '), per, { copy: fmtAmt(per) });
+    });
+
+    // --- percentages
+    function ratio(as, bs, ctx) {
+      const a = EV(as, ctx), b = EV(bs, ctx);
+      if (!a || !b || a.t !== 'n' || b.t !== 'n' || !dEq(a.d, b.d) || b.n === 0) return null;
+      return pctRes(a.n / b.n, null);
+    }
+    rule(/^(.+?)\s+(?:as\s+(?:a\s+)?(?:%|percent(?:age)?)\s+of|is\s+what\s+(?:%|percent(?:age)?)\s+of|in\s+(?:%|percent)\s+of)\s+(.+)$/i, (m, ctx) => ratio(m[1], m[2], ctx));
+    rule(/^(?:what\s+)?(?:%|percent(?:age)?)\s+(?:of\s+)?(.+?)\s+is\s+(.+)$/i, (m, ctx) => ratio(m[2], m[1], ctx));
+    rule(/^(.+?)\s+out\s+of\s+(.+?)(?:\s+(?:as|in)\s+(?:a\s+)?(?:%|percent(?:age)?))?$/i, (m, ctx) => ratio(m[1], m[2], ctx));
+    rule(/^(.+?)\s+of\s+(.+?)\s+(?:as|in)\s+(?:a\s+)?(?:%|percent(?:age)?)$/i, (m, ctx) => ratio(m[1], m[2], ctx));
+    rule(/^(.+?)\s+is\s+(.+?)\s*(?:%|percent)\s+of\s+what$/i, (m, ctx) => {
+      const a = asAmt(m[1], ctx), p = asPct(m[2], ctx);
+      if (!a || !p) return null;
+      const w = scale(a, 100 / p);
+      return res(fmtAmt(w), null, w);
+    });
+    rule(/^(?:(?:%|percent(?:age)?)\s+)?(?:change|increase|decrease|difference|growth|diff)\s+(?:from\s+|between\s+)?(.+?)\s+(?:to|and)\s+(.+)$|^from\s+(.+?)\s+to\s+(.+?)\s+(?:is\s+)?(?:what\s+)?(?:%|percent(?:age)?)\s*(?:change|increase|decrease)?$/i, (m, ctx) => {
+      const a = asAmt(m[1] || m[3], ctx), b = asAmt(m[2] || m[4], ctx);
+      if (!a || !b || !dEq(a.d, b.d) || a.n === 0) return null;
+      const ch = (b.n - a.n) / Math.abs(a.n);
+      const r = pctRes(ch, null);
+      r.main = (ch > 0 ? '+' : '') + r.main;
+      r.sub = `${ch >= 0 ? 'up' : 'down'} ${fmtAmt(a, Math.abs(amtOf(b) - amtOf(a)))}`;
+      return r;
+    });
+
+    // --- probability
+    rule(/^(\d+)\s*(?:c|ncr|choose)\s*(\d+)$/i, (m) => res(fmtNum(choose(+m[1], +m[2])), 'ways to pick (order doesn\'t matter)', num(choose(+m[1], +m[2]))));
+    rule(/^(\d+)\s*(?:p|npr|permute|perm)\s*(\d+)$/i, (m) => { const v = choose(+m[1], +m[2]) * factorial(+m[2]); return res(fmtNum(v), 'arrangements (order matters)', num(v)); });
+    rule(/^(\d+(?:\.\d+)?)\s+in\s+(\d+(?:\.\d+)?)(?:\s+(?:chance|odds))?$/i, (m) => {
+      const a = +m[1], b = +m[2];
+      if (!(a > 0) || a > b) return null;
+      const r = pctRes(a / b, `odds ${fmtNum(a)} : ${fmtNum(b - a)}`);
+      r.sub = r.sub.replace(/ · about 1 in .*$/, '');
+      return r;
+    });
+    rule(/^(?:odds\s+(?:of\s+|are\s+)?(\d+(?:\.\d+)?)\s*(?:to|:|\/)\s*(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s*(?:to|:|\/)\s*(\d+(?:\.\d+)?)\s+odds)(?:\s+(against|on|for|in\s+favou?r))?$/i, (m) => {
+      const a = +(m[1] || m[3]), b = +(m[2] || m[4]);
+      if (!(a + b > 0)) return null;
+      const favor = m[5] && !/against/i.test(m[5]);
+      const p = favor ? a / (a + b) : b / (a + b);
+      return pctRes(p, `${favor ? 'in favor' : 'against'} · pays ${fmtNum(1 / p, 4, 2)}× (decimal odds)`);
+    });
+    const FACES = { heads: 0.5, head: 0.5, tails: 0.5, tail: 0.5, ones: 1 / 6, '1s': 1 / 6, twos: 1 / 6, '2s': 1 / 6, threes: 1 / 6, '3s': 1 / 6, fours: 1 / 6, '4s': 1 / 6, fives: 1 / 6, '5s': 1 / 6, sixes: 1 / 6, '6s': 1 / 6, "6's": 1 / 6, six: 1 / 6 };
+    function binomRes(mode, k, n, p) {
+      if (!(n >= 1) || n > 100000 || k < 0 || !(p >= 0 && p <= 1)) return null;
+      mode = (mode || 'exactly').toLowerCase().replace(/\s+/g, ' ').trim();
+      let pr = 0;
+      const sum = (a, b) => { let s = 0; for (let j = Math.max(0, a); j <= Math.min(n, b); j++) s += binom(n, j, p); return Math.min(1, s); };
+      if (mode === 'at least' || mode === 'or more') pr = sum(k, n);
+      else if (mode === 'at most' || mode === 'or less' || mode === 'or fewer') pr = sum(0, k);
+      else if (mode === 'more than' || mode === 'over') pr = sum(k + 1, n);
+      else if (mode === 'less than' || mode === 'fewer than' || mode === 'under') pr = sum(0, k - 1);
+      else { mode = 'exactly'; pr = binom(n, k, p); }
+      return pctRes(pr, `${mode} ${fmtNum(k)} of ${fmtNum(n)} at ${fmtNum(p * 100, 4, 2)}% each`);
+    }
+    const MODEX = '(exactly|at\\s+least|at\\s+most|more\\s+than|fewer\\s+than|less\\s+than|over|under)?';
+    const PROBX = '(?:(?:what\\s+(?:is|are)\\s+the\\s+)?(?:probability|chance|chances|odds|likelihood|p)\\s+(?:of\\s+|that\\s+|to\\s+)?)?(?:getting\\s+|rolling\\s+|flipping\\s+|hitting\\s+)?';
+    rule(new RegExp(`^${PROBX}${MODEX}\\s*(\\d+)\\s+(heads?|tails?|ones|1s|twos|2s|threes|3s|fours|4s|fives|5s|sixes|6s|6's)(?:\\s+(or\\s+more|or\\s+less|or\\s+fewer))?\\s+(?:in|from|with|on|out\\s+of)\\s+(\\d+)\\s*(?:coin\\s+)?(?:flips?|tosses|throws|coins?|rolls?|dice|die|tries|times)?$`, 'i'), (m) => binomRes(m[4] || m[1], +m[2], +m[5], FACES[m[3].toLowerCase()]));
+    rule(new RegExp(`^${PROBX}${MODEX}\\s*(\\d+)\\s+(?:successes?|hits?|wins?|times?|of\\s+them)?\\s*(or\\s+more|or\\s+less|or\\s+fewer)?\\s*(?:in|out\\s+of|from)\\s+(\\d+)\\s*(?:tries|trials|attempts|shots|times|goes|games|rolls|draws|pulls|days)?\\s*(?:at|with|@|if\\s+each\\s+is|each\\s+at)\\s+(.+?)(?:\\s+(?:chance|each|probability|odds))*$`, 'i'), (m, ctx) => {
+      const p = asProb(m[5], ctx);
+      return p == null ? null : binomRes(m[3] || m[1], +m[2], +m[4], p);
+    });
+    function onceRes(n, p) {
+      if (!(n >= 1) || p == null || p < 0 || p > 1) return null;
+      const any = 1 - (1 - p) ** n;
+      const r = pctRes(any, null);
+      r.sub = `at least once in ${fmtNum(n)} · every time ${fmtNum(p ** n * 100, 3)}% · never ${fmtNum((1 - p) ** n * 100, 3)}%`;
+      return r;
+    }
+    rule(new RegExp(`^${PROBX}(?:at\\s+least\\s+)?(?:once|one)\\s+(?:in|out\\s+of|over)\\s+(\\d+)\\s*(?:tries|times|attempts|rolls|draws|goes|pulls|games|days|shots|years)?\\s*(?:at|with|@|if|each\\s+at)\\s+(.+?)(?:\\s+(?:chance|each|odds))*$`, 'i'), (m, ctx) => onceRes(+m[1], asProb(m[2], ctx)));
+    rule(/^(.+?)\s+(?:chance|odds|probability)(?:\s+each)?\s*,?\s*(?:in|over|across|for|x|×)?\s*(\d+)\s*(?:tries|times|attempts|rolls|draws|goes|pulls|games|days|shots)$/i, (m, ctx) => onceRes(+m[2], asProb(m[1], ctx)));
+    rule(new RegExp(`^${PROBX}(?:at\\s+least\\s+(?:one|a)\\s+)(six|6|heads?|tails?)\\s+(?:in|with|from|on)\\s+(\\d+)\\s*(?:rolls?|dice|flips?|tosses|tries)?$`, 'i'), (m) => onceRes(+m[2], /^(6|six)$/i.test(m[1]) ? 1 / 6 : 0.5));
+    rule(new RegExp(`^${PROBX}(?:a\\s+)?(\\d+)(\\s*\\+|\\s+or\\s+(?:more|higher|better|above|less|lower|under|below|fewer))?\\s+(?:with|on|using|from|in|by)\\s+(.+)$`, 'i'), (m) => {
+      const d = diceSpec(m[3]);
+      if (!d || d.n > 60 || d.s > 120) return null;
+      const target = +m[1];
+      const dist = diceDist(d.n, d.s);
+      const mode = (m[2] || '').trim().toLowerCase();
+      let p = 0;
+      const up = /\+|more|higher|better|above/.test(mode), down = /less|lower|under|below|fewer/.test(mode);
+      for (let s = 0; s < dist.length; s++) if ((up && s >= target) || (down && s <= target) || (!up && !down && s === target)) p += dist[s];
+      return pctRes(Math.min(1, p), `${target}${up ? ' or more' : down ? ' or less' : ''} on ${d.n}d${d.s}`);
+    });
+    rule(/^(?:birthday\s+(?:paradox|problem)\s+(?:for\s+|with\s+)?(\d+)(?:\s+people)?|(?:(?:chance|odds|probability)\s+(?:that\s+)?)?(?:2\s+of\s+)?(\d+)\s+people\s+(?:share|sharing|have|with)\s+(?:a\s+|the\s+)?(?:same\s+)?birthdays?)$/i, (m) => {
+      const n = +(m[1] || m[2]);
+      if (!(n >= 1) || n > 10000) return null;
+      let q = 1;
+      for (let i = 0; i < n && i < 366; i++) q *= (365 - i) / 365;
+      return pctRes(n > 365 ? 1 : 1 - q, `at least two of ${fmtNum(n)} people share a birthday`);
+    });
+
+    // --- tax / vat on top, or taken back out
+    const TAXW = '(tax|vat|gst|sales\\s+tax|fees?|service(?:\\s+charge)?|markup|commission)';
+    rule(new RegExp(`^(.+?)\\s+(?:with|plus|\\+|and|incl(?:uding|\\.)?|after|inc)\\s+(?:a\\s+)?(.+?)\\s*(?:%|percent)\\s+${TAXW}$`, 'i'), (m, ctx) => {
+      const a = asAmt(m[1], ctx), p = asPct(m[2], ctx);
+      if (!a || p == null) return null;
+      const tax = scale(a, p / 100), tot = A.add(a, tax);
+      return res(fmtAmt(tot), `${m[3].toLowerCase()} ${fmtAmt(tax)}`, tot);
+    });
+    rule(new RegExp(`^(?:remove\\s+|take\\s+out\\s+|strip\\s+)?(?:(.+?)\\s*(?:%|percent)\\s+${TAXW}\\s+from\\s+(.+)|(.+?)\\s+(?:without|excluding|excl\\.?|ex|minus|less|before|pre)\\s+(?:the\\s+)?(.+?)\\s*(?:%|percent)\\s+${TAXW})$`, 'i'), (m, ctx) => {
+      const a = asAmt(m[3] || m[4], ctx), p = asPct(m[1] || m[5], ctx);
+      if (!a || p == null || p <= -100) return null;
+      const net = scale(a, 1 / (1 + p / 100));
+      return res(fmtAmt(net), `${(m[2] || m[6]).toLowerCase()} was ${fmtAmt(A.sub(a, net))}`, net);
+    });
+
+    // --- pace: "5 km in 25 min"
+    splitRule(/\s+(?:in|took|takes|taking)\s+/i, (l, r, sep, ctx) => {
+      const d = EV(l, ctx), t = EV(r, ctx);
+      if (!d || !t || d.t !== 'n' || t.t !== 'n' || !dEq(d.d, LEN) || !dEq(t.d, TIME) || !(t.n > 0) || !(d.n > 0)) return null;
+      const imp = sysOf(d) === 'i';
+      const sp = d.n / t.n;
+      const pace = (perM) => { const s = Math.round(t.n / (d.n / perM)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+      const speed = imp ? qty(sp / 0.44704, USYM.get('mph')) : qty(sp * 3.6, USYM.get('km/h'));
+      return res(fmtU(valIn(speed, speed.u), speed.u), `pace ${pace(1000)} /km · ${pace(1609.344)} /mi`, speed);
+    });
+
+    // --- rates: "100 km at 60 km/h", "3 kg at $4/kg", "60 mph for 3 hours", "1 GB at 50 mbps"
+    splitRule(/\s+(?:at|for)\s+|\s*@\s*/i, (l, r, sep, ctx) => {
+      const a = EV(l, ctx), b = EV(r, ctx);
+      if (!a || !b || a.t !== 'n' || b.t !== 'n' || (dZero(a.d) && dZero(b.d))) return null;
+      const tries = [];
+      try { tries.push(['mul', A.mul(a, b)]); } catch { /* no product */ }
+      try { tries.push(['div', A.div(a, b)]); } catch { /* no quotient */ }
+      const named = (v) => v.t === 'n' && !dZero(v.d) && UNITS.some((u) => dEq(u.dim, v.d));
+      const pick = (op, test) => tries.find(([o, v]) => o === op && test(v));
+      const isFor = /for/i.test(sep);
+      if (isFor && a.d[2] < 0 && dEq(b.d, TIME)) {
+        // "1,250 a week for a year": a working year is 52 weeks, not 52.18
+        const per = a.u && a.u.per && a.u.per.sym;
+        const unitB = b.u && !b.mixed ? b.u.sym : null;
+        if (per === 'week' && unitB === 'year') {
+          const out = scale(a, 604800 * 52 * valIn(b, b.u));
+          const r = fromValue({ ...out, d: dAdd(a.d, b.d), u: a.u.top && a.u.top !== BLANK ? a.u.top : null });
+          if (r) r.sub = [r.sub, '52 weeks a year'].filter(Boolean).join(' · ');
+          return r;
+        }
+      }
+      const hit = isFor
+        ? pick('mul', named) || pick('mul', isMoney) || (a.d[2] < 0 && pick('mul', isPlain))
+        : pick('mul', isMoney) || pick('div', (v) => dEq(v.d, TIME)) || pick('mul', named) || pick('div', named);
+      return hit ? fromValue(hit[1]) : null;
+    });
+
+    // --- comparisons
+    const MORE = 'more|bigger|greater|larger|longer|heavier|taller|higher|faster|further|farther|older|pricier|costlier|hotter|warmer|over|above';
+    const LESS = 'less|smaller|shorter|lighter|lower|slower|cheaper|younger|fewer|colder|cooler|under|below';
+    function compareRes(as, op, bs, ctx) {
+      const a = EV(as, ctx), b = EV(bs, ctx);
+      if (!a || !b || a.t !== b.t || (a.t === 'n' && !dEq(a.d, b.d))) return null;
+      const x = a.t === 'd' ? a.ms : a.n, y = b.t === 'd' ? b.ms : b.n;
+      op = op.toLowerCase();
+      const gt = new RegExp(`^(>|${MORE}|after|later)`).test(op), lt = new RegExp(`^(<|${LESS}|before|earlier)`).test(op);
+      const eq = fix(x) === fix(y);
+      const yes = /=/.test(op) && (gt || lt) ? (gt ? x >= y : x <= y) || eq : gt ? x > y && !eq : lt ? x < y && !eq : eq;
+      let sub;
+      if (eq) sub = 'they are the same';
+      else if (a.t === 'n') {
+        const diff = A.sub(a, b);
+        sub = `${show(a).main} is ${show({ ...diff, n: Math.abs(diff.n), u: a.u || diff.u }).main} ${x > y ? 'more' : 'less'}`;
+        if (b.n) sub += ` (${fmtNum(Math.abs(x / y), 4, 2)}×)`;
+      } else sub = `${plural(Math.abs(dayDiff(y, x)), 'day')} ${x > y ? 'later' : 'earlier'}`;
+      return res(yes ? 'yes' : 'no', sub, null);
+    }
+    splitRule(new RegExp(`\\s*(?:>=|<=|>|<|==|≥|≤)\\s*|\\s+(?:(?:${MORE}|${LESS})\\s+than|after|before|later\\s+than|earlier\\s+than|(?:the\\s+)?same\\s+as|equal\\s+to)\\s+`, 'i'),
+      (l, r, sep, ctx) => compareRes(l.replace(/^(?:is|are|was)\s+/i, ''), sep.trim().replace('≥', '>=').replace('≤', '<='), r, ctx));
+    rule(new RegExp(`^which\\s+(?:one\\s+)?(?:is\\s+|are\\s+)?(${MORE}|${LESS}|the\\s+most|the\\s+least)[,:]?\\s+(.+?)\\s+or\\s+(.+)$`, 'i'), (m, ctx) => {
+      const a = EV(m[2], ctx), b = EV(m[3], ctx);
+      if (!a || !b || a.t !== 'n' || b.t !== 'n' || !dEq(a.d, b.d)) return null;
+      const wantMore = new RegExp(`^(${MORE}|the\\s+most)`, 'i').test(m[1]);
+      const aWins = wantMore ? a.n >= b.n : a.n <= b.n;
+      const w = aWins ? m[2] : m[3], l = aWins ? b : a, wv = aWins ? a : b;
+      const diff = A.sub(wv, l);
+      return res(w.trim(), `by ${show({ ...diff, n: Math.abs(diff.n), u: wv.u || diff.u }).main}`, null);
+    });
+
+    // --- solve for the unknown: "2x + 3 = 11", "20% of what is 30"; or check "0.1 + 0.2 = 0.3"
+    const SKIPW = new Set(['the', 'a', 'an', 'is', 'of', 'and', 'what', 'x']);
+    rule(/^(?:solve\s+(?:for\s+\w+\s*:?\s*)?)?(.+?)\s*(?:={1,2}|\bequals\b|\bis\b)\s*(.+)$/i, (m, ctx) => {
+      let L = m[1], Rt = m[2];
+      if (/=/.test(Rt)) return null;
+      const both = `${L} ${Rt}`.toLowerCase();
+      let name = null;
+      if (/\bwhat\b/.test(both)) { name = 'x'; L = L.replace(/\bwhat\b/gi, 'x'); Rt = Rt.replace(/\bwhat\b/gi, 'x'); }
+      else {
+        const words = new Set((both.match(/\p{L}[\p{L}\p{N}_]*/gu) || []).filter((w) => !SKIPW.has(w) && (!ctx.vars || !ctx.vars.has(w)) && classify(w, w, ctx, '').t === 'unk'));
+        if (/(^|[^\p{L}])x(?![\p{L}])/u.test(both) && !(ctx.vars && ctx.vars.has('x'))) words.add('x');
+        if (words.size > 1) return null;
+        name = words.size ? [...words][0] : null;
+      }
+      if (!name) {
+        // nothing unknown: just check it
+        const a = EV(L, ctx), b = EV(Rt, ctx);
+        if (!a || !b || a.t !== b.t || (a.t === 'n' && !dEq(a.d, b.d))) return null;
+        const same = fix(a.t === 'd' ? a.ms : a.n) === fix(b.t === 'd' ? b.ms : b.n);
+        return res(same ? 'true' : 'false', same ? `both are ${show(a).main}` : `${show(a).main} vs ${show(b).main}`, null);
+      }
+      const c = Object.create(ctx);
+      c.vars = new Map(ctx.vars || []);
+      c.multi = ctx.multi;
+      const f = (x) => {
+        c.vars.set(name, num(x));
+        const a = EV(L, c), b = EV(Rt, c);
+        if (!a || !b) return NaN;
+        const diff = A.sub(a.t === 'p' ? num(a.n / 100) : a, b.t === 'p' ? num(b.n / 100) : b);
+        return diff.t === 'n' ? diff.n : NaN;
+      };
+      let x0 = 0, x1 = 1, f0 = f(x0), f1 = f(x1);
+      if (!isFinite(f0)) { x0 = 2; f0 = f(x0); }
+      if (!isFinite(f0) || !isFinite(f1)) return null;
+      for (let k = 0; k < 80 && Math.abs(f1) > 1e-12 * (1 + Math.abs(x1)); k++) {
+        if (f1 === f0) break;
+        const x2 = x1 - (f1 * (x1 - x0)) / (f1 - f0);
+        if (!isFinite(x2)) return null;
+        x0 = x1; f0 = f1; x1 = x2; f1 = f(x1);
+        if (!isFinite(f1)) return null;
+      }
+      if (Math.abs(f1) > 1e-7 * (1 + Math.abs(x1))) return null;
+      const x = fix(x1);
+      if (ctx.vars && name !== 'x' && !/^what$/.test(name)) ctx.vars.set(name, num(x));
+      if (ctx.vars && /\bx\b/i.test(m[0]) && !/\bwhat\b/i.test(m[0])) ctx.vars.set('x', num(x));
+      return res(/\bwhat\b/i.test(m[0]) ? fmtNum(x) : `${name} = ${fmtNum(x)}`, null, num(x), { copy: fmtNum(x) });
+    });
+
+    // "3 feet, 2 yards, 2 meters" -> total
+    function listSum(s, ctx) {
+      if (!/,/.test(s)) return null;
+      const parts = s.split(/\s*,\s*(?:and\s+)?|\s+and\s+/).filter(Boolean);
+      if (parts.length < 2) return null;
+      const vals = parts.map((p) => EV(p, ctx));
+      if (vals.some((v) => !v || v.t !== 'n') || vals.every((v) => dZero(v.d))) return null;
+      let t = vals[0];
+      for (const v of vals.slice(1)) t = A.add(t, v);
+      if (!t.mixed && vals.some((v) => v.u && t.u && v.u.sym !== t.u.sym)) t.mixed = true;
+      return fromValue(t);
+    }
+
+    /* ---------------- lines ---------------- */
+    function clean(s) {
+      return s
+        .replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x660)
+        .replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x6f0)
+        .replace(/٫/g, '.').replace(/٬/g, ',').replace(/٪/g, '%').replace(/؟/g, '?').replace(/،/g, ',')
+        .replace(/[×✕✖]/g, '*').replace(/÷/g, '/').replace(/[−–—]/g, '-')
+        .replace(/[’‘`′]/g, "'").replace(/[“”″]/g, '"')
+        .replace(/½/g, '.5').replace(/¼/g, '.25').replace(/¾/g, '.75')
+        .replace(/[   ]/g, ' ');
+    }
+    const FILLER = /^(?:what\s+is|what's|whats|what\s+are|how\s+much\s+is|how\s+much\s+are|how\s+much|calculate|calc|compute|convert|work\s+out|tell\s+me|please|pls|plz|so|ok|okay|hey|um|and|then|=)\s+/i;
+    function stripFillers(s) {
+      let p;
+      do { p = s; s = s.replace(FILLER, ''); } while (s !== p);
+      return s.replace(/\s*(?:please|pls|plz|\?+|=+|\.+)\s*$/i, '').replace(/\s+/g, ' ').trim();
+    }
+
+    function fromValue(v) {
+      const r = show(v);
+      if (!r) return null;
+      return { ...r, value: v, cyc: cycleTargets(v).length > 0 };
+    }
+
+    /* ---------------- reading the words before the math ---------------- */
+    // "two hundred and fifty" -> 250, "one and a half" -> 1.5, "three quarters" -> (3/4), "1 1/2" -> (1+1/2)
+    const SMALLW = { ...NUMW };
+    delete SMALLW.couple;
+    const SCALEW = { hundred: 100, thousand: 1e3, million: 1e6, billion: 1e9, trillion: 1e12 };
+    const NUMRUN = new RegExp(`\\b(?:(?:${[...Object.keys(SMALLW), ...Object.keys(SCALEW)].join('|')})(?![\\p{L}])(?:[\\s-]+(?:and\\s+)?(?=(?:${[...Object.keys(SMALLW), ...Object.keys(SCALEW)].join('|')})(?![\\p{L}])))?)+`, 'giu');
+    const FRACW = { half: 2, halves: 2, third: 3, thirds: 3, quarter: 4, quarters: 4, fourth: 4, fourths: 4, fifth: 5, fifths: 5, sixth: 6, sixths: 6, eighth: 8, eighths: 8, tenth: 10, tenths: 10 };
+    function numberWords(s) {
+      s = s.replace(NUMRUN, (run) => {
+        const words = run.toLowerCase().split(/[\s-]+/).filter((w) => w && w !== 'and');
+        if (!words.some((w) => w in SMALLW)) return run;
+        let total = 0, cur = 0;
+        for (const w of words) {
+          if (w in SMALLW) cur += SMALLW[w];
+          else if (w === 'hundred') cur = (cur || 1) * 100;
+          else { total += (cur || 1) * SCALEW[w]; cur = 0; }
+        }
+        return String(total + cur);
+      });
+      return s
+        .replace(/\b(\d+)\s+(\d+)\/(\d+)\b(?!\/)/g, '($1+$2/$3)')
+        .replace(/\b(\d+(?:\.\d+)?)\s+and\s+(?:a|one)\s+(half|third|quarter)\b/gi, (m, n, f) => `(${n}+1/${FRACW[f.toLowerCase()]})`)
+        .replace(/\b(\d+(?:\.\d+)?)\s+and\s+(\d+)\s+(halves|thirds|quarters|fourths|fifths|eighths)\b/gi, (m, n, k, f) => `(${n}+${k}/${FRACW[f.toLowerCase()]})`)
+        .replace(/\b(\d+)\s+(halves|thirds?|quarters?|fourths?|fifths?|sixths?|eighths?|tenths?)\b/gi, (m, n, f) => `(${n}/${FRACW[f.toLowerCase()]})`)
+        .replace(/\ba\s+(third|quarter|fifth|tenth)\s+of\b/gi, (m, f) => `(1/${FRACW[f.toLowerCase()]}) of`)
+        .replace(/\b(an?|one)\s+half\s+of\b/gi, 'half of');
+    }
+
+    // fix misspelled keywords (units and currencies already get fuzzy matching on their own)
+    const VOCAB = new Map();
+    for (const w of ['split', 'between', 'among', 'payments', 'payment', 'installments', 'percent', 'percentage', 'discount', 'until', 'since', 'tomorrow',
+      'yesterday', 'today', 'christmas', 'halloween', 'birthday', 'paradox', 'chance', 'probability', 'choose', 'average', 'total', 'divided', 'multiplied',
+      'times', 'minus', 'square', 'people', 'persons', 'friends', 'interest', 'compounded', 'monthly', 'yearly', 'annually', 'after', 'before', 'change',
+      'increase', 'decrease', 'difference', 'random', 'heads', 'tails', 'gratuity', 'convert', 'exactly', 'least', 'factorial', 'subtotal', 'median',
+      'minimum', 'maximum', 'fraction', 'binary', 'hexadecimal', 'roman', 'weekend', 'excluding', 'including', 'without', 'cheaper', 'bigger', 'smaller',
+      'greater', 'heavier', 'longer', 'shorter', 'faster', 'slower', 'which', 'what', 'quarter', 'quarters', 'thirds', 'thousand', 'million', 'billion',
+      'hundred', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'seven', 'eight', 'three', 'eleven', 'twelve', 'fifteen',
+      ...WEEKDAYS, 'january', 'february', 'march', 'april', 'august', 'september', 'october', 'november', 'december']) VOCAB.set(w, w);
+    let KNOWN = null;
+    function known(w, ctx) {
+      if (!KNOWN) {
+        KNOWN = new Set([...VOCAB.keys(), ...UBY.keys(), ...CUR_NAMES.keys(), ...ZONES.keys(), ...Object.keys(KW), ...Object.keys(OPW), ...Object.keys(FNW),
+          ...Object.keys(CONSTS), ...Object.keys(MULW), ...Object.keys(NUMW), ...Object.keys(PREW), ...Object.keys(AGGW), ...ANSW, ...Object.keys(FMTW),
+          ...Object.keys(ING), ...Object.keys(HOLIDAYS), ...Object.keys(FRACW), ...WEEKDAYS, 'squared', 'cubed', 'square', 'cubic', 'pound', 'pounds',
+          'today', 'now', 'tomorrow', 'yesterday', 'tonight', 'line', 'solve', 'equals', 'than', 'flips', 'tosses', 'rolls', 'dice', 'sided', 'people']);
+      }
+      return KNOWN.has(w) || (ctx.vars && ctx.vars.has(w)) || stripPlural(w, UBY) || stripPlural(w, CUR_NAMES);
+    }
+    function fixTypos(s, ctx) {
+      return s.replace(/\p{L}{5,}/gu, (w) => {
+        const lw = w.toLowerCase();
+        if (known(lw, ctx)) return w;
+        const max = lw.length >= 8 ? 2 : 1;
+        let best = null, bd = max + 1;
+        for (const k of VOCAB.keys()) {
+          if (k[0] !== lw[0]) continue;
+          const d = editDist(lw, k, max);
+          if (d < bd) { bd = d; best = k; }
+        }
+        return best || w;
+      });
+    }
+
+    const HOWLONG = /^how\s+(?:long|far|much\s+time)\s+(?:does\s+it\s+take\s+|will\s+it\s+take\s+|would\s+it\s+take\s+|is\s+it\s+|can\s+(?:i|you|we)\s+(?:go|get|drive|walk|run)\s+(?:in\s+)?|to\s+)*(?:to\s+)?(?:drive|walk|run|bike|cycle|ride|fly|go|travel|download|upload|transfer|copy|send|fill|get|do)?\s*/i;
+    const prep = (s, ctx) => {
+      s = fixTypos(numberWords(s), ctx).replace(HOWLONG, '').trim();
+      return stripFillers(s);
+    };
+
+    function core(s, ctx) {
+      s = prep(stripFillers(s), ctx);
+      if (!s) return null;
+      // a line that starts with an operator carries on from the line above: "+ 50", "* 2", "- 10%"
+      if (ctx.prev && /^(?:[+*/^×÷]|-\s|(?:plus|minus|times|divided\s+by|multiplied\s+by|mod|squared|cubed)\b)/i.test(s)) {
+        const r = read('ans ' + s, ctx);
+        if (r) { r.chain = true; return r; }
+      }
+      const r = read(s, ctx);
+      if (r) return r;
+      // "in euros", "to cm", "as %", "per month" convert the line above
+      if (ctx.prev && /^(?:in|to|into|as|per)\s+\D/i.test(s)) return read('ans ' + s, ctx);
+      return null;
+    }
+
+    function read(s, ctx) {
+      for (const [re, fn, isSplit] of RULES) {
+        if (isSplit) {
+          for (const m of s.matchAll(re)) {
+            if (!m.index || m.index + m[0].length >= s.length) continue;
+            try { const r = fn(s.slice(0, m.index), s.slice(m.index + m[0].length), m[0], ctx); if (r) return r; } catch { /* next split */ }
+          }
+          continue;
+        }
+        const m = s.match(re);
+        if (!m) continue;
+        try { const r = fn(m, ctx, s); if (r) return r; } catch { /* try the next reading */ }
+      }
+      ctx.usedAgg = false;
+      try {
+        const v = parse(tokenize(s, ctx), ctx);
+        if (v) { const r = fromValue(v); if (r && ctx.usedAgg) r.isAgg = true; return r; }
+      } catch { /* fall through */ }
+      try { return listSum(s, ctx); } catch { return null; }
+    }
+
+    const RESERVED = new Set([...Object.keys(AGGW), ...ANSW, ...Object.keys(KW), ...Object.keys(FNW), ...Object.keys(CONSTS), 'today', 'now', 'tomorrow', 'yesterday']);
+    const LABEL = /^([\p{L}_][\p{L}\p{N}_ ']{0,40}?)\s*(?::|=(?!=))\s*(.+)$/u;
+
+    function evalLine(raw, ctx, opts = {}) {
+      let s = clean(raw).replace(/\s+\/\/.*$/, '').trim();
+      if (!s) return null;
+      if (!opts.noLabel) {
+        const m = s.match(LABEL);
+        if (m) {
+          const name = m[1].trim().toLowerCase().replace(/\s+/g, ' ');
+          ctx.labeled = true;
+          let r;
+          try { r = core(m[2], ctx); } finally { ctx.labeled = false; }
+          if (r) {
+            if (r.value && !RESERVED.has(name) && !r.rand) {
+              ctx.vars.set(name, r.value);
+              ctx.multi = [...ctx.vars.keys()].filter((k) => k.includes(' ')).sort((a, b) => b.length - a.length);
+            }
+            return r;
+          }
+        }
+      }
+      return core(s, ctx);
+    }
+
+    const newCtx = () => ({ vars: new Map(), multi: [], prev: null, block: [] });
+
+    function evaluateDoc(lines) {
+      const ctx = newCtx();
+      let block = [];
+      ctx.agg = (k) => aggregate(k, block);
+      const vals = [];
+      ctx.lineVal = (n) => vals[n - 1] || null;
+      return lines.map((raw, idx) => {
+        const line = raw.trim();
+        if (!line) { block = []; return null; }
+        if (/^(#|\/\/)/.test(line)) { block = []; return { kind: 'hdr' }; }
+        ctx.key = 'doc|' + line;
+        let r = null;
+        try { r = evalLine(line, ctx); } catch { r = null; }
+        if (r) {
+          if (r.value) {
+            // "+ 50" under a line updates that running figure instead of adding a new one
+            if (r.chain && block.length) block[block.length - 1] = r.value;
+            else if (!r.isAgg) block.push(r.value);
+            ctx.prev = r.value;
+            vals[idx] = r.value;
+          }
+          return r;
+        }
+        // half-typed: "200 +", "5 km to", "20% of" -> show what we have so far, faintly
+        if (/\d/.test(clean(line))) {
+          let cut = clean(line), prevCut;
+          do {
+            prevCut = cut;
+            cut = cut.replace(/(?:\s*[-+*/^(×÷,=]|\s+(?:to|in|into|as|of|plus|minus|times|divided\s+by|and|at|for|per|split|between|over|mod))\s*$/i, '').trim();
+          } while (cut !== prevCut && cut);
+          if (cut && cut !== clean(line)) {
+            const c = Object.create(ctx);
+            c.vars = new Map(ctx.vars);
+            let p = null;
+            try { p = evalLine(cut, c); } catch { p = null; }
+            if (p && p.main) return { main: p.main, pending: true };
+          }
+          return { q: true };
+        }
+        return null;
+      });
+    }
+
+    // words a phrase can open with, so they still count as math in a cell
+    const STARTERS = new Set(['roll', 'throw', 'flip', 'toss', 'coin', 'random', 'rand', 'pick', 'split', 'tip', 'days', 'weeks', 'months', 'years', 'hours',
+      'time', 'how', 'what', 'whats', 'which', 'is', 'solve', 'remove', 'born', 'age', 'odds', 'chance', 'probability', 'birthday', 'convert', 'in', 'from',
+      'calculate', 'heads', 'exactly', 'at', 'once', 'compare']);
+
+    // spreadsheet: every cell is a line; A1-style refs and ranges
+    const colIdx = (c) => c.charCodeAt(0) - 65;
+    const colName = (i) => String.fromCharCode(65 + i);
+    function evaluateSheet(cells) {
+      const memo = new Map(), busy = new Set();
+      const ctx = newCtx();
+      const raw = (ref) => (cells[ref] || '').trim();
+      const val = (ref) => {
+        if (!memo.has(ref)) {
+          if (busy.has(ref)) fail();
+          busy.add(ref);
+          memo.set(ref, calc(ref));
+          busy.delete(ref);
+        }
+        const r = memo.get(ref);
+        if (r && r.value) return r.value;
+        if (!raw(ref)) return num(0);
+        return fail();
+      };
+      function above(ref) {
+        const c = ref[0], row = +ref.slice(1);
+        const out = [];
+        for (let r = row - 1; r >= 1; r--) {
+          const k = c + r;
+          if (!raw(k)) break;
+          try { out.unshift(val(k)); } catch { break; }
+        }
+        return out;
+      }
+      function calc(ref) {
+        const text = raw(ref);
+        if (!text) return null;
+        const c = Object.create(ctx);
+        c.key = 'sheet|' + ref + '|' + text;
+        c.agg = (k) => aggregate(k, above(ref));
+        // column headers like "with 15% tax" stay text: a cell that opens with a plain word isn't math
+        const first = (text.match(/^[\p{L}_][\p{L}\p{N}_]*/u) || [])[0];
+        if (first && !RX.cell.test(first.toLowerCase()) && !STARTERS.has(first.toLowerCase()) && classify(first.toLowerCase(), first, c, text.slice(first.length)).t === 'unk' && !/[=:]/.test(text)) return null;
+        try { return evalLine(text, c, { noLabel: true }); } catch { return null; }
+      }
+      ctx.cell = val;
+      ctx.range = (a, b) => {
+        const c1 = Math.min(colIdx(a[0]), colIdx(b[0])), c2 = Math.max(colIdx(a[0]), colIdx(b[0]));
+        const r1 = Math.min(+a.slice(1), +b.slice(1)), r2 = Math.max(+a.slice(1), +b.slice(1));
+        if ((c2 - c1 + 1) * (r2 - r1 + 1) > 5000) fail();
+        const out = [];
+        for (let ci = c1; ci <= c2; ci++) for (let r = r1; r <= r2; r++) {
+          const k = colName(ci) + r;
+          if (!raw(k)) continue;
+          try { out.push(val(k)); } catch { /* text cells are skipped */ }
+        }
+        return out;
+      };
+      ctx.cells = true;
+      const out = {};
+      for (const ref of Object.keys(cells)) {
+        if (!raw(ref)) continue;
+        try { val(ref); } catch { /* cycles or text */ }
+        out[ref] = memo.get(ref) || null;
+      }
+      return out;
+    }
+
+    return {
+      evaluateDoc, evaluateSheet, show, cycleTargets, setRates, fmtNum,
+      reroll(line) { RAND.delete('doc|' + line.trim()); },
+      rates: () => RATES,
+      localCur,
+    };
+  })();
+  if (typeof module !== 'undefined') module.exports = Sum;
+  </script>
+
+  <!-- ============================================================
+       BACKGROUND: dithered mint bands, drifting pixel digits
+       ============================================================ -->
+  <script>
+  (() => {
+    const cv = document.getElementById('bg');
+    if (!cv) return;
+    const g = cv.getContext('2d', { alpha: false });
+    const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const BANDS = ['#18664a', '#14583f', '#104a35', '#0c3c2b', '#082e21', '#052118', '#03150f'];
+    const BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]];
+    // 3x5 pixel glyphs
+    const GLYPHS = {
+      0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001',
+      5: '111100111001111', 6: '111100111101111', 7: '111001010010010', 8: '111101111101111', 9: '111101111001111',
+      '+': '000010111010000', '-': '000000111000000', '×': '000101010101000', '÷': '010000111000010', '=': '000111000111000',
+      '%': '101001010100101', 'Σ': '111100010100111',
+    };
+    const KEYS = Object.keys(GLYPHS);
+    const COLS = ['#3ddc97', '#8ef5c5', '#1f9d6a', '#c2fbe0'];
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const pick = (a) => a[Math.floor(Math.random() * a.length)];
+    const sprites = new Map();
+    function sprite(ch, col, s) {
+      const key = ch + col + s;
+      let c = sprites.get(key);
+      if (c) return c;
+      c = document.createElement('canvas');
+      c.width = 3 * s; c.height = 5 * s;
+      const x = c.getContext('2d');
+      x.fillStyle = COLS[col];
+      [...GLYPHS[ch]].forEach((b, i) => { if (b === '1') x.fillRect((i % 3) * s, Math.floor(i / 3) * s, s, s); });
+      sprites.set(key, c);
+      return c;
+    }
+
+    let PX = 3, W = 0, H = 0, base = null, veil = null, bits = [], sparks = [], pops = [];
+    const mouse = { x: -999, y: -999, vx: 0 };
+    addEventListener('pointermove', (e) => {
+      const x = e.clientX / PX;
+      mouse.vx = x - mouse.x; mouse.x = x; mouse.y = e.clientY / PX;
+    }, { passive: true });
+
+    function newBit(any) {
+      const z = Math.random();
+      return { x: rand(0, W), y: any ? rand(0, H) : H + rand(4, 30), vy: -(1.5 + z * 5), vx: 0, ph: rand(0, 6.3), ch: pick(KEYS), col: z > 0.85 ? 1 : z > 0.4 ? 0 : 2, a: 0.18 + z * 0.5, s: z > 0.86 ? 2 : 1 };
+    }
+
+    function buildBase() {
+      base = document.createElement('canvas');
+      base.width = W; base.height = H;
+      const b = base.getContext('2d');
+      const bh = H / BANDS.length;
+      for (let i = 0; i < BANDS.length; i++) {
+        b.fillStyle = BANDS[i];
+        b.fillRect(0, Math.floor(i * bh), W, Math.ceil(bh) + 1);
+        if (i + 1 < BANDS.length) {
+          // dithered seam between bands
+          b.fillStyle = BANDS[i + 1];
+          for (let y = 0; y < 4; y++) {
+            const yy = Math.floor((i + 1) * bh) - 4 + y;
+            for (let x = 0; x < W; x++) if (BAYER[yy & 3][x & 3] < (y + 1) * 4) b.fillRect(x, yy, 1, 1);
+          }
+        }
+      }
+    }
+
+    function buildVeil() {
+      veil = document.createElement('canvas');
+      veil.width = W; veil.height = H;
+      const v = veil.getContext('2d');
+      v.fillStyle = '#010805';
+      const el = document.querySelector('[data-veil]');
+      const rect = el ? el.getBoundingClientRect() : null;
+      const cx = rect ? (rect.left + rect.width / 2) / PX : W / 2;
+      const inner = Math.min(W * 0.5, (rect ? rect.width / 2 + 20 : 300) / PX);
+      const outer = inner + 120 / PX;
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          const dx = Math.abs(x - cx);
+          const k = dx <= inner ? 1 : Math.max(0, 1 - (dx - inner) / (outer - inner));
+          if (BAYER[y & 3][x & 3] / 16 < Math.round(k * 5) / 5 * 0.7) v.fillRect(x, y, 1, 1);
+        }
+      }
+    }
+
+    function resize() {
+      const dpr = devicePixelRatio || 1;
+      PX = Math.max(2, Math.round((innerWidth * dpr) / 560)) / dpr;
+      W = cv.width = Math.ceil(innerWidth / PX);
+      H = cv.height = Math.ceil(innerHeight / PX);
+      bits = Array.from({ length: Math.min(90, Math.round((W * H) / 900)) }, () => newBit(true));
+      buildBase();
+      buildVeil();
+      if (still) frame(0, true);
+    }
+
+    function draw(t, dt) {
+      g.drawImage(base, 0, 0);
+      // slow light shafts
+      for (let i = 0; i < 4; i++) {
+        const x0 = (i / 4) * (W + H * 0.4) - H * 0.2 + Math.sin(t * 0.00011 + i * 2) * W * 0.05;
+        const a = 0.03 + 0.025 * Math.sin(t * 0.0004 + i * 2.1);
+        g.fillStyle = `rgba(150, 255, 205, ${Math.max(0, a)})`;
+        const w = 4 + (i % 3) * 5;
+        for (let y = 0; y < H * 0.85; y += 1) g.fillRect(Math.round(x0 - y * 0.28), y, w, 1);
+      }
+      // drifting digits and operators
+      for (let i = 0; i < bits.length; i++) {
+        const b = bits[i];
+        b.vx += (Math.sin(t * 0.0009 + b.ph) * 2 - b.vx) * Math.min(1, dt * 2);
+        const dx = b.x - mouse.x, dy = b.y - mouse.y, d2 = dx * dx + dy * dy;
+        if (d2 < 300) { const f = 1 - d2 / 300; b.vx += (dx * 3 + mouse.vx * 8) * f * dt * 4; b.y += dy * f * dt * 3; }
+        b.x += b.vx * dt;
+        b.y += b.vy * dt;
+        const fade = Math.min(1, b.y / (H * 0.25));
+        g.globalAlpha = Math.max(0, b.a * fade);
+        g.drawImage(sprite(b.ch, b.col, b.s), Math.round(b.x), Math.round(b.y));
+        if (b.y < -12 || b.x < -12 || b.x > W + 12) bits[i] = newBit(false);
+      }
+      mouse.vx *= 0.8;
+      // little puffs from answers
+      for (let i = pops.length - 1; i >= 0; i--) {
+        const p = pops[i];
+        p.life -= dt * 1.1;
+        if (p.life <= 0) { pops.splice(i, 1); continue; }
+        p.vy += 14 * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+        g.globalAlpha = Math.min(1, p.life * 1.5);
+        g.drawImage(sprite(p.ch, p.col, 1), Math.round(p.x), Math.round(p.y));
+      }
+      // menthol sparkles
+      if (sparks.length < W / 16 && Math.random() < 0.4) sparks.push({ x: rand(0, W), y: rand(0, H * 0.9), life: 0, dur: rand(0.7, 1.6) });
+      g.fillStyle = '#e3fff2';
+      for (let i = sparks.length - 1; i >= 0; i--) {
+        const s = sparks[i];
+        s.life += dt / s.dur;
+        if (s.life >= 1) { sparks.splice(i, 1); continue; }
+        const k = Math.sin(s.life * Math.PI);
+        g.globalAlpha = k;
+        g.fillRect(Math.round(s.x), Math.round(s.y), 1, 1);
+        if (k > 0.5) { g.globalAlpha = k * 0.5; g.fillRect(Math.round(s.x) - 1, Math.round(s.y), 3, 1); g.fillRect(Math.round(s.x), Math.round(s.y) - 1, 1, 3); }
+      }
+      g.globalAlpha = 1;
+      if (veil) g.drawImage(veil, 0, 0);
+    }
+
+    let last = 0;
+    function frame(t, once) {
+      if (!once) requestAnimationFrame(frame);
+      if (!once && t - last < 1000 / 30) return;
+      const dt = once ? 0 : Math.min(0.1, (t - last) / 1000);
+      last = t;
+      if (!document.hidden || once) draw(t, dt);
+    }
+
+    window.sumFx = {
+      pop(x, y, n = 4) {
+        if (still) return;
+        for (let i = 0; i < n; i++) pops.push({ x: x / PX + rand(-4, 4), y: y / PX, vx: rand(-14, 14), vy: rand(-26, -12), ch: pick(KEYS), col: Math.random() < 0.5 ? 1 : 3, life: 1 });
+      },
+      veil() { if (W) buildVeil(); },
+    };
+
+    let rt = null;
+    addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(resize, 120); });
+    resize();
+    if (!still) requestAnimationFrame(frame);
+  })();
+  </script>
+
+  <!-- ============================================================
+       UI: lines, results, spreadsheet, popups, rates
+       ============================================================ -->
+  <script>
+  (() => {
+    const $ = (s, r = document) => r.querySelector(s);
+    const LS = {
+      get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+      set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } },
+    };
+    const coarse = matchMedia('(pointer: coarse)').matches;
+
+    /* ---------------- title letters ---------------- */
+    const title = $('#title');
+    title.innerHTML = [...title.textContent].map((c, i) => `<span style="animation-delay:${i * 0.25}s">${c}</span>`).join('');
+
+    /* ---------------- toast & copy ---------------- */
+    const toastEl = $('#toast');
+    let toastT = null;
+    function toast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('on');
+      clearTimeout(toastT);
+      toastT = setTimeout(() => toastEl.classList.remove('on'), 1300);
+    }
+    async function copy(text) {
+      try { await navigator.clipboard.writeText(text); }
+      catch {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch { /* nothing else to try */ }
+        ta.remove();
+      }
+      toast('copied');
+    }
+
+    /* ---------------- calculator lines ---------------- */
+    // shown faintly under an empty page, never put in the user's notes
+    const GHOST = [
+      'rent: 1200',
+      'groceries: 340.50',
+      'phone: 45',
+      'total',
+      '',
+      '586 split into 6',
+      '15% tip on 240',
+      '$25 an hour in a year',
+      '',
+      '5 ft 11 in to cm',
+      '3 feet + 2 yards + 2 meters',
+      '200 usd to sar',
+      '',
+      'days until dec 25',
+      'time in tokyo',
+      '',
+      '2x + 3 = 11',
+      'is 5 km more than 3 miles',
+    ];
+    let lines = LS.get('sumthing:lines', null);
+    // older visits saved the old prefilled demo; treat that as an empty page
+    const OLD_DEMO = '["# hey, this is sumthing","rent: 1200"';
+    if (!Array.isArray(lines) || !lines.length || JSON.stringify(lines).startsWith(OLD_DEMO)) lines = [''];
+    const ed = $('#ed');
+    let rows = [];
+    let results = [];
+    let active = -1;
+    const cycIdx = new Map();
+    const COPY_SVG = '<svg viewBox="0 0 12 12" aria-hidden="true"><path fill="currentColor" d="M3 0h9v9h-2V2H3z M0 3h8v9H0z M2 5v5h4V5z"/></svg>';
+
+    let saveT = null;
+    const save = () => { clearTimeout(saveT); saveT = setTimeout(() => LS.set('sumthing:lines', lines), 250); };
+
+    function autosize(ta) {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    }
+
+    function mkRow(i) {
+      const el = document.createElement('div');
+      el.className = 'row';
+      el.innerHTML = `<span class="ln"></span><textarea class="src" rows="1" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" enterkeyhint="enter" aria-label="line"></textarea><div class="res" hidden></div>`;
+      const row = { el, ln: el.children[0], ta: el.children[1], res: el.children[2], sig: '' };
+      row.ta.dataset.i = i;
+      row.res.dataset.i = i;
+      return row;
+    }
+
+    function build(focusI, caret) {
+      const frag = document.createDocumentFragment();
+      rows = lines.map((t, i) => {
+        const row = rows[i] && rows[i].el.isConnected ? rows[i] : mkRow(i);
+        row.ta.dataset.i = i; row.res.dataset.i = i;
+        row.ln.textContent = i + 1;
+        if (row.ta.value !== t) row.ta.value = t;
+        frag.appendChild(row.el);
+        return row;
+      });
+      ed.replaceChildren(frag);
+      rows.forEach((r, i) => { r.sig = r.sig || ''; r.ta.placeholder = i === 0 && lines.length === 1 ? 'type anything…' : ''; autosize(r.ta); });
+      if (lines.length === 0 || ed.lastChild === null) { lines = ['']; return build(focusI, caret); }
+      refresh(true);
+      if (focusI != null) focusRow(focusI, caret);
+    }
+
+    function focusRow(i, caret) {
+      const r = rows[Math.max(0, Math.min(rows.length - 1, i))];
+      if (!r) return;
+      r.ta.focus({ preventScroll: true });
+      const c = caret == null ? r.ta.value.length : Math.min(caret, r.ta.value.length);
+      r.ta.setSelectionRange(c, c);
+      r.el.scrollIntoView({ block: 'nearest' });
+    }
+
+    function paint(i, r) {
+      const row = rows[i];
+      if (!row) return;
+      const text = lines[i].trim();
+      row.el.classList.toggle('hdr', /^#/.test(text));
+      row.el.classList.toggle('cmt', /^\/\//.test(text));
+      let disp = r;
+      if (r && r.value && r.cyc && cycIdx.has(text)) {
+        const tg = Sum.cycleTargets(r.value)[cycIdx.get(text)];
+        const d = tg && Sum.show(r.value, tg);
+        if (d) disp = { ...r, ...d };
+      }
+      const sig = !r || r.kind === 'hdr' ? '' : r.q ? '?' : `${disp.main}|${disp.sub || ''}|${r.cyc ? 1 : 0}${r.rand ? 1 : 0}${r.pending ? 1 : 0}`;
+      if (sig === row.sig) return false;
+      const changed = row.sig !== '' || sig !== '';
+      row.sig = sig;
+      row.res.classList.toggle('qq', sig === '?');
+      if (!sig) { row.res.hidden = true; row.res.replaceChildren(); return false; }
+      row.res.hidden = false;
+      if (sig === '?') { row.res.innerHTML = '<span class="q" title="not sure what this means yet">?</span>'; return false; }
+      const line = document.createElement('div');
+      line.className = 'vline';
+      const val = document.createElement('button');
+      val.type = 'button';
+      val.className = 'val' + (r.pending ? ' pend' : r.cyc ? ' cyc' : r.rand ? ' rnd' : '');
+      val.textContent = disp.main;
+      val.dataset.copy = disp.copy || disp.main;
+      val.title = r.cyc ? 'tap to switch units' : r.rand ? 'tap to roll again' : 'tap to copy';
+      line.appendChild(val);
+      if (r.cyc || r.rand) {
+        const cp = document.createElement('button');
+        cp.type = 'button';
+        cp.className = 'cp';
+        cp.innerHTML = COPY_SVG;
+        cp.setAttribute('aria-label', 'copy');
+        cp.title = 'copy';
+        cp.dataset.copy = disp.copy || disp.main;
+        line.appendChild(cp);
+      }
+      row.res.replaceChildren(line);
+      if (disp.sub) {
+        const sub = document.createElement('span');
+        sub.className = 'sub';
+        sub.textContent = disp.sub;
+        row.res.appendChild(sub);
+      }
+      return changed;
+    }
+
+    const ghost = document.createElement('div');
+    ghost.className = 'ghost';
+    ghost.setAttribute('aria-hidden', 'true');
+    function paintGhost() {
+      const res = Sum.evaluateDoc(GHOST);
+      const esc = (x) => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+      ghost.innerHTML = '<div class="ghost-label">for example</div>' + GHOST.map((t, i) => {
+        const r = res[i];
+        const out = r && r.main ? `<div class="res"><div class="vline"><span class="val">${esc(r.main)}</span></div>${r.sub ? `<span class="sub">${esc(r.sub)}</span>` : ''}</div>` : '<div class="res" hidden></div>';
+        return t ? `<div class="row"><span class="ln"></span><div class="src">${esc(t)}</div>${out}</div>` : '<div class="row" style="min-height:0.8rem"></div>';
+      }).join('');
+    }
+    const isEmpty = () => lines.every((l) => !l.trim());
+    function updateGhost() {
+      const show = isEmpty();
+      if (show && !ghost.isConnected) { paintGhost(); ed.appendChild(ghost); }
+      else if (!show && ghost.isConnected) ghost.remove();
+    }
+
+    function refresh(quiet) {
+      updateGhost();
+      results = Sum.evaluateDoc(lines);
+      results.forEach((r, i) => {
+        const changed = paint(i, r);
+        if (changed && !quiet && i === active && r && !r.pending && window.sumFx) {
+          const b = rows[i].res.getBoundingClientRect();
+          if (b.width) sumFx.pop(b.right - 20, b.top + 8, 3);
+        }
+      });
+    }
+
+    ed.addEventListener('input', (e) => {
+      const ta = e.target.closest('.src');
+      if (!ta) return;
+      const i = +ta.dataset.i;
+      const v = ta.value.replace(/\r/g, '');
+      if (v.includes('\n')) {
+        // Enter or a multi-line paste: split into separate lines
+        const pos = ta.selectionStart;
+        const before = v.slice(0, pos);
+        const k = (before.match(/\n/g) || []).length;
+        const col = pos - before.lastIndexOf('\n') - 1;
+        lines.splice(i, 1, ...v.split('\n'));
+        active = i + k;
+        build(i + k, col);
+      } else {
+        lines[i] = v;
+        autosize(ta);
+        refresh();
+      }
+      save();
+    });
+
+    ed.addEventListener('keydown', (e) => {
+      const ta = e.target.closest('.src');
+      if (!ta) return;
+      const i = +ta.dataset.i;
+      const s = ta.selectionStart, end = ta.selectionEnd;
+      if (e.key === 'Backspace' && s === 0 && end === 0 && i > 0) {
+        e.preventDefault();
+        const c = lines[i - 1].length;
+        lines[i - 1] += lines[i];
+        lines.splice(i, 1);
+        build(i - 1, c); save();
+      } else if (e.key === 'Delete' && s === ta.value.length && end === s && i < lines.length - 1) {
+        e.preventDefault();
+        lines[i] += lines[i + 1];
+        lines.splice(i + 1, 1);
+        build(i, s); save();
+      } else if (e.key === 'ArrowUp' && i > 0 && !e.shiftKey && (s === 0 || ta.scrollHeight < 48)) {
+        e.preventDefault(); focusRow(i - 1, s);
+      } else if (e.key === 'ArrowDown' && i < lines.length - 1 && !e.shiftKey && (s === ta.value.length || ta.scrollHeight < 48)) {
+        e.preventDefault(); focusRow(i + 1, s);
+      }
+    });
+
+    ed.addEventListener('focusin', (e) => {
+      const ta = e.target.closest('.src');
+      if (!ta) return;
+      rows.forEach((r) => r.el.classList.remove('on'));
+      active = +ta.dataset.i;
+      ta.parentElement.classList.add('on');
+      if (coarse) setTimeout(() => ta.parentElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 320);
+    });
+    ed.addEventListener('focusout', (e) => { const ta = e.target.closest('.src'); if (ta) ta.parentElement.classList.remove('on'); });
+
+    ed.addEventListener('click', (e) => {
+      const cp = e.target.closest('.cp');
+      if (cp) { copy(cp.dataset.copy); return; }
+      const val = e.target.closest('.val');
+      if (val) {
+        const i = +val.closest('.res').dataset.i;
+        const r = results[i];
+        const key = lines[i].trim();
+        if (r && r.rand) { Sum.reroll(key); rows[i].sig = '#'; refresh(); return; }
+        if (r && r.cyc) {
+          const n = Sum.cycleTargets(r.value).length;
+          cycIdx.set(key, ((cycIdx.has(key) ? cycIdx.get(key) : -1) + 1) % n);
+          refresh();
+          return;
+        }
+        copy(val.dataset.copy);
+        return;
+      }
+      // tapping empty space lands on the last line
+      if (e.target === ed || ghost.contains(e.target)) {
+        if (isEmpty()) { focusRow(0); return; }
+        if (lines[lines.length - 1].trim()) { lines.push(''); build(lines.length - 1); save(); }
+        else focusRow(lines.length - 1);
+      }
+    });
+
+    let clearArm = null;
+    $('#clearBtn').addEventListener('click', (e) => {
+      const b = e.currentTarget;
+      if (!clearArm) {
+        b.textContent = 'tap again to clear';
+        b.classList.add('warn');
+        clearArm = setTimeout(() => { clearArm = null; b.textContent = 'clear all'; b.classList.remove('warn'); }, 2500);
+        return;
+      }
+      clearTimeout(clearArm); clearArm = null;
+      b.textContent = 'clear all'; b.classList.remove('warn');
+      lines = [''];
+      cycIdx.clear();
+      build(0); save();
+    });
+
+    let rt = null;
+    addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => rows.forEach((r) => autosize(r.ta)), 150); });
+
+    /* ---------------- spreadsheet ---------------- */
+    // shown faintly as placeholders in an empty sheet, never saved
+    const SHEET_GHOST = {
+      cols: 4, rows: 12,
+      cells: {
+        A1: 'item', B1: 'price', C1: 'with 15% tax',
+        A2: 'coffee', B2: '4.50', C2: 'B2 + 15%',
+        A3: 'lunch', B3: '12', C3: 'B3 + 15%',
+        A4: 'books', B4: '38', C4: 'B4 + 15%',
+        A5: 'total', B5: 'sum(B2:B4)', C5: 'sum(C2:C4)',
+        A7: 'in euros', B7: 'C5 usd to eur',
+        A8: 'per person', B8: 'C5 / 3',
+      },
+    };
+    let sheet = LS.get('sumthing:sheet', null);
+    // older visits saved the old prefilled example; treat that as empty
+    if (!sheet || !sheet.cells || JSON.stringify(sheet.cells) === JSON.stringify(SHEET_GHOST.cells)) sheet = { cols: 4, rows: 12, cells: {} };
+    const ghostRes = Sum.evaluateSheet(SHEET_GHOST.cells);
+    const sheetEmpty = () => !Object.values(sheet.cells).some((v) => v && v.trim());
+    const grid = $('#grid');
+    let sheetRes = {};
+    const saveSheet = () => LS.set('sumthing:sheet', sheet);
+    const col = (i) => String.fromCharCode(65 + i);
+
+    function buildGrid() {
+      let h = '<thead><tr><th class="rh"></th>';
+      for (let c = 0; c < sheet.cols; c++) h += `<th data-c="${c}">${col(c)}</th>`;
+      h += '</tr></thead><tbody>';
+      for (let r = 1; r <= sheet.rows; r++) {
+        h += `<tr><th class="rh" data-r="${r}">${r}</th>`;
+        for (let c = 0; c < sheet.cols; c++) h += `<td><input class="cell" data-ref="${col(c)}${r}" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="${col(c)}${r}"></td>`;
+        h += '</tr>';
+      }
+      grid.innerHTML = h + '</tbody>';
+      calcSheet();
+    }
+
+    function cellShow(inp) {
+      const ref = inp.dataset.ref;
+      const raw = sheet.cells[ref] || '';
+      if (document.activeElement === inp) { inp.value = raw; inp.className = 'cell'; if (!sheetEmpty()) inp.placeholder = ''; return; }
+      const r = sheetRes[ref];
+      // empty sheet: the example shows through as placeholders until the first keystroke
+      const g = sheetEmpty() ? SHEET_GHOST.cells[ref] : null;
+      inp.placeholder = g ? (ghostRes[ref] && ghostRes[ref].main) || g : '';
+      if (!raw && g) { inp.value = ''; inp.className = 'cell' + (ghostRes[ref] && ghostRes[ref].main ? ' num' : ''); inp.title = ''; return; }
+      if (r && r.main && !r.kind) { inp.value = r.main; inp.className = 'cell num'; inp.title = raw; }
+      else { inp.value = raw; inp.className = 'cell ' + (/\d/.test(raw) && !/^[\p{L}\s]+$/u.test(raw) && r === null && /[+\-*/^(]/.test(raw) ? 'bad' : 'txt'); inp.title = ''; }
+    }
+
+    function calcSheet() {
+      sheetRes = Sum.evaluateSheet(sheet.cells);
+      grid.querySelectorAll('.cell').forEach(cellShow);
+    }
+
+    grid.addEventListener('input', (e) => {
+      const inp = e.target.closest('.cell');
+      if (!inp) return;
+      if (inp.value.trim()) sheet.cells[inp.dataset.ref] = inp.value;
+      else delete sheet.cells[inp.dataset.ref];
+      calcSheet();
+      saveSheet();
+    });
+    grid.addEventListener('focusin', (e) => {
+      const inp = e.target.closest('.cell');
+      if (!inp) return;
+      cellShow(inp);
+      const ref = inp.dataset.ref;
+      grid.querySelectorAll('th.on').forEach((t) => t.classList.remove('on'));
+      const c = grid.querySelector(`thead th[data-c="${ref.charCodeAt(0) - 65}"]`), r = grid.querySelector(`th[data-r="${ref.slice(1)}"]`);
+      if (c) c.classList.add('on');
+      if (r) r.classList.add('on');
+    });
+    grid.addEventListener('focusout', (e) => { const inp = e.target.closest('.cell'); if (inp) setTimeout(() => cellShow(inp)); });
+    grid.addEventListener('keydown', (e) => {
+      const inp = e.target.closest('.cell');
+      if (!inp) return;
+      const ref = inp.dataset.ref, c = ref[0], r = +ref.slice(1);
+      let next = null;
+      if (e.key === 'Enter' || (e.key === 'ArrowDown')) next = c + (r + 1);
+      else if (e.key === 'ArrowUp') next = c + (r - 1);
+      else if (e.key === 'Escape') { inp.blur(); return; }
+      if (!next) return;
+      const n = grid.querySelector(`[data-ref="${next}"]`);
+      if (n) { e.preventDefault(); n.focus(); n.select(); }
+      else if (e.key === 'Enter') { e.preventDefault(); sheet.rows++; saveSheet(); buildGrid(); grid.querySelector(`[data-ref="${next}"]`).focus(); }
+    });
+    $('#addRow').addEventListener('click', () => { sheet.rows = Math.min(500, sheet.rows + 1); saveSheet(); buildGrid(); });
+    $('#addCol').addEventListener('click', () => { sheet.cols = Math.min(26, sheet.cols + 1); saveSheet(); buildGrid(); });
+    let sheetArm = null;
+    $('#clearSheet').addEventListener('click', (e) => {
+      const b = e.currentTarget;
+      if (!sheetArm) {
+        b.textContent = 'tap again'; b.classList.add('warn');
+        sheetArm = setTimeout(() => { sheetArm = null; b.textContent = 'clear'; b.classList.remove('warn'); }, 2500);
+        return;
+      }
+      clearTimeout(sheetArm); sheetArm = null;
+      b.textContent = 'clear'; b.classList.remove('warn');
+      sheet = { cols: 4, rows: 12, cells: {} };
+      saveSheet(); buildGrid();
+    });
+
+    /* ---------------- tabs ---------------- */
+    let booted = false;
+    function setTab(t) {
+      document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+      $('#calc').hidden = t !== 'calc';
+      $('#sheet').hidden = t !== 'sheet';
+      LS.set('sumthing:tab', t);
+      if (!coarse && booted) {
+        if (t === 'sheet') { const first = grid.querySelector('[data-ref="A1"]'); if (first && sheetEmpty()) first.focus(); }
+        else focusRow(lines.length - 1);
+      }
+      if (window.sumFx) setTimeout(sumFx.veil, 50);
+    }
+    document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
+
+    /* ---------------- popups ---------------- */
+    const EXAMPLES = [
+      ['everyday math', ['2+2', '(5*3)/2', '2^10', 'sqrt 16', '10 mod 3', 'half of 80', 'double 25', '12 times 4', '5!']],
+      ['notes & names', ['rent: 1200', 'rent + 20%', 'sum', 'average', 'ans * 2', 'coffee 4.50', 'line 2 * 12']],
+      ['keep going from the line above', ['+ 50', '* 2', '- 10%', 'in eur', 'per month']],
+      ['say it in words', ['two hundred and fifty plus one and a half', 'three quarters of an hour in minutes', '1 1/2 cups in ml', 'a third of 90', 'spilt 586 betwen 4 people']],
+      ['solve & compare', ['2x + 3 = 11', '20% of what is 30', 'is 5 km more than 3 miles', 'which is cheaper 20 usd or 70 sar', '0.1 + 0.2 = 0.3']],
+      ['rates & travel', ['$25 an hour in a year', '25 an hour 50 hours a week for a year', '60k a year per month', '100 km at 60 km/h', 'how long to download 4 GB at 50 mbps', '5 km in 25 min', '3 kg at $4/kg', '9am to 5:30pm']],
+      ['percent & money', ['200 + 20%', '200 - 15%', '20% of 300', '50 as % of 200', '15% tip on 240', 'what is 80 after 25% off', '% change from 80 to 100', '80 with 15% vat', '115 without 15% vat']],
+      ['splitting', ['586 split into 6', '586 / 6 people', 'split 586 between 4 with 15% tip', '586 in 4 payments', '2400 over 12 months', '1000 at 5% for 3 years']],
+      ['currency & prices', ['price of btc', 'usd', '100 usd', '100 usd to local', '200 usd to eur', '$50 in sar', '100 riyal to dollars', '£20 in yen', '50 bucks to sar', 'eth price in sar', 'price of gold']],
+      ['units', ['5 km to miles', '100 f to c', '300 deg to rad', '2 hours in minutes', '1.5 GB in MB', 'how many cups in a liter', '2 cups of flour in grams', '30 mpg to l/100km', '60 mph in km/h']],
+      ['mixed units', ['3 feet + 2 yards + 2 meters', '3 feet, 2 yards, 2 meters', '5 ft 11 in to cm', '1 h 45 min + 50 min', '2 lb 3 oz in kg', '180 cm in feet and inches', '200 minutes in hours', '5 ft to cm to meters', '18 years to days + 18 weeks']],
+      ['dates & time', ['today + 3 weeks', 'days until dec 25', 'how old is someone born 2007-05-14', 'time in tokyo', '3pm riyadh in london', 'what day is jan 1 2027', '90 days from now']],
+      ['odds', ['10 choose 3', '1 in 6', '3 heads in 5 flips', 'at least once in 4 tries at 20%', 'chance of 7 with 2d6', 'birthday paradox 23', 'roll 2d6', 'flip a coin']],
+    ];
+    const exBody = $('#exBody');
+    exBody.innerHTML = EXAMPLES.map(([h, list]) => `<div class="exgroup"><h3>${h}</h3><div class="exlist">${list.map((x) => `<button type="button" class="ex">${x.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</button>`).join('')}</div></div>`).join('');
+
+    let lastFocus = null;
+    function openPop(id) {
+      lastFocus = document.activeElement;
+      const p = $('#' + id);
+      p.hidden = false;
+      const first = p.querySelector('.ex, [data-close]');
+      if (first && !coarse) first.focus();
+    }
+    function closePop(p) {
+      p.hidden = true;
+      if (lastFocus && lastFocus.focus && !coarse) lastFocus.focus();
+    }
+    $('#helpBtn').addEventListener('click', () => openPop('examples'));
+    $('#aboutBtn').addEventListener('click', () => openPop('about'));
+    document.querySelectorAll('.pop').forEach((p) => p.addEventListener('click', (e) => {
+      if (e.target === p || e.target.closest('[data-close]')) closePop(p);
+    }));
+    addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const open = [...document.querySelectorAll('.pop')].find((p) => !p.hidden);
+      if (open) closePop(open);
+    });
+
+    exBody.addEventListener('click', (e) => {
+      const b = e.target.closest('.ex');
+      if (!b) return;
+      setTab('calc');
+      const text = b.textContent;
+      let at = active >= 0 && active < lines.length ? active : lines.length - 1;
+      if (lines[at].trim()) {
+        // drop it after the current line, reusing an empty line if one follows
+        if (at + 1 < lines.length && !lines[at + 1].trim()) at++;
+        else lines.splice(++at, 0, '');
+      }
+      lines[at] = text;
+      active = at;
+      save();
+      closePop($('#examples'));
+      build(coarse ? null : at);
+      const row = rows[at];
+      row.el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      row.el.classList.remove('flash'); void row.el.offsetWidth; row.el.classList.add('flash');
+    });
+
+    /* ---------------- phone key bar (sits on top of the keyboard) ---------------- */
+    const keys = $('#keys');
+    const vv = window.visualViewport;
+    function placeKeys() {
+      const kb = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0;
+      document.documentElement.style.setProperty('--kb', kb + 'px');
+    }
+    if (vv) { vv.addEventListener('resize', placeKeys); vv.addEventListener('scroll', placeKeys); }
+    let hideT = null, tapped = false;
+    function showKeys(el) {
+      if (!coarse || !tapped || !el || !el.matches('.src, .cell')) return;
+      clearTimeout(hideT);
+      keys.hidden = false;
+      keys.querySelector('.ret').hidden = !el.matches('.src');
+      document.body.classList.add('keyed');
+      placeKeys();
+    }
+    // the page focuses a line on load, but the phone keyboard (and this bar) only come up after a real tap
+    document.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('#keys')) return;
+      tapped = true;
+      const el = e.target.closest('.src, .cell');
+      if (el && el === document.activeElement) showKeys(el);
+    }, true);
+    document.addEventListener('focusin', (e) => showKeys(e.target));
+    document.addEventListener('focusout', () => {
+      hideT = setTimeout(() => {
+        if (document.activeElement && document.activeElement.matches('.src, .cell')) return;
+        keys.hidden = true;
+        document.body.classList.remove('keyed');
+      }, 120);
+    });
+    keys.addEventListener('pointerdown', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      e.preventDefault();
+      const el = document.activeElement;
+      if (!el || !el.matches('.src, .cell')) return;
+      el.setRangeText(b.dataset.k, el.selectionStart, el.selectionEnd, 'end');
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    /* ---------------- live rates (cached, with a built-in fallback) ---------------- */
+    const RATE_KEY = 'sumthing:rates', CRYPTO_KEY = 'sumthing:crypto';
+    const STALE = 6 * 3600e3;
+    const ago = (t) => {
+      const s = (Date.now() - t) / 1000;
+      if (s < 90) return 'just now';
+      if (s < 5400) return Math.round(s / 60) + ' min ago';
+      if (s < 129600) return Math.round(s / 3600) + ' h ago';
+      return Math.round(s / 86400) + ' days ago';
+    };
+    function applyRates() {
+      const r = LS.get(RATE_KEY, null), c = LS.get(CRYPTO_KEY, null);
+      Sum.setRates(r && r.rates, c && c.prices);
+      $('#rateNote').textContent = (r ? `rates updated ${ago(r.t)}` : 'rates: built-in (offline)') + ` · your currency: ${Sum.localCur()}`;
+      $('#rateNote').title = r ? `exchange rates as of ${new Date(r.t).toLocaleString()}` : 'approximate rates, live ones load when online';
+    }
+    async function loadRates(force) {
+      const r = LS.get(RATE_KEY, null), c = LS.get(CRYPTO_KEY, null);
+      const jobs = [];
+      if (force || !r || Date.now() - r.t > STALE) {
+        jobs.push(fetch('https://open.er-api.com/v6/latest/USD').then((x) => x.json()).then((j) => {
+          if (j && j.result === 'success' && j.rates) LS.set(RATE_KEY, { t: (j.time_last_update_unix || Date.now() / 1000) * 1000, rates: j.rates });
+        }).catch(() => {}));
+      }
+      if (force || !c || Date.now() - c.t > STALE / 3) {
+        const IDS = { bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', dogecoin: 'DOGE', ripple: 'XRP', cardano: 'ADA', litecoin: 'LTC', binancecoin: 'BNB', 'tether-gold': 'XAU' };
+        jobs.push(fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${Object.keys(IDS).join(',')}&vs_currencies=usd`).then((x) => x.json()).then((j) => {
+          if (!j || !j.bitcoin) return;
+          const prices = {};
+          for (const [id, code] of Object.entries(IDS)) if (j[id] && j[id].usd) prices[code] = j[id].usd;
+          LS.set(CRYPTO_KEY, { t: Date.now(), prices });
+        }).catch(() => {}));
+      }
+      if (!jobs.length) return;
+      await Promise.all(jobs);
+      applyRates();
+      refresh(true);
+      calcSheet();
+    }
+    $('#rateNote').addEventListener('click', () => loadRates(true));
+    setInterval(() => { applyRates(); }, 60000);
+
+    /* ---------------- go ---------------- */
+    applyRates();
+    if (lines[lines.length - 1].trim()) lines.push('');
+    build();
+    buildGrid();
+    setTab(LS.get('sumthing:tab', 'calc') === 'sheet' ? 'sheet' : 'calc');
+    // caret in place so you can just type (phones only open the keyboard after a real tap)
+    if (!$('#calc').hidden) requestAnimationFrame(() => focusRow(lines.length - 1));
+    else if (sheetEmpty()) requestAnimationFrame(() => grid.querySelector('[data-ref="A1"]').focus());
+    booted = true;
+    loadRates(false);
+    if ('ResizeObserver' in window && window.sumFx) {
+      let vt = null;
+      new ResizeObserver(() => { clearTimeout(vt); vt = setTimeout(sumFx.veil, 150); }).observe($('.app'));
+    }
+  })();
+  </script>
+</body>
+</html>

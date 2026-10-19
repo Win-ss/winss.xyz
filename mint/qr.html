@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QR</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png" />
+  <meta name="description" content="Make styled QR codes and read them from your camera or an image, right in your browser." />
+  <meta property="og:title" content="QR" />
+  <meta property="og:description" content="Make styled QR codes and read them from your camera or an image, right in your browser." />
+  <meta property="og:image" content="https://winss.xyz/assets/favicon.png" />
+  <meta property="og:url" content="https://winss.xyz/mint/qr.html" />
+  <meta name="theme-color" content="#3ddc97" />
+  <link rel="stylesheet" href="base.css" />
+  <style>
+    .wrap { max-width: 32rem; }
+
+    /* make / read */
+    .tabs {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      width: 100%;
+      border-bottom: 1px solid var(--line);
+      margin-top: -0.4rem;
+    }
+
+    .tab {
+      font: inherit;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 1px solid transparent;
+      margin-bottom: -1px;
+      padding: 0.35rem 0.4rem;
+      cursor: pointer;
+    }
+
+    .tab:hover { color: var(--mint-light); }
+    .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--mint); }
+
+    .mode {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.1rem;
+    }
+
+    /* what goes in the code */
+    .kinds {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.2rem 1rem;
+    }
+
+    .kind {
+      font: inherit;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      border-bottom: 1px solid transparent;
+      padding: 0.2rem 0.1rem;
+      cursor: pointer;
+    }
+
+    .kind:hover { color: var(--mint-light); }
+    .kind[aria-pressed="true"] { color: var(--mint-light); border-bottom-color: var(--mint); }
+
+    .grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem 1rem;
+    }
+
+    .grid label, .grid .lab {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.03em;
+      color: var(--text-muted);
+      text-align: left;
+      min-width: 0;
+    }
+
+    .grid b {
+      font-weight: normal;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .grid b em { font-style: normal; color: var(--mint-light); }
+    .full { grid-column: 1 / -1; }
+
+    input[type="text"], input[type="email"], input[type="tel"], input[type="number"], textarea {
+      font: inherit;
+      font-size: 0.82rem;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--line);
+      outline: none;
+      padding: 0.35rem 0.1rem;
+      width: 100%;
+      min-width: 0;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    textarea { resize: none; overflow-y: auto; max-height: 10rem; line-height: 1.45; }
+    input::placeholder, textarea::placeholder { color: var(--text-faint); }
+    input:focus, textarea:focus { border-bottom-color: var(--mint); }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 1.7rem;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track { height: 1px; background: var(--line); }
+    input[type="range"]::-moz-range-track { height: 1px; background: var(--line); }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 10px;
+      height: 10px;
+      margin-top: -4.5px;
+      background: var(--mint);
+      border: 0;
+      border-radius: 0;
+    }
+    input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; background: var(--mint); border: 0; border-radius: 0; }
+    input[type="range"]:hover::-webkit-slider-thumb { background: var(--mint-light); }
+    input[type="range"]:hover::-moz-range-thumb { background: var(--mint-light); }
+    input[type="range"]:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 1.6rem;
+      padding: 2px;
+      border: 1px solid var(--line);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="color"]:hover { border-color: var(--mint); }
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0; }
+    input[type="color"]::-moz-color-swatch { border: none; border-radius: 0; }
+
+    .cycle {
+      font: inherit;
+      font-size: 0.78rem;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--line);
+      padding: 0.35rem 0.1rem;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cycle:hover, .cycle.over { color: var(--mint-light); border-bottom-color: var(--mint); }
+    .cycle:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* preview + read square */
+    .stage {
+      width: 100%;
+      max-width: 20rem;
+      aspect-ratio: 1 / 1;
+      border: 1px solid var(--line);
+      background: rgba(0, 0, 0, 0.55);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.7rem;
+      overflow: hidden;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .stage .tag {
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-size: 0.6rem;
+      padding: 0.15rem 0.45rem;
+      background: #000;
+      color: var(--text-muted);
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .stage .tag.r { left: auto; right: 0; border-right: none; border-left: 1px solid var(--line); }
+    .stage .tag.ok { color: var(--mint-light); }
+    .stage .tag.bad { color: var(--error); }
+
+    #qr { width: 100%; line-height: 0; }
+    #qr canvas, #qr svg { width: 100%; height: auto; display: block; }
+    .stage.example #qr { opacity: 0.16; }
+
+    /* transparent background shows as a checkerboard */
+    .stage.clear #qr {
+      background-color: #fff;
+      background-image: repeating-conic-gradient(#d4d4d4 0 25%, #fff 0 50%);
+      background-size: 12px 12px;
+    }
+
+    .stage.clear.dark #qr {
+      background-color: #111;
+      background-image: repeating-conic-gradient(#262626 0 25%, #111 0 50%);
+    }
+
+    .meta {
+      width: 100%;
+      max-width: 20rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: -0.6rem;
+      text-align: left;
+    }
+
+    .meta .link { font-size: inherit; white-space: nowrap; }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 20rem;
+    }
+
+    .row .btn { flex: 1 1 0; padding-left: 0.5rem; padding-right: 0.5rem; white-space: nowrap; }
+
+    .more { font-size: 0.75rem; }
+    .more[aria-expanded="true"] { color: var(--mint-light); }
+
+    .style-box {
+      width: 100%;
+      border-top: 1px solid var(--line);
+      padding-top: 1.1rem;
+    }
+
+    .sw {
+      display: flex;
+      gap: 0.6rem;
+      justify-content: flex-end;
+      font-size: 0.6rem;
+    }
+
+    .sw .link, .grid b .link { font-size: inherit; }
+
+    /* read */
+    .stage.pick { cursor: pointer; border-style: dashed; flex-direction: column; gap: 0.3rem; padding: 1rem; }
+    .stage.pick:hover, .stage.over { border-color: var(--mint); border-style: solid; }
+    .stage.over { background: rgba(10, 74, 51, 0.35); }
+    .stage .big { font-size: 0.95rem; }
+    .stage .small { font-size: 0.68rem; color: var(--text-muted); }
+
+    /* little pixel qr glyph for the empty square */
+    .glyph {
+      width: 36px;
+      height: 36px;
+      margin: 0 auto 0.8rem;
+      position: relative;
+    }
+
+    .glyph i {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border: 3px solid var(--text-faint);
+    }
+
+    .glyph i:nth-child(1) { left: 0; top: 0; }
+    .glyph i:nth-child(2) { right: 0; top: 0; }
+    .glyph i:nth-child(3) { left: 0; bottom: 0; }
+    .glyph i:nth-child(4) { right: 2px; bottom: 2px; width: 6px; height: 6px; border: none; background: var(--mint-dark); }
+    .stage.pick:hover .glyph i, .stage.over .glyph i { border-color: var(--mint); }
+
+    #video, #shot {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #000;
+    }
+
+    #video { object-fit: cover; }
+
+    .aim {
+      position: absolute;
+      inset: 20%;
+      border: 1px solid var(--mint-light);
+      pointer-events: none;
+    }
+
+    .res {
+      width: 100%;
+      max-width: 20rem;
+      border: 1px solid var(--mint-dark);
+      background: rgba(0, 0, 0, 0.55);
+      position: relative;
+      padding: 1.8rem 0.9rem 0.9rem;
+      text-align: left;
+    }
+
+    .res .tag {
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-size: 0.6rem;
+      padding: 0.15rem 0.45rem;
+      background: #000;
+      color: var(--mint-light);
+      border-right: 1px solid var(--mint-dark);
+      border-bottom: 1px solid var(--mint-dark);
+    }
+
+    .raw {
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      max-height: 12rem;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--mint-dark) transparent;
+    }
+
+    .res dl { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.9rem; font-size: 0.8rem; }
+    .res dt { color: var(--text-muted); font-size: 0.65rem; padding-top: 0.15rem; }
+    .res dd { overflow-wrap: anywhere; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="frost" aria-hidden="true"></div>
+  <main class="wrap panel">
+    <h1 class="tagline"><a href="./">qr</a></h1>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab" role="tab" id="tab-make" data-mode="make" aria-controls="make" aria-selected="true">make</button>
+      <button type="button" class="tab" role="tab" id="tab-read" data-mode="read" aria-controls="read" aria-selected="false">read</button>
+    </div>
+
+    <!-- make -->
+    <section class="mode" id="make" role="tabpanel" aria-labelledby="tab-make">
+      <div class="kinds" id="kinds" aria-label="what goes in the code">
+        <button type="button" class="kind" data-kind="text" aria-pressed="true">text</button>
+        <button type="button" class="kind" data-kind="wifi" aria-pressed="false">wifi</button>
+        <button type="button" class="kind" data-kind="email" aria-pressed="false">email</button>
+        <button type="button" class="kind" data-kind="phone" aria-pressed="false">phone</button>
+        <button type="button" class="kind" data-kind="sms" aria-pressed="false">sms</button>
+        <button type="button" class="kind" data-kind="contact" aria-pressed="false">contact</button>
+      </div>
+
+      <div class="grid fields" data-kind="text">
+        <label class="full"><b>text or link</b>
+          <textarea id="f-text" rows="1" placeholder="https://" spellcheck="false" autocomplete="off"></textarea>
+        </label>
+      </div>
+      <div class="grid fields hidden" data-kind="wifi">
+        <label class="full"><b>network name</b><input type="text" id="f-ssid" autocomplete="off" spellcheck="false" /></label>
+        <label class="full"><b>password</b><input type="text" id="f-pass" autocomplete="off" spellcheck="false" /></label>
+        <div class="lab"><b>security</b><button type="button" class="cycle" id="f-sec" data-cycle="sec"></button></div>
+        <div class="lab"><b>hidden network</b><button type="button" class="cycle" id="f-hid" data-cycle="hid"></button></div>
+      </div>
+      <div class="grid fields hidden" data-kind="email">
+        <label class="full"><b>to</b><input type="email" id="f-to" autocomplete="off" spellcheck="false" placeholder="name@example.com" /></label>
+        <label class="full"><b>subject</b><input type="text" id="f-sub" autocomplete="off" /></label>
+        <label class="full"><b>message</b><textarea id="f-body" rows="1"></textarea></label>
+      </div>
+      <div class="grid fields hidden" data-kind="phone">
+        <label class="full"><b>number</b><input type="tel" id="f-tel" autocomplete="off" placeholder="+1 555 0100" /></label>
+      </div>
+      <div class="grid fields hidden" data-kind="sms">
+        <label class="full"><b>number</b><input type="tel" id="f-snum" autocomplete="off" placeholder="+1 555 0100" /></label>
+        <label class="full"><b>message</b><textarea id="f-smsg" rows="1"></textarea></label>
+      </div>
+      <div class="grid fields hidden" data-kind="contact">
+        <label class="full"><b>name</b><input type="text" id="f-name" autocomplete="off" /></label>
+        <label><b>phone</b><input type="tel" id="f-ctel" autocomplete="off" /></label>
+        <label><b>email</b><input type="email" id="f-cmail" autocomplete="off" spellcheck="false" /></label>
+        <label><b>company</b><input type="text" id="f-org" autocomplete="off" /></label>
+        <label><b>website</b><input type="text" id="f-site" autocomplete="off" spellcheck="false" /></label>
+      </div>
+
+      <div class="stage example" id="pstage">
+        <div id="qr" role="img" aria-label="qr code preview"></div>
+        <span class="tag" id="ptag">example</span>
+        <span class="tag r hidden" id="ctag"></span>
+      </div>
+      <div class="meta">
+        <span id="pinfo">type something above</span>
+        <button type="button" class="link hidden" id="fix">add https://</button>
+      </div>
+
+      <div class="row">
+        <button type="button" class="btn" id="save" disabled>save png</button>
+        <button type="button" class="btn ghost" id="copy" disabled>copy</button>
+      </div>
+
+      <button type="button" class="link more" id="more" aria-expanded="false" aria-controls="style">style +</button>
+
+      <div class="style-box hidden" id="style">
+        <div class="grid">
+          <div class="lab"><b>dots</b><button type="button" class="cycle" data-cycle="dots"></button></div>
+          <label><b>ink <em id="ink-v"></em></b><input type="color" data-color="ink" /></label>
+          <div class="lab"><b>eyes</b><button type="button" class="cycle" data-cycle="eyes"></button></div>
+          <label><b>eye color <em id="eye-v"></em></b><input type="color" data-color="eye" /></label>
+          <div class="lab"><b>pupils</b><button type="button" class="cycle" data-cycle="pupils"></button></div>
+          <label><b>pupil color <em id="pupil-v"></em></b><input type="color" data-color="pupil" /></label>
+          <div class="lab"><b>background</b><button type="button" class="cycle" data-cycle="clear"></button></div>
+          <label><b>paper <em id="paper-v"></em></b><input type="color" data-color="paper" /></label>
+          <label><b>margin <em id="margin-v"></em></b><input type="range" id="margin" min="0" max="20" step="1" /></label>
+          <div class="lab"><b>error correction</b><button type="button" class="cycle" data-cycle="ecc"></button></div>
+          <label><b>size (px)</b><input type="number" id="size" min="64" max="4096" step="64" inputmode="numeric" /></label>
+          <div class="lab"><b>format</b><button type="button" class="cycle" data-cycle="format"></button></div>
+          <div class="lab full"><b>logo <button type="button" class="link hidden" id="logo-off">remove</button></b><button type="button" class="cycle" id="logo-pick">add image (or drop one here)</button></div>
+          <label><b>logo size <em id="lsize-v"></em></b><input type="range" id="lsize" min="10" max="50" step="5" /></label>
+          <label><b>logo gap <em id="lgap-v"></em></b><input type="range" id="lgap" min="0" max="20" step="1" /></label>
+          <div class="sw full">
+            <button type="button" class="link" id="swap">swap ink / paper</button>
+            <button type="button" class="link" id="reset">reset style</button>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="logo-file" accept="image/*" hidden />
+    </section>
+
+    <!-- read -->
+    <section class="mode hidden" id="read" role="tabpanel" aria-labelledby="tab-read">
+      <div class="stage pick" id="rstage" role="button" tabindex="0" aria-label="choose an image with a qr code">
+        <div id="rempty">
+          <div class="glyph" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <p class="big">drop or paste an image</p>
+          <p class="small">or click to pick one</p>
+        </div>
+        <video id="video" class="hidden" muted playsinline></video>
+        <canvas id="shot" class="hidden"></canvas>
+        <div class="aim hidden" id="aim"></div>
+        <span class="tag hidden" id="rtag"></span>
+      </div>
+      <input type="file" id="rfile" accept="image/*" hidden />
+
+      <div class="row">
+        <button type="button" class="btn ghost" id="cam">use camera</button>
+        <button type="button" class="btn ghost hidden" id="flip">switch camera</button>
+      </div>
+
+      <div class="res hidden" id="res" aria-live="polite">
+        <span class="tag" id="rkind"></span>
+        <div id="rbody"></div>
+      </div>
+      <div class="row hidden" id="racts"></div>
+      <button type="button" class="link hidden" id="again" style="font-size: 0.75rem">read another</button>
+    </section>
+
+    <p class="status" id="status" aria-live="polite"></p>
+    <p class="foot"><a href="./">← mint</a> · nothing leaves your device</p>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+  <script src="ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const $status = $('status');
+
+    function setStatus(text, kind) {
+      $status.textContent = text || '';
+      $status.className = 'status' + (kind ? ' ' + kind : '');
+    }
+
+    function show(ids, on) { ids.forEach((id) => $(id).classList.toggle('hidden', !on)); }
+
+    const store = {
+      get(k) { try { return JSON.parse(localStorage.getItem('mint-qr-' + k)); } catch { return null; } },
+      set(k, v) { try { localStorage.setItem('mint-qr-' + k, JSON.stringify(v)); } catch {} },
+    };
+
+    // ---------- make / read switch, kept in the hash so links land on the right one
+
+    let mode = 'make';
+
+    function setMode(m) {
+      if (m !== 'read') m = 'make';
+      const changed = m !== mode;
+      mode = m;
+      document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.mode === m)));
+      show(['make'], m === 'make');
+      show(['read'], m === 'read');
+      if (m !== 'read') stopCam();
+      if (location.hash !== '#' + m) history.replaceState(null, '', '#' + m);
+      if (changed) setStatus('');
+    }
+
+    document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => setMode(t.dataset.mode)));
+    addEventListener('hashchange', () => setMode(location.hash.slice(1)));
+
+    // ---------- reading pixels (shared by the reader and the maker's self check)
+
+    const work = document.createElement('canvas');
+    const wctx = work.getContext('2d', { willReadFrequently: true });
+
+    // tries a few sizes and backings (transparent pngs need one), returns { code, scale } or null
+    function decode(src, w, h, sizes = [1000, 640, 1600, 360], backs = ['#fff', '#000']) {
+      if (!window.jsQR || !w || !h) return null;
+      const tried = new Set();
+      for (const max of sizes) {
+        const s = Math.min(1, max / Math.max(w, h));
+        const cw = Math.max(1, Math.round(w * s)), ch = Math.max(1, Math.round(h * s));
+        if (tried.has(cw)) continue;
+        tried.add(cw);
+        work.width = cw;
+        work.height = ch;
+        for (const back of backs) {
+          wctx.fillStyle = back;
+          wctx.fillRect(0, 0, cw, ch);
+          wctx.drawImage(src, 0, 0, cw, ch);
+          const d = wctx.getImageData(0, 0, cw, ch);
+          const code = jsQR(d.data, cw, ch, { inversionAttempts: 'attemptBoth' });
+          if (code) return { code, scale: s };
+        }
+      }
+      return null;
+    }
+
+    async function bitmap(blob) {
+      if (window.createImageBitmap) {
+        try { return await createImageBitmap(blob); } catch {}
+      }
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(blob);
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('not an image')); };
+        img.src = url;
+      });
+    }
+
+    // ---------- make
+
+    const CYCLES = {
+      dots: [['square', 'square'], ['dots', 'dots'], ['rounded', 'rounded'], ['extra-rounded', 'blobby'], ['classy', 'classy'], ['classy-rounded', 'classy round']],
+      eyes: [['square', 'square'], ['dot', 'round'], ['extra-rounded', 'soft']],
+      pupils: [['square', 'square'], ['dot', 'round']],
+      clear: [[false, 'solid'], [true, 'transparent']],
+      ecc: [['L', 'l · 7%'], ['M', 'm · 15%'], ['Q', 'q · 25%'], ['H', 'h · 30%']],
+      format: [['png', 'png'], ['jpeg', 'jpg'], ['webp', 'webp'], ['svg', 'svg']],
+      sec: [['WPA', 'wpa / wpa2'], ['WEP', 'wep'], ['nopass', 'none']],
+      hid: [[false, 'no'], [true, 'yes']],
+    };
+
+    const DEFAULT = {
+      dots: 'square', eyes: 'square', pupils: 'square',
+      ink: '#000000', eye: '#000000', pupil: '#000000', paper: '#ffffff',
+      clear: false, margin: 6, ecc: 'M', lsize: 30, lgap: 4, size: 1024, format: 'png',
+    };
+
+    let style = Object.assign({}, DEFAULT, store.get('style') || {});
+    const extra = { sec: 'WPA', hid: false }; // wifi bits, not saved
+    let kind = 'text';
+    let logo = null; // { url, name }
+    let data = '';
+    let qr = null;
+
+    const PREVIEW = 600;
+    const MAX_BYTES = { L: 2953, M: 2331, Q: 1663, H: 1273 };
+
+    const enc = encodeURIComponent;
+    const wifiEsc = (s) => s.replace(/([\\;,:"])/g, '\\$1');
+    const vEsc = (s) => s.replace(/([\\;,])/g, '\\$1').replace(/\n/g, '\\n');
+    const val = (id) => $(id).value;
+
+    function payload() {
+      switch (kind) {
+        case 'wifi': {
+          const ssid = val('f-ssid');
+          if (!ssid) return '';
+          const pass = extra.sec === 'nopass' ? '' : 'P:' + wifiEsc(val('f-pass')) + ';';
+          return 'WIFI:T:' + extra.sec + ';S:' + wifiEsc(ssid) + ';' + pass + (extra.hid ? 'H:true;' : '') + ';';
+        }
+        case 'email': {
+          const to = val('f-to').trim(), sub = val('f-sub'), body = val('f-body');
+          if (!to && !sub && !body) return '';
+          const q = [];
+          if (sub) q.push('subject=' + enc(sub));
+          if (body) q.push('body=' + enc(body));
+          return 'mailto:' + to + (q.length ? '?' + q.join('&') : '');
+        }
+        case 'phone': {
+          const n = val('f-tel').replace(/[^\d+*#]/g, '');
+          return n ? 'tel:' + n : '';
+        }
+        case 'sms': {
+          const n = val('f-snum').replace(/[^\d+*#]/g, ''), m = val('f-smsg');
+          return n || m ? 'SMSTO:' + n + ':' + m : '';
+        }
+        case 'contact': {
+          const name = val('f-name').trim(), tel = val('f-ctel').trim(), mail = val('f-cmail').trim();
+          const org = val('f-org').trim(), site = val('f-site').trim();
+          if (!name && !tel && !mail && !org && !site) return '';
+          const parts = name.split(/\s+/);
+          const last = parts.length > 1 ? parts.pop() : '';
+          const lines = ['BEGIN:VCARD', 'VERSION:3.0', 'N:' + vEsc(last) + ';' + vEsc(parts.join(' ')) + ';;;', 'FN:' + vEsc(name)];
+          if (org) lines.push('ORG:' + vEsc(org));
+          if (tel) lines.push('TEL:' + vEsc(tel));
+          if (mail) lines.push('EMAIL:' + vEsc(mail));
+          if (site) lines.push('URL:' + vEsc(site));
+          lines.push('END:VCARD');
+          return lines.join('\n');
+        }
+        default:
+          return val('f-text');
+      }
+    }
+
+    function qrOptions(size, text, forExport) {
+      const k = size / 300;
+      return {
+        width: size,
+        height: size,
+        type: forExport === 'svg' ? 'svg' : 'canvas',
+        // the library writes one byte per char, so hand it utf-8 bytes or accents and symbols come out broken
+        data: utf8(text),
+        margin: Math.round(size * style.margin / 100),
+        image: logo ? logo.url : '',
+        qrOptions: { typeNumber: 0, mode: 'Byte', errorCorrectionLevel: style.ecc },
+        imageOptions: { hideBackgroundDots: true, imageSize: style.lsize / 100, margin: Math.round(style.lgap * k), crossOrigin: 'anonymous' },
+        dotsOptions: { type: style.dots, color: style.ink },
+        cornersSquareOptions: { type: style.eyes, color: style.eye },
+        cornersDotOptions: { type: style.pupils, color: style.pupil },
+        // jpeg has no alpha, so it keeps the paper color
+        backgroundOptions: { color: style.clear && forExport !== 'jpeg' ? 'transparent' : style.paper },
+      };
+    }
+
+    const bytes = (s) => new TextEncoder().encode(s).length;
+    function utf8(s) {
+      let out = '';
+      new TextEncoder().encode(s).forEach((b) => { out += String.fromCharCode(b); });
+      return out;
+    }
+
+    function looksLikeDomain(s) {
+      return /^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(\/\S*)?$/i.test(s.trim());
+    }
+
+    let frame = 0;
+    function render() {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(draw);
+    }
+
+    function draw() {
+      if (!window.QRCodeStyling) return;
+      data = payload();
+      const empty = !data;
+      const text = empty ? 'https://winss.xyz' : data;
+      const n = bytes(text);
+      const over = n > MAX_BYTES[style.ecc];
+
+      $('pstage').classList.toggle('example', empty);
+      $('pstage').classList.toggle('clear', !!style.clear);
+      $('pstage').classList.toggle('dark', luma(style.ink) > 0.5);
+      $('ptag').textContent = empty ? 'example' : 'preview';
+      $('save').disabled = $('copy').disabled = empty || over;
+      $('fix').classList.toggle('hidden', !(kind === 'text' && looksLikeDomain(data) && !/^[a-z]+:/i.test(data.trim())));
+
+      if (over) {
+        $('pinfo').textContent = n + ' bytes, max ' + MAX_BYTES[style.ecc] + ' at ' + style.ecc.toLowerCase();
+        $('ctag').classList.add('hidden');
+        return setStatus('too long for one qr code, shorten it or lower error correction', 'error');
+      }
+      if ($status.textContent.startsWith('too long')) setStatus('');
+
+      const o = qrOptions(PREVIEW, text);
+      try {
+        if (!qr) {
+          qr = new QRCodeStyling(o);
+          qr.append($('qr'));
+        } else {
+          qr.update(o);
+        }
+      } catch (err) {
+        console.error(err);
+        return setStatus("couldn't draw that code", 'error');
+      }
+
+      if (empty) {
+        $('pinfo').textContent = 'type something above';
+        $('ctag').classList.add('hidden');
+        return;
+      }
+      const mods = qr._qr && qr._qr.getModuleCount ? qr._qr.getModuleCount() : 0;
+      $('pinfo').textContent = describe(data) + ' · ' + n + (n === 1 ? ' byte' : ' bytes') + (mods ? ' · ' + mods + '×' + mods : '');
+      check(text);
+    }
+
+    // read the preview back to make sure it actually scans
+    let checkSeq = 0, checkTimer = 0;
+    function check(text) {
+      clearTimeout(checkTimer);
+      const seq = ++checkSeq;
+      const $c = $('ctag');
+      checkTimer = setTimeout(async () => {
+        try {
+          const blob = await qr.getRawData('png');
+          const img = await bitmap(blob);
+          if (seq !== checkSeq) return;
+          const back = luma(style.ink) > 0.5 ? '#000' : '#fff';
+          const r = decode(img, img.width, img.height, [600, 400], [style.clear ? back : style.paper]);
+          if (seq !== checkSeq) return;
+          const ok = r && r.code.data === text;
+          $c.textContent = ok ? 'scans' : 'may not scan';
+          $c.className = 'tag r ' + (ok ? 'ok' : 'bad');
+          $c.title = ok ? 'read back fine' : 'could not read this back, try more contrast, a smaller logo or higher error correction';
+        } catch (err) {
+          console.error(err);
+          $c.classList.add('hidden');
+        }
+      }, 220);
+    }
+
+    function luma(hex) {
+      const n = parseInt(hex.slice(1), 16);
+      const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    }
+
+    function setKind(k) {
+      kind = k;
+      document.querySelectorAll('.kind').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.kind === k)));
+      document.querySelectorAll('.fields').forEach((f) => f.classList.toggle('hidden', f.dataset.kind !== k));
+      render();
+    }
+
+    document.querySelectorAll('.kind').forEach((b) => b.addEventListener('click', () => {
+      setKind(b.dataset.kind);
+      const first = document.querySelector('.fields[data-kind="' + b.dataset.kind + '"] input, .fields[data-kind="' + b.dataset.kind + '"] textarea');
+      if (first && matchMedia('(pointer: fine)').matches) first.focus();
+    }));
+
+    function grow(ta) {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 1 + 'px';
+    }
+
+    document.querySelectorAll('.fields input, .fields textarea').forEach((el) => {
+      el.addEventListener('input', () => {
+        if (el.tagName === 'TEXTAREA') grow(el);
+        render();
+      });
+    });
+
+    $('fix').addEventListener('click', () => {
+      const ta = $('f-text');
+      ta.value = 'https://' + ta.value.trim();
+      grow(ta);
+      render();
+    });
+
+    // cycles: style ones are saved, wifi ones live in `extra`
+    function cycleLabel(btn) {
+      const key = btn.dataset.cycle;
+      const src = key in extra ? extra : style;
+      const opt = CYCLES[key].find((o) => o[0] === src[key]) || CYCLES[key][0];
+      btn.textContent = opt[1];
+    }
+
+    function syncStyle() {
+      document.querySelectorAll('[data-cycle]').forEach(cycleLabel);
+      document.querySelectorAll('[data-color]').forEach((el) => {
+        el.value = style[el.dataset.color];
+        $(el.dataset.color + '-v').textContent = style[el.dataset.color];
+      });
+      $('margin').value = style.margin;
+      $('margin-v').textContent = style.margin + '%';
+      $('lsize').value = style.lsize;
+      $('lsize-v').textContent = style.lsize + '%';
+      $('lgap').value = style.lgap;
+      $('lgap-v').textContent = style.lgap;
+      $('lsize').disabled = $('lgap').disabled = !logo;
+      $('size').value = style.size;
+      const f = CYCLES.format.find((o) => o[0] === style.format);
+      $('save').textContent = 'save ' + (f ? f[1] : 'png');
+    }
+
+    function changed() {
+      store.set('style', style);
+      syncStyle();
+      render();
+    }
+
+    document.querySelectorAll('[data-cycle]').forEach((btn) => btn.addEventListener('click', () => {
+      const key = btn.dataset.cycle;
+      const src = key in extra ? extra : style;
+      const list = CYCLES[key];
+      const i = list.findIndex((o) => o[0] === src[key]);
+      src[key] = list[(i + 1) % list.length][0];
+      if (key === 'sec') $('f-pass').disabled = extra.sec === 'nopass';
+      if (src === extra) { cycleLabel(btn); render(); } else changed();
+    }));
+
+    document.querySelectorAll('[data-color]').forEach((el) => el.addEventListener('input', () => {
+      const key = el.dataset.color;
+      // eyes follow the ink until you give them their own color
+      if (key === 'ink') {
+        if (style.eye === style.ink) style.eye = el.value;
+        if (style.pupil === style.ink) style.pupil = el.value;
+      }
+      style[key] = el.value;
+      changed();
+    }));
+
+    [['margin', 'margin'], ['lsize', 'lsize'], ['lgap', 'lgap']].forEach(([id, key]) => {
+      $(id).addEventListener('input', () => { style[key] = +$(id).value; changed(); });
+    });
+
+    $('size').addEventListener('change', () => {
+      style.size = Math.max(64, Math.min(4096, Math.round(+$('size').value) || DEFAULT.size));
+      changed();
+    });
+
+    $('swap').addEventListener('click', () => {
+      const ink = style.ink;
+      style.ink = style.eye = style.pupil = style.paper;
+      style.paper = ink;
+      changed();
+    });
+
+    $('reset').addEventListener('click', () => {
+      style = Object.assign({}, DEFAULT);
+      clearLogo();
+      changed();
+    });
+
+    $('more').addEventListener('click', () => {
+      const open = $('style').classList.contains('hidden');
+      show(['style'], open);
+      $('more').setAttribute('aria-expanded', String(open));
+      $('more').textContent = open ? 'style −' : 'style +';
+      store.set('open', open);
+    });
+
+    // logo
+    function setLogo(f) {
+      if (!f || !/^image\//.test(f.type)) return setStatus("that's not an image", 'error');
+      const r = new FileReader();
+      r.onload = () => {
+        logo = { url: r.result, name: f.name || 'pasted image' };
+        $('logo-pick').textContent = logo.name;
+        show(['logo-off'], true);
+        if (style.ecc !== 'H' && style.ecc !== 'Q') {
+          style.ecc = 'H';
+          setStatus('error correction set to h so the logo still scans', 'ok');
+        }
+        changed();
+      };
+      r.readAsDataURL(f);
+    }
+
+    function clearLogo() {
+      logo = null;
+      $('logo-file').value = '';
+      $('logo-pick').textContent = 'add image (or drop one here)';
+      show(['logo-off'], false);
+    }
+
+    $('logo-pick').addEventListener('click', () => $('logo-file').click());
+    $('logo-file').addEventListener('change', () => setLogo($('logo-file').files[0]));
+    $('logo-off').addEventListener('click', () => { clearLogo(); changed(); });
+
+    // export
+    function fileName(ext) {
+      let base = '';
+      if (kind === 'wifi') base = 'wifi-' + val('f-ssid');
+      else if (kind === 'contact') base = val('f-name') || 'contact';
+      else if (kind === 'phone' || kind === 'sms') base = kind + '-' + (val(kind === 'phone' ? 'f-tel' : 'f-snum') || '');
+      else if (kind === 'email') base = 'mail-' + val('f-to');
+      else {
+        try { base = new URL(data.trim()).hostname || ''; } catch {}
+        if (!base) base = data.trim().slice(0, 32);
+      }
+      base = base.toLowerCase().replace(/^www\./, '').replace(/[^a-z0-9.\-_]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+      return 'qr' + (base ? '-' + base : '') + '.' + (ext === 'jpeg' ? 'jpg' : ext);
+    }
+
+    async function exportBlob(ext) {
+      const out = new QRCodeStyling(qrOptions(style.size, data, ext));
+      const blob = await out.getRawData(ext);
+      if (!blob) throw new Error('nothing drawn');
+      return blob;
+    }
+
+    async function save() {
+      if (!data || $('save').disabled) return;
+      $('save').disabled = true;
+      try {
+        const name = fileName(style.format);
+        mintUI.save(await exportBlob(style.format), name);
+        setStatus('saved ' + name + ' · ' + style.size + ' px', 'ok');
+      } catch (err) {
+        console.error(err);
+        setStatus('save failed: ' + (err.message || err), 'error');
+      } finally {
+        $('save').disabled = false;
+      }
+    }
+
+    $('save').addEventListener('click', save);
+
+    $('copy').addEventListener('click', async () => {
+      if (!data) return;
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': exportBlob('png') })]);
+        setStatus('copied as png', 'ok');
+      } catch {
+        setStatus("clipboard won't take images here, save it instead", 'error');
+      }
+    });
+
+    addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && mode === 'make') {
+        e.preventDefault();
+        save();
+      }
+    });
+
+    // ---------- understanding what a code holds
+
+    function splitEsc(s, sep) {
+      const out = [];
+      let cur = '';
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (c === '\\' && i + 1 < s.length) { cur += c + s[++i]; continue; }
+        if (c === sep) { out.push(cur); cur = ''; continue; }
+        cur += c;
+      }
+      if (cur) out.push(cur);
+      return out;
+    }
+
+    const unEsc = (s) => s.replace(/\\(.)/g, '$1');
+
+    // "WIFI:T:WPA;S:x;P:y;;" style records -> { T: 'WPA', S: 'x', ... }
+    function record(body) {
+      const o = {};
+      for (const part of splitEsc(body, ';')) {
+        const i = part.indexOf(':');
+        if (i > 0) o[part.slice(0, i).toUpperCase()] = unEsc(part.slice(i + 1));
+      }
+      return o;
+    }
+
+    function vcard(text) {
+      const o = {};
+      text.replace(/\r?\n[ \t]/g, '').split(/\r?\n/).forEach((line) => {
+        const i = line.indexOf(':');
+        if (i < 0) return;
+        const key = line.slice(0, i).split(';')[0].toUpperCase();
+        const v = line.slice(i + 1).replace(/\\n/gi, '\n').replace(/\\([,;\\])/g, '$1');
+        if (!(key in o)) o[key] = v;
+      });
+      if (!o.FN && o.N) o.FN = o.N.split(';').filter(Boolean).reverse().join(' ');
+      return o;
+    }
+
+    const isUrl = (s) => /^https?:\/\/[^\s]+$/i.test(s);
+
+    function parse(raw) {
+      const t = raw.trim();
+      let m;
+      if (isUrl(t)) return { kind: 'link', url: t, make: { kind: 'text', 'f-text': t } };
+      if (looksLikeDomain(t)) return { kind: 'link', url: 'https://' + t, make: { kind: 'text', 'f-text': 'https://' + t } };
+      if (/^WIFI:/i.test(t)) {
+        const r = record(t.slice(5));
+        const sec = /^wep$/i.test(r.T || '') ? 'WEP' : /^(nopass)?$/i.test(r.T || '') && !r.P ? 'nopass' : 'WPA';
+        return {
+          kind: 'wifi',
+          fields: [['network', r.S || ''], ['password', r.P || '(none)'], ['security', sec === 'nopass' ? 'none' : (r.T || 'wpa').toLowerCase()]].concat(/^true$/i.test(r.H || '') ? [['hidden', 'yes']] : []),
+          pass: r.P || '',
+          make: { kind: 'wifi', 'f-ssid': r.S || '', 'f-pass': r.P || '', sec, hid: /^true$/i.test(r.H || '') },
+        };
+      }
+      if (/^mailto:/i.test(t) || /^MATMSG:/i.test(t)) {
+        let to = '', sub = '', body = '';
+        if (/^MATMSG:/i.test(t)) {
+          const r = record(t.slice(7));
+          to = r.TO || ''; sub = r.SUB || ''; body = r.BODY || '';
+        } else {
+          const [addr, q] = t.slice(7).split('?');
+          to = decodeURIComponent(addr || '');
+          const p = new URLSearchParams(q || '');
+          sub = p.get('subject') || ''; body = p.get('body') || '';
+        }
+        return {
+          kind: 'email',
+          fields: [['to', to]].concat(sub ? [['subject', sub]] : [], body ? [['message', body]] : []),
+          href: 'mailto:' + to + (sub || body ? '?' + [sub && 'subject=' + enc(sub), body && 'body=' + enc(body)].filter(Boolean).join('&') : ''),
+          make: { kind: 'email', 'f-to': to, 'f-sub': sub, 'f-body': body },
+        };
+      }
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) {
+        return { kind: 'email', fields: [['to', t]], href: 'mailto:' + t, make: { kind: 'email', 'f-to': t } };
+      }
+      if ((m = /^tel:(.+)$/i.exec(t)) || (m = /^(\+?[\d\s\-().]{7,})$/.exec(t))) {
+        const n = m[1].trim();
+        return { kind: 'phone', fields: [['number', n]], href: 'tel:' + n.replace(/[^\d+*#]/g, ''), make: { kind: 'phone', 'f-tel': n } };
+      }
+      if ((m = /^smsto:([^:]*):?([\s\S]*)$/i.exec(t)) || (m = /^sms:([^?]*)\??(?:body=([\s\S]*))?$/i.exec(t))) {
+        const n = m[1].trim();
+        let msg = m[2] || '';
+        if (/^sms:/i.test(t)) { try { msg = decodeURIComponent(msg); } catch {} }
+        return {
+          kind: 'sms',
+          fields: [['number', n]].concat(msg ? [['message', msg]] : []),
+          href: 'sms:' + n.replace(/[^\d+*#]/g, '') + (msg ? '?body=' + enc(msg) : ''),
+          make: { kind: 'sms', 'f-snum': n, 'f-smsg': msg },
+        };
+      }
+      if (/^BEGIN:VCARD/i.test(t) || /^MECARD:/i.test(t)) {
+        let c;
+        if (/^MECARD:/i.test(t)) {
+          const r = record(t.slice(7));
+          c = { FN: (r.N || '').split(',').reverse().join(' ').trim(), TEL: r.TEL, EMAIL: r.EMAIL, URL: r.URL, ORG: r.ORG };
+        } else {
+          c = vcard(t);
+        }
+        const fields = [['name', c.FN], ['company', c.ORG], ['phone', c.TEL], ['email', c.EMAIL], ['website', c.URL]].filter((f) => f[1]);
+        return {
+          kind: 'contact',
+          fields,
+          card: /^BEGIN:VCARD/i.test(t) ? t : null,
+          c,
+          make: { kind: 'contact', 'f-name': c.FN || '', 'f-ctel': c.TEL || '', 'f-cmail': c.EMAIL || '', 'f-org': c.ORG || '', 'f-site': c.URL || '' },
+        };
+      }
+      if ((m = /^geo:(-?[\d.]+),(-?[\d.]+)/i.exec(t))) {
+        return {
+          kind: 'place',
+          fields: [['lat', m[1]], ['lon', m[2]]],
+          url: 'https://www.openstreetmap.org/?mlat=' + m[1] + '&mlon=' + m[2] + '#map=17/' + m[1] + '/' + m[2],
+          make: { kind: 'text', 'f-text': raw },
+        };
+      }
+      return { kind: 'text', make: { kind: 'text', 'f-text': raw } };
+    }
+
+    function describe(text) {
+      const k = parse(text).kind;
+      return k === 'place' ? 'location' : k;
+    }
+
+    // ---------- read
+
+    const $rstage = $('rstage'), $video = $('video'), $shot = $('shot');
+    const sctx = $shot.getContext('2d');
+    let stream = null, cams = [], camId = store.get('cam'), raf = 0, lastScan = 0, last = '';
+
+    function view(which, tag) {
+      $rstage.classList.toggle('pick', which === 'empty');
+      $rstage.setAttribute('tabindex', which === 'empty' ? '0' : '-1');
+      $rstage.setAttribute('role', which === 'empty' ? 'button' : 'img');
+      show(['rempty'], which === 'empty');
+      show(['video', 'aim'], which === 'camera');
+      show(['shot'], which === 'shot');
+      show(['rtag'], !!tag);
+      $('rtag').textContent = tag || '';
+      $('rtag').className = 'tag' + (tag ? '' : ' hidden');
+    }
+
+    // draws the source into the visible canvas and outlines the code if found
+    function paintShot(src, w, h, found) {
+      const s = Math.min(1, 1000 / Math.max(w, h));
+      $shot.width = Math.round(w * s);
+      $shot.height = Math.round(h * s);
+      sctx.drawImage(src, 0, 0, $shot.width, $shot.height);
+      if (!found) return;
+      const k = s / found.scale;
+      const l = found.code.location;
+      const pts = [l.topLeftCorner, l.topRightCorner, l.bottomRightCorner, l.bottomLeftCorner];
+      sctx.strokeStyle = '#3ddc97';
+      sctx.lineWidth = Math.max(2, $shot.width / 160);
+      sctx.beginPath();
+      pts.forEach((p, i) => sctx[i ? 'lineTo' : 'moveTo'](p.x * k, p.y * k));
+      sctx.closePath();
+      sctx.stroke();
+    }
+
+    async function readFile(f) {
+      if (!f) return;
+      if (!/^image\//.test(f.type)) return setStatus("that's not an image", 'error');
+      stopCam();
+      setMode('read');
+      clearResult();
+      setStatus('');
+      let img;
+      try {
+        img = await bitmap(f);
+      } catch {
+        return setStatus("couldn't open that image", 'error');
+      }
+      const w = img.width || img.naturalWidth, h = img.height || img.naturalHeight;
+      const found = decode(img, w, h);
+      paintShot(img, w, h, found);
+      if (found) {
+        view('shot', 'image');
+        showResult(found.code.data);
+      } else {
+        view('shot', 'no code found');
+        setStatus('no qr code in that image, try a sharper or closer crop', 'error');
+      }
+    }
+
+    async function startCam(id) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        return setStatus(isSecureContext ? 'no camera available here' : 'the camera needs https', 'error');
+      }
+      stopCam();
+      clearResult();
+      setStatus('');
+      $('cam').disabled = true;
+      try {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: id ? { deviceId: { exact: id } } : { facingMode: { ideal: 'environment' } },
+          });
+        } catch (err) {
+          if (!id || err.name === 'NotAllowedError') throw err;
+          stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' } } });
+        }
+      } catch (err) {
+        stream = null;
+        $('cam').disabled = false;
+        const msg = err.name === 'NotAllowedError' ? 'camera blocked, allow it in your browser settings'
+          : err.name === 'NotFoundError' || err.name === 'OverconstrainedError' ? 'no camera found'
+          : err.name === 'NotReadableError' ? 'the camera is busy in another app'
+          : "couldn't start the camera";
+        return setStatus(msg, 'error');
+      }
+      $('cam').disabled = false;
+      $('cam').textContent = 'stop camera';
+      $video.srcObject = stream;
+      view('camera', 'camera');
+      try { await $video.play(); } catch {}
+      const track = stream.getVideoTracks()[0];
+      const set = track && track.getSettings ? track.getSettings() : {};
+      if (set.deviceId) { camId = set.deviceId; store.set('cam', camId); }
+      try {
+        cams = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'videoinput');
+      } catch { cams = []; }
+      show(['flip'], cams.length > 1);
+      setStatus('point it at a qr code');
+      raf = requestAnimationFrame(scan);
+    }
+
+    function stopCam() {
+      cancelAnimationFrame(raf);
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      const was = !!stream;
+      stream = null;
+      $video.srcObject = null;
+      $('cam').textContent = 'use camera';
+      show(['flip'], false);
+      if (was) {
+        view('empty');
+        if ($status.textContent === 'point it at a qr code') setStatus('');
+      }
+    }
+
+    function scan(t) {
+      if (!stream) return;
+      if (t - lastScan > 110 && $video.readyState >= 2 && $video.videoWidth) {
+        lastScan = t;
+        const w = $video.videoWidth, h = $video.videoHeight;
+        const found = decode($video, w, h, [720], ['#fff']);
+        if (found && found.code.data) {
+          paintShot($video, w, h, found);
+          stopCam();
+          view('shot', 'camera');
+          if (navigator.vibrate) navigator.vibrate(30);
+          showResult(found.code.data);
+          return;
+        }
+      }
+      raf = requestAnimationFrame(scan);
+    }
+
+    $('cam').addEventListener('click', () => (stream ? stopCam() : startCam(camId)));
+    $('flip').addEventListener('click', () => {
+      if (cams.length < 2) return;
+      const i = cams.findIndex((c) => c.deviceId === camId);
+      startCam(cams[(i + 1) % cams.length].deviceId);
+    });
+
+    document.addEventListener('visibilitychange', () => { if (document.hidden) stopCam(); });
+
+    function clearResult() {
+      last = '';
+      show(['res', 'racts', 'again'], false);
+    }
+
+    function button(label, primary, run) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn' + (primary ? '' : ' ghost');
+      b.textContent = label;
+      b.addEventListener('click', run);
+      return b;
+    }
+
+    async function copyText(text, what) {
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus('copied ' + (what || 'text'), 'ok');
+      } catch {
+        setStatus("couldn't reach the clipboard", 'error');
+      }
+    }
+
+    function showResult(text) {
+      last = text;
+      const r = parse(text);
+      $('rkind').textContent = r.kind;
+      const body = $('rbody');
+      body.replaceChildren();
+      if (r.fields) {
+        const dl = document.createElement('dl');
+        r.fields.forEach(([k, v]) => {
+          const dt = document.createElement('dt');
+          const dd = document.createElement('dd');
+          dt.textContent = k;
+          dd.textContent = v;
+          dl.append(dt, dd);
+        });
+        body.appendChild(dl);
+      } else {
+        const p = document.createElement('p');
+        p.className = 'raw';
+        p.textContent = r.kind === 'link' ? r.url : text;
+        body.appendChild(p);
+      }
+
+      const acts = [];
+      const go = (href) => () => { location.href = href; };
+      if (r.kind === 'link') acts.push(button('open', true, () => window.open(r.url, '_blank', 'noopener')));
+      else if (r.kind === 'place') acts.push(button('open map', true, () => window.open(r.url, '_blank', 'noopener')));
+      else if (r.kind === 'wifi' && r.pass) acts.push(button('copy password', true, () => copyText(r.pass, 'password')));
+      else if (r.kind === 'email') acts.push(button('write email', true, go(r.href)));
+      else if (r.kind === 'phone') acts.push(button('call', true, go(r.href)));
+      else if (r.kind === 'sms') acts.push(button('text', true, go(r.href)));
+      else if (r.kind === 'contact') acts.push(button('save contact', true, () => saveContact(r)));
+      acts.push(button('copy', !acts.length, () => copyText(r.kind === 'link' ? r.url : text)));
+      acts.push(button('edit', false, () => toMaker(r.make)));
+      $('racts').replaceChildren(...acts);
+
+      show(['res', 'racts', 'again'], true);
+      setStatus('');
+      $('racts').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function saveContact(r) {
+      let card = r.card;
+      if (!card) {
+        const c = r.c;
+        card = ['BEGIN:VCARD', 'VERSION:3.0', 'FN:' + vEsc(c.FN || '')]
+          .concat(c.ORG ? ['ORG:' + vEsc(c.ORG)] : [], c.TEL ? ['TEL:' + vEsc(c.TEL)] : [], c.EMAIL ? ['EMAIL:' + vEsc(c.EMAIL)] : [], c.URL ? ['URL:' + vEsc(c.URL)] : [], ['END:VCARD'])
+          .join('\r\n');
+      }
+      const name = ((r.c && r.c.FN) || 'contact').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'contact';
+      mintUI.save(new Blob([card], { type: 'text/vcard' }), name + '.vcf');
+    }
+
+    // send a scan into the maker so it can be restyled or changed
+    function toMaker(m) {
+      if (!m) return;
+      Object.keys(m).forEach((k) => {
+        if (k.startsWith('f-')) $(k).value = m[k];
+      });
+      if ('sec' in m) extra.sec = m.sec;
+      if ('hid' in m) extra.hid = m.hid;
+      $('f-pass').disabled = extra.sec === 'nopass';
+      document.querySelectorAll('[data-cycle="sec"], [data-cycle="hid"]').forEach(cycleLabel);
+      setMode('make');
+      setKind(m.kind);
+      document.querySelectorAll('.fields textarea').forEach(grow);
+      setStatus('loaded into make', 'ok');
+      scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    $('again').addEventListener('click', () => {
+      clearResult();
+      view('empty');
+      setStatus('');
+    });
+
+    $rstage.addEventListener('click', () => { if ($rstage.classList.contains('pick')) $('rfile').click(); });
+    $rstage.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ' ') && $rstage.classList.contains('pick')) { e.preventDefault(); $('rfile').click(); }
+    });
+    $('rfile').addEventListener('change', () => { readFile($('rfile').files[0]); $('rfile').value = ''; });
+
+    // paste an image anywhere to read it; paste text with nothing focused to make one
+    addEventListener('paste', (e) => {
+      const cd = e.clipboardData;
+      if (!cd) return;
+      const item = [...cd.items].find((i) => i.kind === 'file' && /^image\//.test(i.type));
+      if (item) {
+        e.preventDefault();
+        readFile(item.getAsFile());
+        return;
+      }
+      const t = e.target;
+      const editing = t && t.closest && t.closest('input, textarea, [contenteditable]');
+      const text = cd.getData('text');
+      if (!editing && text && mode === 'make') {
+        e.preventDefault();
+        setKind('text');
+        $('f-text').value = text;
+        grow($('f-text'));
+        render();
+      }
+    });
+
+    // drop anywhere: on the logo slot it becomes the logo, anywhere else it gets read
+    let depth = 0;
+    const dropTarget = () => (mode === 'read' ? (stream ? null : $rstage) : $('style').classList.contains('hidden') ? null : $('logo-pick'));
+    addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      depth++;
+      const d = dropTarget();
+      if (d) d.classList.add('over');
+    });
+    addEventListener('dragover', (e) => e.preventDefault());
+    const unover = () => { $rstage.classList.remove('over'); $('logo-pick').classList.remove('over'); };
+    addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; unover(); } });
+    addEventListener('drop', (e) => {
+      e.preventDefault();
+      depth = 0;
+      unover();
+      const f = e.dataTransfer && e.dataTransfer.files[0];
+      if (!f) return;
+      if (e.target.closest && e.target.closest('#logo-pick')) return setLogo(f);
+      readFile(f);
+    });
+
+    // ---------- start
+
+    if (!window.QRCodeStyling || !window.jsQR) setStatus('could not load the qr libraries, check your connection and reload', 'error');
+    if (store.get('open')) $('more').click();
+    syncStyle();
+    document.querySelectorAll('[data-cycle="sec"], [data-cycle="hid"]').forEach(cycleLabel);
+    setMode(location.hash.slice(1));
+    render();
+    if (mode === 'make' && matchMedia('(pointer: fine)').matches) $('f-text').focus();
+  </script>
+  <script src="bg.js" defer></script>
+</body>
+</html>

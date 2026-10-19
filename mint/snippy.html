@@ -1,0 +1,3479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>snippy</title>
+  <link rel="icon" type="image/png" href="../assets/snippy.png" />
+  <link rel="apple-touch-icon" href="../assets/snippy-180.png" />
+  <meta name="description" content="Trim, crop, censor, draw on, re-speed and re-volume a video, right on your device." />
+  <meta property="og:title" content="snippy" />
+  <meta property="og:description" content="Trim, crop, censor, draw on, re-speed and re-volume a video, right on your device." />
+  <meta property="og:image" content="https://winss.xyz/assets/snippy-180.png" />
+  <meta property="og:url" content="https://winss.xyz/mint/snippy.html" />
+  <meta name="theme-color" content="#000000" />
+  <style>
+    /* same palette and font as the rest of mint (base.css), laid out as a full-window editor */
+    @font-face {
+      font-family: 'Monocraft';
+      src: url('../assets/Monocraft.woff2') format('woff2'),
+           url('../assets/Monocraft.woff') format('woff');
+      font-display: swap;
+    }
+
+    :root {
+      --bg: #000;
+      --bg-2: #070a09;
+      --text: #fff;
+      --text-soft: rgba(255, 255, 255, 0.86);
+      --text-muted: rgba(255, 255, 255, 0.6);
+      --text-faint: rgba(255, 255, 255, 0.4);
+      --line: rgba(255, 255, 255, 0.24);
+      --line-soft: rgba(255, 255, 255, 0.12);
+      --edge: rgba(255, 255, 255, 0.45);
+      --mint: #3ddc97;
+      --mint-light: #8ef5c5;
+      --mint-dark: #138a5c;
+      --mint-deep: #0a4a33;
+      --btn-text: #021a10;
+      --error: #f87171;
+      --warn: #facc15;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
+    html, body { height: 100%; }
+    html { -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Monocraft', ui-monospace, monospace;
+      font-size: 12px;
+      line-height: 1.4;
+      overflow: hidden;
+    }
+
+    ::selection { background: var(--mint); color: var(--btn-text); }
+    :focus-visible { outline: 1px solid var(--mint); outline-offset: 1px; }
+    [hidden] { display: none !important; }
+
+    #app {
+      height: 100vh;
+      height: 100dvh;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* ---- top bar ---- */
+    .top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--line);
+      min-width: 0;
+    }
+
+    .brand { color: var(--mint); text-decoration: none; margin-right: 4px; }
+    .brand:hover { color: var(--mint-light); }
+    .info { color: var(--text-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+
+    .b {
+      font: inherit;
+      font-size: 11px;
+      color: var(--text-soft);
+      background: transparent;
+      border: 1px solid var(--edge);
+      padding: 4px 9px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex: none;
+    }
+
+    .b:hover:not(:disabled) { color: #fff; border-color: var(--mint); background: rgba(61, 220, 151, 0.12); }
+    .b:disabled { opacity: 0.35; cursor: default; }
+    .b.on, .b.primary { color: var(--btn-text); background: var(--mint); border-color: var(--mint); }
+    .b.on:hover:not(:disabled), .b.primary:hover:not(:disabled) { color: var(--btn-text); background: #fff; border-color: #fff; }
+    .b.sm { padding: 2px 6px; font-size: 10px; }
+
+    .notes { border-bottom: 1px solid var(--line); }
+    .notes:empty { border-bottom: none; }
+    .note { padding: 4px 10px; font-size: 11px; color: var(--text-soft); display: flex; gap: 8px; }
+    .note + .note { border-top: 1px solid var(--line-soft); }
+    .note b { font-weight: normal; flex: none; }
+    .note.warn b { color: var(--warn); }
+    .note.error b { color: var(--error); }
+    .note.info b { color: var(--mint); }
+
+    /* ---- middle: tools | stage | properties ---- */
+    .body {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) 248px;
+      min-height: 0;
+    }
+
+    .tools {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--line);
+      overflow-y: auto;
+    }
+
+    .tools button {
+      font: inherit;
+      font-size: 11px;
+      text-align: left;
+      padding: 7px 10px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--line);
+      color: var(--text-soft);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      white-space: nowrap;
+    }
+
+    .tools button kbd { font: inherit; color: var(--text-faint); }
+    .tools button:hover:not(:disabled) { color: #fff; background: rgba(255, 255, 255, 0.08); }
+    .tools button:hover:not(:disabled) kbd { color: var(--text-soft); }
+    .tools button.on { background: var(--mint); color: var(--btn-text); }
+    .tools button.on kbd { color: var(--mint-deep); }
+    .tools button.on:hover:not(:disabled) { background: #fff; color: var(--btn-text); }
+    .tools button.on:hover:not(:disabled) kbd { color: rgba(2, 26, 16, 0.6); }
+    .tools button:disabled { opacity: 0.35; cursor: default; }
+
+    .stage {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      background:
+        repeating-conic-gradient(rgba(255, 255, 255, 0.025) 0 25%, transparent 0 50%) 0 0 / 16px 16px,
+        var(--bg-2);
+    }
+
+    #view { display: block; touch-action: none; }
+
+    .drop {
+      position: absolute;
+      inset: 14px;
+      border: 1px dashed var(--line);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      color: var(--text-soft);
+      text-align: center;
+      padding: 1rem;
+      background: var(--bg);
+    }
+
+    .drop span { color: var(--text-muted); font-size: 11px; }
+    .drop:hover, .drop.over { border-color: var(--mint); border-style: solid; color: var(--mint-light); }
+
+    .side {
+      border-left: 1px solid var(--line);
+      overflow-y: auto;
+      min-height: 0;
+    }
+
+    .sec { border-bottom: 1px solid var(--line); padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+    .sec h3 { font-size: 10px; font-weight: normal; letter-spacing: 0.08em; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 18px; }
+    .sec h3 .acts { display: flex; gap: 3px; }
+    .sec.sel { background: rgba(61, 220, 151, 0.04); }
+    .sec.sel h3 { color: var(--mint); }
+
+    .row { display: flex; align-items: center; gap: 5px; min-width: 0; }
+    .row > label { width: 54px; flex: none; color: var(--text-muted); font-size: 11px; }
+    .row > input[type="text"], .row > input[type="number"], .row > select { flex: 1; width: 0; }
+    .val { color: var(--text-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+    .quad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; flex: 1; }
+    .quad input { width: 100%; }
+
+    input[type="text"], input[type="number"], select, textarea {
+      font: inherit;
+      font-size: 11px;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--edge);
+      padding: 3px 5px;
+      min-width: 0;
+      outline: none;
+      border-radius: 0;
+    }
+
+    input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+    input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    select { cursor: pointer; }
+    textarea { resize: vertical; min-height: 44px; width: 100%; }
+    input:focus, select:focus, textarea:focus { border-color: var(--mint); }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 22px;
+      border: 1px solid var(--edge);
+      background: var(--bg);
+      padding: 2px;
+      cursor: pointer;
+      flex: none;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0; }
+    input[type="color"]::-moz-color-swatch { border: none; border-radius: 0; }
+
+    input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; width: 0; height: 18px; background: transparent; cursor: pointer; }
+    input[type="range"]::-webkit-slider-runnable-track { height: 2px; background: var(--edge); }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 10px; height: 10px; margin-top: -4px; background: var(--mint); border: none; }
+    input[type="range"]::-moz-range-track { height: 2px; background: var(--edge); }
+    input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; background: var(--mint); border: none; border-radius: 0; }
+
+    .chk { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--text-soft); cursor: pointer; user-select: none; }
+    input[type="checkbox"] { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border: 1px solid var(--edge); background: var(--bg); cursor: pointer; flex: none; display: grid; place-content: center; }
+    input[type="checkbox"]:checked { border-color: var(--mint); }
+    input[type="checkbox"]:checked::after { content: ''; width: 6px; height: 6px; background: var(--mint); }
+
+    .hint { color: var(--text-muted); font-size: 10px; line-height: 1.5; }
+    .keys { color: var(--text-faint); font-size: 10px; line-height: 1.7; }
+    .keys b { font-weight: normal; color: var(--text-muted); }
+
+    /* ---- transport + timeline ---- */
+    .transport {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 8px;
+      border-top: 1px solid var(--line);
+      min-width: 0;
+      overflow-x: auto;
+    }
+
+    .time { font-variant-numeric: tabular-nums; color: var(--text); padding: 0 6px; white-space: nowrap; }
+    .time span { color: var(--text-muted); }
+    .spacer { flex: 1; }
+
+    /* drag bar between the editor and the timeline */
+    .split {
+      height: 8px;
+      cursor: ns-resize;
+      border-top: 1px solid var(--line);
+      background: var(--bg);
+      position: relative;
+      touch-action: none;
+    }
+
+    .split::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 2px;
+      width: 40px;
+      height: 3px;
+      margin-left: -20px;
+      background: repeating-linear-gradient(90deg, var(--edge) 0 2px, transparent 2px 4px);
+    }
+
+    .split:hover, .split.drag { background: rgba(61, 220, 151, 0.1); }
+    .split:hover::after, .split.drag::after { background: repeating-linear-gradient(90deg, var(--mint) 0 2px, transparent 2px 4px); }
+
+    /* timeline: fixed header (ruler, thumbnails, waveform) over a lane list that scrolls on its own */
+    .tlpane {
+      height: 220px;
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid var(--line);
+      background: var(--bg);
+      min-height: 0;
+      min-width: 0;
+    }
+
+    .tlpane, .tlpane * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.4) var(--bg-2); }
+    #tlHead { display: block; flex: none; touch-action: none; }
+    .hscroll { flex: none; min-width: 0; overflow-x: auto; overflow-y: hidden; border-top: 1px solid var(--line-soft); }
+    .hscroll > div { height: 1px; }
+    .lanes { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; border-top: 1px solid var(--line); scrollbar-gutter: stable; }
+    #tlLane { display: block; touch-action: pan-y; }
+
+    /* ---- export dialog ---- */
+    dialog {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--mint-dark);
+      padding: 0;
+      width: min(460px, calc(100vw - 32px));
+      margin: auto;
+      font: inherit;
+    }
+
+    dialog::backdrop { background: rgba(0, 0, 0, 0.72); }
+    .xhead { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--line); color: var(--mint); }
+    .xbody { padding: 10px; display: flex; flex-direction: column; gap: 7px; }
+    .xbody .row > label { width: 64px; }
+    .plan { border: 1px solid var(--line); padding: 7px 8px; color: var(--text-soft); font-size: 11px; line-height: 1.6; }
+    .plan b { font-weight: normal; color: var(--mint); }
+    .plan .k { color: var(--text-muted); }
+    .warns { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--text-soft); }
+    .warns div::before { content: '! '; color: var(--warn); }
+    .warns div.err::before { color: var(--error); }
+    .xprog { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+    .xstat { font-size: 11px; color: var(--text-soft); font-variant-numeric: tabular-nums; }
+    .xstat.ok { color: var(--mint-light); }
+    .xstat.err { color: var(--error); }
+    .xfoot { display: flex; gap: 6px; justify-content: flex-end; padding: 8px 10px; border-top: 1px solid var(--line); }
+
+    .sqbar { display: flex; align-items: center; gap: 3px; height: 10px; }
+    .sqbar i { width: 5px; height: 5px; background: rgba(255, 255, 255, 0.14); transition: width 0.12s ease, height 0.12s ease, background-color 0.12s ease; }
+    .sqbar i.fill { width: 8px; height: 8px; background: var(--mint); }
+    .sqbar i.fill.edge { background: var(--mint-light); }
+
+    /* timeline right-click menu */
+    .menu {
+      position: fixed;
+      z-index: 20;
+      width: 236px;
+      background: var(--bg);
+      border: 1px solid var(--mint);
+      display: flex;
+      flex-direction: column;
+      font-size: 11px;
+    }
+
+    .menu > button {
+      font: inherit;
+      text-align: left;
+      color: var(--text-soft);
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--line);
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .menu > button:hover:not(:disabled) { color: #fff; background: rgba(255, 255, 255, 0.08); }
+    .menu > button { display: flex; justify-content: space-between; gap: 10px; }
+    .menu kbd { font: inherit; color: var(--text-faint); }
+    .menu > button:hover:not(:disabled) kbd { color: var(--text-soft); }
+    .menu > button.msep { border-top: 1px solid var(--edge); }
+    .menu .mhead { padding: 6px 10px; color: var(--mint); border-bottom: 1px solid var(--line); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .menu > button:disabled { opacity: 0.35; cursor: default; }
+    .menu .blk { padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; }
+    .menu .blk h4 { font-weight: normal; font-size: 10px; letter-spacing: 0.08em; color: var(--text-muted); }
+    .menu .row > label { width: 46px; }
+    .menu .acts { display: flex; gap: 5px; justify-content: flex-end; margin-top: 2px; }
+
+    #vid { position: fixed; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+
+    @media (max-width: 760px) {
+      body { overflow: auto; }
+      #app { height: auto; min-height: 100dvh; grid-template-rows: auto auto auto auto auto auto; }
+      .body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 56vh auto; }
+      .tools { flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--line); }
+      .tools button { border-bottom: none; border-right: 1px solid var(--line-soft); }
+      .tools button kbd { display: none; }
+      .side { border-left: none; border-top: 1px solid var(--line); overflow: visible; }
+      .keys { display: none; }
+      .top .hide-sm { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header class="top">
+      <a class="brand" href="./" title="back to mint">snippy</a>
+      <button class="b" id="openBtn">open</button>
+      <span class="info" id="fileInfo">nothing open</span>
+      <button class="b hide-sm" id="undoBtn" title="undo (ctrl+z)" disabled>undo</button>
+      <button class="b hide-sm" id="redoBtn" title="redo (ctrl+shift+z)" disabled>redo</button>
+      <button class="b primary" id="exportBtn" title="export (ctrl+e)" disabled>export</button>
+    </header>
+
+    <div class="notes" id="notes"></div>
+
+    <main class="body">
+      <nav class="tools" id="tools">
+        <button data-tool="select" class="on">select <kbd>v</kbd></button>
+        <button data-tool="crop">crop <kbd>c</kbd></button>
+        <button data-tool="text">text <kbd>t</kbd></button>
+        <button data-tool="rect">box <kbd>b</kbd></button>
+        <button data-tool="ellipse">oval <kbd>e</kbd></button>
+        <button data-tool="line">line <kbd>l</kbd></button>
+        <button data-tool="arrow">arrow <kbd>a</kbd></button>
+        <button data-tool="pen">pen <kbd>p</kbd></button>
+        <button data-tool="censor">censor <kbd>x</kbd></button>
+      </nav>
+
+      <section class="stage" id="stage">
+        <canvas id="view" hidden></canvas>
+        <div class="drop" id="drop">
+          drop a video here, or click to open
+          <span>mp4 · mov · webm · mkv | All local!</span>
+        </div>
+      </section>
+
+      <aside class="side" id="side">
+        <section class="sec sel" id="selSec" hidden></section>
+
+        <section class="sec">
+          <h3>clip</h3>
+          <div class="row"><label>in</label><input type="text" id="cIn" inputmode="decimal" /><button class="b sm" data-here="in" title="set to playhead (i)">here</button></div>
+          <div class="row"><label>out</label><input type="text" id="cOut" inputmode="decimal" /><button class="b sm" data-here="out" title="set to playhead (o)">here</button></div>
+          <div class="row"><label>length</label><span class="val" id="cLen">–</span></div>
+        </section>
+
+        <section class="sec">
+          <h3>blank sections</h3>
+          <div class="hint">solid frames before or after the video, for titles and outros. also on the timeline's right-click menu.</div>
+          <div class="row"><label>before</label><input type="number" id="cLead" min="0" max="600" step="0.5" placeholder="0" /><span class="val">s</span></div>
+          <div class="row"><label>after</label><input type="number" id="cTail" min="0" max="600" step="0.5" placeholder="0" /><span class="val">s</span></div>
+          <div class="row"><label>color</label><input type="color" id="cBlankColor" value="#000000" /></div>
+        </section>
+
+        <section class="sec">
+          <h3>speed</h3>
+          <div class="row">
+            <label>speed</label>
+            <select id="cSpeedSel">
+              <option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="0.75">0.75×</option>
+              <option value="1">1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option>
+              <option value="2">2×</option><option value="3">3×</option><option value="4">4×</option>
+              <option value="custom">custom</option>
+            </select>
+            <input type="number" id="cSpeed" min="0.25" max="4" step="0.05" />
+          </div>
+          <label class="chk"><input type="checkbox" id="cPitch" /> keep pitch</label>
+        </section>
+
+        <section class="sec">
+          <h3>sound</h3>
+          <div class="row"><label>volume</label><input type="range" id="cVol" min="0" max="300" step="1" /><span class="val" id="cVolV">100%</span></div>
+          <label class="chk"><input type="checkbox" id="cMute" /> remove audio</label>
+        </section>
+
+        <section class="sec">
+          <h3>crop <span class="val" id="cCropV">full frame</span></h3>
+          <div class="row">
+            <label>aspect</label>
+            <select id="cAspect">
+              <option value="free">free</option><option value="src">source</option><option value="16:9">16:9</option>
+              <option value="9:16">9:16</option><option value="1:1">1:1</option><option value="4:5">4:5</option>
+              <option value="4:3">4:3</option><option value="21:9">21:9</option>
+            </select>
+          </div>
+          <div class="row"><button class="b" id="cCropEdit">edit crop</button><button class="b" id="cCropReset">reset</button></div>
+        </section>
+
+        <section class="sec keys">
+          <div><b>space</b> play · <b>← →</b> frame · <b>shift ← →</b> 1 s</div>
+          <div><b>i / o</b> set in / out · <b>home / end</b> jump</div>
+          <div><b>del</b> remove · <b>ctrl d</b> duplicate · <b>esc</b> deselect</div>
+          <div><b>ctrl c / x / v</b> copy, cut, paste · <b>right-click</b> an overlay for more</div>
+          <div><b>ctrl z</b> undo · <b>ctrl shift z</b> redo · <b>ctrl e</b> export</div>
+          <div><b>ctrl wheel</b> zoom timeline · <b>shift</b> snaps lines to 45°</div>
+        </section>
+      </aside>
+    </main>
+
+    <div class="split" id="split" title="drag to resize the timeline (double-click to reset)"></div>
+
+    <div class="transport">
+      <button class="b" id="playBtn" disabled>play</button>
+      <button class="b" id="prevBtn" title="previous frame (←)" disabled>&lt;</button>
+      <button class="b" id="nextBtn" title="next frame (→)" disabled>&gt;</button>
+      <button class="b" id="loopBtn" title="loop between in and out" disabled>loop</button>
+      <span class="time" id="timeV">0:00.000 <span>/ 0:00.000</span></span>
+      <span class="spacer"></span>
+      <button class="b" id="inBtn" title="set in (i)" disabled>in</button>
+      <button class="b" id="outBtn" title="set out (o)" disabled>out</button>
+      <button class="b" id="zoomOut" title="zoom out" disabled>−</button>
+      <button class="b" id="zoomFit" title="fit timeline" disabled>fit</button>
+      <button class="b" id="zoomIn" title="zoom in" disabled>+</button>
+    </div>
+
+    <div class="tlpane" id="tlPane">
+      <canvas id="tlHead"></canvas>
+      <div class="hscroll" id="tlH" hidden><div id="tlHInner"></div></div>
+      <div class="lanes" id="tlLanes"><canvas id="tlLane"></canvas></div>
+    </div>
+  </div>
+
+  <dialog id="xdlg">
+    <div class="xhead"><span>export</span><button class="b sm" id="xClose">close</button></div>
+    <div class="xbody">
+      <div class="row"><label>size</label><select id="xRes"></select></div>
+      <div class="row">
+        <label>format</label>
+        <select id="xFmt"><option value="mp4">mp4</option><option value="mov">mov</option><option value="webm">webm</option><option value="mkv">mkv</option></select>
+      </div>
+      <div class="row" id="xFpsRow"><label>frames</label><select id="xFps"><option value="source">match source frame rate</option><option value="all">keep every frame</option></select></div>
+      <div class="row" id="xRateRow"><label>bitrate</label><input type="number" id="xRate" min="0.1" step="0.1" /><span class="val">Mbps</span><button class="b sm" id="xAuto">auto</button></div>
+      <label class="chk" id="xExactRow"><input type="checkbox" id="xExact" /> frame-exact cut (re-encodes)</label>
+      <div class="plan" id="xPlan">…</div>
+      <div class="warns" id="xWarn"></div>
+    </div>
+    <div class="xprog" id="xProg" hidden>
+      <div class="sqbar" id="xBar"></div>
+      <div class="xstat" id="xStat"></div>
+    </div>
+    <div class="xfoot">
+      <button class="b" id="xCancel" hidden>cancel</button>
+      <button class="b primary" id="xGo" disabled>export</button>
+    </div>
+  </dialog>
+
+  <div class="menu" id="tlMenu" hidden>
+    <button id="mIn">set in here</button>
+    <button id="mOut">set out here</button>
+    <button id="mPaste">paste here <kbd>ctrl v</kbd></button>
+    <div class="blk">
+      <h4>blank sections</h4>
+      <div class="row"><label>before</label><input type="number" id="mLead" min="0" max="600" step="0.5" placeholder="0" /><span class="val">s</span></div>
+      <div class="row"><label>after</label><input type="number" id="mTail" min="0" max="600" step="0.5" placeholder="0" /><span class="val">s</span></div>
+      <div class="acts"><button class="b sm" id="mClear">remove both</button><button class="b sm primary" id="mApply">apply</button></div>
+    </div>
+  </div>
+
+  <div class="menu" id="oMenu" hidden>
+    <div class="mhead" id="oName">overlay</div>
+    <button data-o="dup">duplicate <kbd>ctrl d</kbd></button>
+    <button data-o="copy">copy <kbd>ctrl c</kbd></button>
+    <button data-o="cut">cut <kbd>ctrl x</kbd></button>
+    <button data-o="paste">paste at playhead <kbd>ctrl v</kbd></button>
+    <button data-o="del">delete <kbd>del</kbd></button>
+    <button data-o="front" class="msep">bring to front</button>
+    <button data-o="back">send to back</button>
+    <button data-o="startHere" class="msep">start at playhead</button>
+    <button data-o="endHere">end at playhead</button>
+    <button data-o="whole">span the whole clip</button>
+  </div>
+
+  <input type="file" id="fileInput" accept="video/*,.mkv,.mov,.webm,.mp4,.m4v" hidden />
+  <video id="vid" playsinline preload="auto"></video>
+
+  <script type="module">
+    // ============================================================================================
+    // snippy: a local video editor. reading, decoding, encoding and writing all happen in this tab
+    // through WebCodecs (the device's own, usually hardware, codecs) with mediabunny doing the
+    // container work. nothing is uploaded anywhere.
+    // ============================================================================================
+
+    const MB_URL = 'https://cdn.jsdelivr.net/npm/mediabunny@1.61.1/dist/bundles/mediabunny.min.mjs';
+
+    const $ = (s) => document.querySelector(s);
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const uid = () => Math.random().toString(36).slice(2, 9);
+    const even = (n) => Math.max(2, Math.round(n / 2) * 2);
+    const mkCanvas = (w, h) => (typeof OffscreenCanvas !== 'undefined'
+      ? new OffscreenCanvas(w, h)
+      : Object.assign(document.createElement('canvas'), { width: w, height: h }));
+
+    function fmtT(t) {
+      t = t || 0;
+      if (t < -0.0005) return '-' + fmtT(-t);
+      t = Math.max(0, t);
+      const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t - Math.floor(t / 60) * 60;
+      const ss = s.toFixed(3).padStart(6, '0');
+      return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+    }
+
+    // "1:02.5", "62.5" and "1:01:02" all work
+    function parseT(str) {
+      let s = String(str).trim(), sign = 1;
+      if (s.startsWith('-')) { sign = -1; s = s.slice(1); }
+      const parts = s.split(':').map(Number);
+      if (!s || parts.some((n) => !Number.isFinite(n) || n < 0)) return null;
+      return sign * parts.reduce((acc, n) => acc * 60 + n, 0);
+    }
+
+    const fmtRate = (bps) => (bps >= 1e6 ? (bps / 1e6).toFixed(1) + ' Mbps' : Math.round(bps / 1e3) + ' kbps');
+    const fmtSize = (b) => (b >= 1 << 30 ? (b / (1 << 30)).toFixed(2) + ' GB' : b >= 1 << 20 ? (b / (1 << 20)).toFixed(1) + ' MB' : Math.round(b / 1024) + ' KB');
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    // ---- notices across the top: what this browser can't do with this file, said plainly ----
+    const notes = [];
+    function note(kind, text) {
+      notes.push({ kind, text });
+      $('#notes').innerHTML = notes.map((n) => `<div class="note ${n.kind}"><b>${n.kind === 'info' ? 'note' : n.kind}</b><span>${esc(n.text)}</span></div>`).join('');
+    }
+    function clearNotes() { notes.length = 0; $('#notes').innerHTML = ''; }
+
+    let MB = null;
+    try {
+      MB = await import(MB_URL);
+    } catch (e) {
+      note('error', "couldn't load the video library (mediabunny from jsdelivr). check your connection and reload.");
+    }
+    if (!('VideoDecoder' in window) || !('VideoEncoder' in window)) {
+      note('error', "this browser doesn't have WebCodecs, which snippy needs to decode and encode video. use a current Chrome, Edge, Firefox or Safari.");
+    }
+
+    // ============================================================================================
+    // state
+    // ============================================================================================
+
+    let src = null;     // the open file and what we know about it
+    let ed = null;      // the edit: trim, crop, speed, sound, overlays
+    let sel = null;     // selected overlay id
+    let tool = 'select';
+    let player = null;
+    let loop = false;
+    let cropAspect = 'free';
+    let job = null;     // running export
+    const hist = { undo: [], redo: [], last: null };
+
+    const full = () => ({ x: 0, y: 0, w: src.W, h: src.H });
+    const selected = () => (ed && sel ? ed.overlays.find((o) => o.id === sel) || null : null);
+    const active = (o, t) => t >= o.start && t < o.end;
+
+    // ---- the edit's timeline ----
+    // times are source seconds. a blank lead-in sits before the video at [-lead, 0) and a blank tail
+    // after it at [dur, dur + tail); the exported clip is lead-in + [in, out] + tail.
+    const spanStart = () => (ed.lead > 0 ? -ed.lead : 0);
+    const spanEnd = () => src.dur + (ed.tail > 0 ? ed.tail : 0);
+    const keepStart = () => (ed.lead > 0 ? -ed.lead : ed.in);
+    const keepEnd = () => (ed.tail > 0 ? src.dur + ed.tail : ed.out);
+    const inLead = (t) => ed.lead > 0 && t < 0;
+    const inTail = (t) => ed.tail > 0 && t >= src.dur;
+    const outLen = (E = ed) => E.lead + (E.out - E.in) / E.speed + E.tail;
+
+    // where source time t lands in the exported clip (trimmed-away spots map to the nearest edge)
+    function outTime(t) {
+      if (t < 0) return Math.max(0, ed.lead + t);
+      if (t >= src.dur && ed.tail > 0) return ed.lead + (ed.out - ed.in) / ed.speed + Math.min(ed.tail, t - src.dur);
+      return ed.lead + (clamp(t, ed.in, ed.out) - ed.in) / ed.speed;
+    }
+
+    // what a blank section shows before overlays go on top
+    const blankFill = (E) => (c) => { c.fillStyle = E.blankColor || '#000000'; c.fillRect(0, 0, src.W, src.H); };
+
+    // how much of [a, b) actually ends up in the export
+    function keptLen(a, b) {
+      const part = (x, y) => Math.max(0, Math.min(b, y) - Math.max(a, x));
+      return (ed.lead > 0 ? part(-ed.lead, 0) : 0) + part(ed.in, ed.out) + (ed.tail > 0 ? part(src.dur, src.dur + ed.tail) : 0);
+    }
+
+    // overlays can't outlive the clip: trimming cuts them down, and one left entirely in a trimmed-away
+    // stretch gets moved onto the start of the kept video
+    function clampOverlays() {
+      if (!ed) return;
+      const lo = keepStart(), hi = keepEnd(), min = 1 / (src.fps || 30);
+      for (const o of ed.overlays) {
+        const len = o.end - o.start;
+        o.start = clamp(o.start, lo, hi - min);
+        o.end = clamp(o.end, o.start + min, hi);
+        if (keptLen(o.start, o.end) < min) {
+          o.start = ed.in;
+          o.end = Math.min(ed.out, ed.in + Math.max(min, len));
+        }
+      }
+    }
+
+    // ---- playhead: the video player, or a plain clock while it's inside a blank section ----
+    let blankT = null;          // playhead time while in a blank section, else null
+    let blankPlaying = false;
+    const now = () => (blankT !== null ? blankT : player ? player.time : 0);
+    const isPlaying = () => (blankT !== null ? blankPlaying : !!player && !player.paused);
+
+    function seekT(t) {
+      if (!src || !player) return;
+      t = clamp(t, spanStart(), spanEnd());
+      if (inLead(t) || inTail(t)) {
+        const was = isPlaying();
+        if (blankT === null) player.pause();
+        blankT = t;
+        blankPlaying = was;
+      } else {
+        const was = blankT !== null && blankPlaying;
+        blankT = null;
+        blankPlaying = false;
+        player.seek(clamp(t, 0, src.dur));
+        if (was) player.play();
+      }
+      redraw();
+    }
+
+    function pauseAll() {
+      blankPlaying = false;
+      player?.pause();
+      syncPlay();
+    }
+
+    // ---- undo / redo: whole-edit JSON snapshots, cheap at this size ----
+    function commit() {
+      const s = JSON.stringify(ed);
+      if (s === hist.last) return;
+      hist.undo.push(hist.last);
+      if (hist.undo.length > 300) hist.undo.shift();
+      hist.last = s;
+      hist.redo.length = 0;
+      syncUndo();
+    }
+
+    function undo() {
+      if (!hist.undo.length) return;
+      hist.redo.push(hist.last);
+      hist.last = hist.undo.pop();
+      restore();
+    }
+
+    function redo() {
+      if (!hist.redo.length) return;
+      hist.undo.push(hist.last);
+      hist.last = hist.redo.pop();
+      restore();
+    }
+
+    function restore() {
+      ed = JSON.parse(hist.last);
+      if (!selected()) sel = null;
+      if (blankT !== null && !inLead(blankT) && !inTail(blankT)) { blankT = null; blankPlaying = false; player.seek(clamp(ed.in, 0, src.dur)); }
+      syncUndo();
+      syncClip();
+      buildSel();
+      applyAudio();
+      layoutView();
+      tlLayout();
+      redraw();
+    }
+
+    function syncUndo() {
+      $('#undoBtn').disabled = !hist.undo.length;
+      $('#redoBtn').disabled = !hist.redo.length;
+    }
+
+    // ============================================================================================
+    // overlays
+    // ============================================================================================
+
+    const FONTS = {
+      sans: 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+      serif: 'Georgia, "Times New Roman", serif',
+      mono: 'ui-monospace, Consolas, "Courier New", monospace',
+      monocraft: 'Monocraft, monospace',
+      impact: 'Impact, "Arial Black", sans-serif',
+    };
+
+    // style keys remembered per type so the next box/arrow/etc looks like the last one
+    const STYLE_KEYS = {
+      text: ['font', 'size', 'color', 'bold', 'outline', 'outlineColor', 'box', 'boxColor', 'align'],
+      rect: ['stroke', 'width', 'fill', 'fillColor', 'fillAlpha'],
+      ellipse: ['stroke', 'width', 'fill', 'fillColor', 'fillAlpha'],
+      line: ['stroke', 'width'],
+      arrow: ['stroke', 'width'],
+      pen: ['stroke', 'width'],
+      censor: ['mode', 'strength', 'color'],
+    };
+    const lastStyle = {};
+
+    function newOverlay(type, x, y) {
+      const lo = keepStart(), hi = keepEnd(), min = 1 / (src.fps || 30);
+      let t = clamp(now(), lo, hi - min);
+      if (keptLen(t, t + min) < min / 2) t = t < ed.in ? ed.in : ed.tail > 0 ? src.dur : ed.out - min;
+      const u = Math.max(src.W, src.H) / 100;
+      const o = { id: uid(), type, start: t, end: Math.min(hi, t + 3), x, y, w: 0, h: 0 };
+      if (type === 'text') Object.assign(o, { text: 'text', font: 'sans', size: Math.round(u * 6), color: '#ffffff', bold: true, outline: Math.max(1, Math.round(u * 0.5)), outlineColor: '#000000', box: false, boxColor: '#000000', align: 'left' });
+      else if (type === 'rect' || type === 'ellipse') Object.assign(o, { stroke: '#3ddc97', width: Math.max(2, Math.round(u * 0.6)), fill: false, fillColor: '#3ddc97', fillAlpha: 0.3 });
+      else if (type === 'line' || type === 'arrow') Object.assign(o, { stroke: '#3ddc97', width: Math.max(2, Math.round(u * 0.6)) });
+      else if (type === 'pen') Object.assign(o, { stroke: '#3ddc97', width: Math.max(2, Math.round(u * 0.5)), pts: [] });
+      else if (type === 'censor') Object.assign(o, { mode: 'blur', strength: Math.max(4, Math.round(u * 2)), color: '#000000' });
+      if (lastStyle[type]) Object.assign(o, lastStyle[type]);
+      return o;
+    }
+
+    function rememberStyle(o) {
+      const keys = STYLE_KEYS[o.type];
+      if (keys) lastStyle[o.type] = Object.fromEntries(keys.map((k) => [k, o[k]]));
+    }
+
+    const measure = mkCanvas(1, 1).getContext('2d');
+    const fontStr = (o) => `${o.bold ? 'bold ' : ''}${o.size}px ${FONTS[o.font] || FONTS.sans}`;
+
+    function textBox(o) {
+      measure.font = fontStr(o);
+      const lines = String(o.text).split('\n');
+      const tw = Math.max(1, ...lines.map((l) => measure.measureText(l).width));
+      const lh = o.size * 1.2;
+      const pad = o.box ? o.size * 0.3 : 0;
+      return { x: o.x - pad, y: o.y - pad, w: tw + pad * 2, h: lines.length * lh + pad * 2, lines, lh, tw };
+    }
+
+    function bbox(o) {
+      if (o.type === 'text') { const b = textBox(o); return { x: b.x, y: b.y, w: b.w, h: b.h }; }
+      if (o.type === 'line' || o.type === 'arrow') return { x: Math.min(o.x, o.x + o.w), y: Math.min(o.y, o.y + o.h), w: Math.abs(o.w), h: Math.abs(o.h) };
+      return { x: o.x, y: o.y, w: o.w, h: o.h };
+    }
+
+    // ============================================================================================
+    // rendering: one function draws a frame for both the preview and the export, so what you see
+    // is exactly what gets encoded. everything is drawn in source pixel coordinates.
+    // ============================================================================================
+
+    // canvases reused by size for the censor passes
+    function makeScratch() {
+      const pool = new Map();
+      return (w, h) => {
+        const key = w + 'x' + h;
+        let c = pool.get(key);
+        if (!c) {
+          if (pool.size > 48) pool.clear();
+          c = mkCanvas(w, h);
+          pool.set(key, c);
+        }
+        return c;
+      };
+    }
+
+    function renderFrame(ctx, R, outW, outH, t, drawSrc, scratch, E) {
+      const kx = outW / R.w, ky = outH / R.h;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, outW, outH);
+      ctx.setTransform(kx, 0, 0, ky, -R.x * kx, -R.y * ky);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      drawSrc(ctx);
+      for (const o of E.overlays) {
+        if (!active(o, t)) continue;
+        if (o.type === 'censor') censor(ctx, o, R, kx, ky, outW, outH, scratch);
+        else drawOverlay(ctx, o);
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    }
+
+    function drawOverlay(ctx, o) {
+      ctx.save();
+      if (o.type === 'text') {
+        const b = textBox(o);
+        ctx.font = fontStr(o);
+        ctx.textBaseline = 'top';
+        if (o.box) { ctx.fillStyle = o.boxColor; ctx.fillRect(b.x, b.y, b.w, b.h); }
+        b.lines.forEach((l, i) => {
+          const lw = ctx.measureText(l).width;
+          const x = o.align === 'center' ? o.x + (b.tw - lw) / 2 : o.align === 'right' ? o.x + b.tw - lw : o.x;
+          const y = o.y + i * b.lh + (b.lh - o.size) / 2;
+          if (o.outline > 0) {
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = o.outline * 2;
+            ctx.strokeStyle = o.outlineColor;
+            ctx.strokeText(l, x, y);
+          }
+          ctx.fillStyle = o.color;
+          ctx.fillText(l, x, y);
+        });
+      } else if (o.type === 'rect' || o.type === 'ellipse') {
+        ctx.beginPath();
+        if (o.type === 'rect') ctx.rect(o.x, o.y, o.w, o.h);
+        else ctx.ellipse(o.x + o.w / 2, o.y + o.h / 2, Math.abs(o.w / 2), Math.abs(o.h / 2), 0, 0, Math.PI * 2);
+        if (o.fill) { ctx.globalAlpha = o.fillAlpha; ctx.fillStyle = o.fillColor; ctx.fill(); ctx.globalAlpha = 1; }
+        if (o.width > 0) { ctx.lineWidth = o.width; ctx.strokeStyle = o.stroke; ctx.lineJoin = 'miter'; ctx.stroke(); }
+      } else if (o.type === 'line' || o.type === 'arrow') {
+        const x2 = o.x + o.w, y2 = o.y + o.h, len = Math.hypot(o.w, o.h);
+        ctx.strokeStyle = ctx.fillStyle = o.stroke;
+        ctx.lineWidth = o.width;
+        ctx.lineCap = 'round';
+        let ex = x2, ey = y2;
+        if (o.type === 'arrow' && len > 0) {
+          const head = Math.min(len * 0.6, o.width * 4.2), half = head * 0.62;
+          const ux = o.w / len, uy = o.h / len;
+          ex = x2 - ux * head * 0.75;
+          ey = y2 - uy * head * 0.75;
+          ctx.beginPath();
+          ctx.moveTo(x2, y2);
+          ctx.lineTo(x2 - ux * head - uy * half, y2 - uy * head + ux * half);
+          ctx.lineTo(x2 - ux * head + uy * half, y2 - uy * head - ux * half);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.beginPath();
+        ctx.moveTo(o.x, o.y);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+      } else if (o.type === 'pen') {
+        const p = o.pts, n = p.length / 2;
+        if (n) {
+          const X = (i) => o.x + p[i * 2] * o.w, Y = (i) => o.y + p[i * 2 + 1] * o.h;
+          ctx.strokeStyle = ctx.fillStyle = o.stroke;
+          ctx.lineWidth = o.width;
+          ctx.lineCap = ctx.lineJoin = 'round';
+          ctx.beginPath();
+          if (n === 1) {
+            ctx.arc(X(0), Y(0), o.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.moveTo(X(0), Y(0));
+            for (let i = 1; i < n - 1; i++) ctx.quadraticCurveTo(X(i), Y(i), (X(i) + X(i + 1)) / 2, (Y(i) + Y(i + 1)) / 2);
+            ctx.lineTo(X(n - 1), Y(n - 1));
+            ctx.stroke();
+          }
+        }
+      }
+      ctx.restore();
+    }
+
+    // censor boxes work on the pixels already drawn, in output pixels, so they hide whatever is under them
+    function censor(ctx, o, R, kx, ky, outW, outH, scratch) {
+      if (o.mode === 'solid') {
+        ctx.fillStyle = o.color;
+        ctx.fillRect(o.x, o.y, o.w, o.h);
+        return;
+      }
+      const x0 = clamp(Math.floor((o.x - R.x) * kx), 0, outW), y0 = clamp(Math.floor((o.y - R.y) * ky), 0, outH);
+      const x1 = clamp(Math.ceil((o.x + o.w - R.x) * kx), 0, outW), y1 = clamp(Math.ceil((o.y + o.h - R.y) * ky), 0, outH);
+      const w = x1 - x0, h = y1 - y0;
+      if (w < 1 || h < 1) return;
+      const s = Math.max(1, o.strength * kx);
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (o.mode === 'pixel') {
+        const tw = Math.max(1, Math.round(w / s)), th = Math.max(1, Math.round(h / s));
+        const c = scratch(tw, th), g = c.getContext('2d');
+        g.imageSmoothingEnabled = true;
+        g.imageSmoothingQuality = 'high';
+        g.drawImage(ctx.canvas, x0, y0, w, h, 0, 0, tw, th);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(c, 0, 0, tw, th, x0, y0, w, h);
+      } else {
+        // blur: halve down to roughly 1/strength of the size, then double back up. each bilinear pass
+        // smears a bit more, which reads as a soft blur and keeps nothing recoverable at high strength
+        const tw = Math.max(1, Math.round(w / s)), th = Math.max(1, Math.round(h / s));
+        const sizes = [[w, h]];
+        while (sizes.at(-1)[0] > tw || sizes.at(-1)[1] > th) {
+          const [cw, ch] = sizes.at(-1);
+          sizes.push([Math.max(tw, Math.ceil(cw / 2)), Math.max(th, Math.ceil(ch / 2))]);
+        }
+        let cur = scratch(w, h), g = cur.getContext('2d');
+        g.drawImage(ctx.canvas, x0, y0, w, h, 0, 0, w, h);
+        const step = (from, [nw, nh]) => {
+          const c = scratch(nw, nh), cg = c.getContext('2d');
+          cg.imageSmoothingEnabled = true;
+          cg.imageSmoothingQuality = 'high';
+          cg.drawImage(from, 0, 0, nw, nh);
+          return c;
+        };
+        for (let i = 1; i < sizes.length; i++) cur = step(cur, sizes[i]);
+        for (let i = sizes.length - 2; i >= 1; i--) cur = step(cur, sizes[i]);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(cur, x0, y0, w, h);
+      }
+      ctx.restore();
+    }
+
+    // ============================================================================================
+    // players: the <video> element when the browser can play the file (sound and all), otherwise
+    // a frame-by-frame decoder so the file can still be edited
+    // ============================================================================================
+
+    class ElementPlayer {
+      constructor(v) {
+        this.v = v;
+        this.ac = null;
+        this.gain = null;
+        v.onseeked = () => redraw();
+        v.onplay = v.onpause = () => syncPlay();
+        v.onended = () => syncPlay();
+      }
+      get time() { return this.v.currentTime; }
+      get paused() { return this.v.paused; }
+      seek(t) { this.v.currentTime = clamp(t, 0, src.dur); }
+      play() {
+        // the gain node lets volume go past 100% in the preview, same as the export
+        if (!this.ac) {
+          try {
+            this.ac = new AudioContext();
+            this.gain = this.ac.createGain();
+            this.ac.createMediaElementSource(this.v).connect(this.gain).connect(this.ac.destination);
+            this.v.volume = 1;
+            this.v.muted = false;
+            applyAudio();
+          } catch { this.ac = null; this.gain = null; }
+        }
+        this.ac?.resume();
+        const p = this.v.play();
+        p?.catch(() => {});
+        tick();
+      }
+      pause() { this.v.pause(); }
+      setAudio(vol, mute, speed, pitch) {
+        const v = this.v;
+        v.playbackRate = speed;
+        v.preservesPitch = v.mozPreservesPitch = v.webkitPreservesPitch = pitch;
+        if (this.gain) this.gain.gain.value = mute ? 0 : vol;
+        else { v.muted = mute; v.volume = Math.min(1, vol); }
+      }
+      drawTo(c) { if (this.v.readyState >= 2) c.drawImage(this.v, 0, 0, src.W, src.H); }
+      dispose() {
+        this.v.pause();
+        this.ac?.close();
+        URL.revokeObjectURL(this.v.src);
+        this.v.removeAttribute('src');
+        this.v.load();
+      }
+    }
+
+    class DecoderPlayer {
+      constructor(track) {
+        this.sink = new MB.VideoSampleSink(track);
+        this.t = 0;
+        this.cur = null;
+        this.playing = false;
+        this.rate = 1;
+        this.gen = 0;
+        this.seekGen = 0;
+      }
+      get time() { return this.t; }
+      get paused() { return !this.playing; }
+      setCur(s) { this.cur?.close(); this.cur = s; }
+      async seek(t) {
+        this.t = clamp(t, 0, src.dur);
+        const g = ++this.seekGen;
+        if (this.playing) { this.pause(); }
+        const s = await this.sink.getSample(this.t).catch(() => null);
+        if (g !== this.seekGen) { s?.close(); return; }
+        if (s) this.setCur(s);
+        redraw();
+      }
+      play() {
+        if (this.playing) return;
+        this.playing = true;
+        syncPlay();
+        this.run(++this.gen);
+        tick();
+      }
+      pause() { this.playing = false; this.gen++; syncPlay(); }
+      async run(gen) {
+        const t0 = this.t, w0 = performance.now();
+        try {
+          for await (const s of this.sink.samples(t0)) {
+            if (gen !== this.gen) { s.close(); break; }
+            const wait = w0 + ((s.timestamp - t0) / this.rate) * 1000 - performance.now();
+            if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+            if (gen !== this.gen) { s.close(); break; }
+            this.setCur(s);
+            this.t = Math.max(t0, s.timestamp);
+            redraw();
+          }
+        } catch { /* decoder hiccup ends playback */ }
+        if (gen === this.gen) { this.playing = false; syncPlay(); }
+      }
+      setAudio(vol, mute, speed) { this.rate = speed; }
+      drawTo(c) { if (this.cur) this.cur.draw(c, 0, 0, src.W, src.H); }
+      dispose() { this.gen++; this.seekGen++; this.cur?.close(); this.cur = null; }
+    }
+
+    class NullPlayer {
+      constructor() { this.t = 0; }
+      get time() { return this.t; }
+      get paused() { return true; }
+      seek(t) { this.t = clamp(t, 0, src.dur); redraw(); }
+      play() {}
+      pause() {}
+      setAudio() {}
+      drawTo(c) {
+        c.fillStyle = '#0b0f0d';
+        c.fillRect(0, 0, src.W, src.H);
+      }
+      dispose() {}
+    }
+
+    function applyAudio() {
+      if (player && ed) player.setAudio(ed.volume, ed.mute, ed.speed, ed.pitch);
+    }
+
+    // plays the edit as it will export: lead-in, then in to out, then tail
+    let ticking = false;
+    function tick() {
+      if (ticking) return;
+      ticking = true;
+      let last = performance.now();
+      const step = () => {
+        if (!isPlaying()) { ticking = false; syncPlay(); return; }
+        const ms = performance.now(), dt = (ms - last) / 1000;
+        last = ms;
+        if (blankT !== null) {
+          const before = blankT;
+          blankT += dt;
+          if (before < 0 && blankT >= 0) {
+            // lead-in done: on to the video
+            blankT = null;
+            blankPlaying = false;
+            player.seek(ed.in);
+            player.play();
+          } else if (blankT >= src.dur + ed.tail) {
+            reachedEnd();
+          }
+        } else if (player.time >= ed.out - 1e-3) {
+          if (ed.tail > 0) {
+            player.pause();
+            blankT = src.dur;
+            blankPlaying = true;
+          } else reachedEnd();
+        }
+        redraw();
+        followPlayhead();
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+
+    function reachedEnd() {
+      if (loop) {
+        seekT(keepStart());
+        startPlaying();
+        return;
+      }
+      pauseAll();
+      seekT(lastFrameT());
+    }
+
+    // the last frame that makes it into the export (the out point itself is the first frame left out)
+    const lastFrameT = () => keepEnd() - 1 / (src.fps || 30);
+
+    function startPlaying() {
+      if (blankT !== null) { blankPlaying = true; syncPlay(); tick(); }
+      else player.play();
+    }
+
+    function togglePlay() {
+      if (!player || !src) return;
+      if (isPlaying()) { pauseAll(); return; }
+      const t = now();
+      // outside the kept clip (or at its very end), start over from the top
+      if (t >= lastFrameT() - 1e-3 || keptLen(t, t + 1e-3) === 0) seekT(keepStart());
+      startPlaying();
+    }
+
+    function syncPlay() {
+      $('#playBtn').textContent = isPlaying() ? 'pause' : 'play';
+      redraw();
+    }
+
+    function stepFrame(dir, secs) {
+      if (!src) return;
+      pauseAll();
+      const d = secs ? secs : 1 / (src.fps || 30);
+      seekT(now() + dir * d + (secs ? 0 : 1e-4));
+    }
+
+    // ============================================================================================
+    // opening a file
+    // ============================================================================================
+
+    let loadToken = 0;
+
+    async function openFile(file) {
+      if (!MB || !file) return;
+      if (job) return;
+      if (ed && hist.undo.length && !confirm('open another video? the edits on this one will be lost.')) return;
+      const token = ++loadToken;
+      closeCurrent();
+      clearNotes();
+      $('#fileInfo').textContent = 'reading ' + file.name + '…';
+      let input;
+      try {
+        input = new MB.Input({ source: new MB.BlobSource(file), formats: MB.ALL_FORMATS });
+        let format;
+        try { format = await input.getFormat(); } catch { throw new Error("this file isn't a video format snippy can read (mp4, mov, webm, mkv, ts, ogg)."); }
+        const vtrack = await input.getPrimaryVideoTrack();
+        if (!vtrack) throw new Error('this file has no video track.');
+        const atrack = await input.getPrimaryAudioTrack();
+
+        const [W, H, vCodec, dur, first, canV, hdr] = await Promise.all([
+          vtrack.getDisplayWidth(), vtrack.getDisplayHeight(), vtrack.getCodec(),
+          input.computeDuration(), input.getFirstTimestamp().catch(() => 0),
+          vtrack.canDecode(), vtrack.hasHighDynamicRange().catch(() => false),
+        ]);
+        const vstats = await vtrack.computePacketStats(3000).catch(() => null);
+        const fpsm = await vtrack.computeFrameRateMetrics().catch(() => null);
+        const finite = (n) => (Number.isFinite(n) && n > 0 ? n : 0);
+        const vBitrate = finite(vstats?.averageBitrate) || finite(await vtrack.getAverageBitrate().catch(() => null));
+        const fps = fpsm?.bestGuessFrameRate || vstats?.averagePacketRate || 30;
+
+        let a = null;
+        if (atrack) {
+          const [aCodec, sr, ch, canA] = await Promise.all([atrack.getCodec(), atrack.getSampleRate(), atrack.getNumberOfChannels(), atrack.canDecode()]);
+          const astats = await atrack.computePacketStats(2000).catch(() => null);
+          a = { aCodec, sr, ch, canA, aBitrate: Number.isFinite(astats?.averageBitrate) ? astats.averageBitrate : 0 };
+        }
+        if (token !== loadToken) { input.dispose(); return; }
+
+        src = {
+          file, input, vtrack, atrack, mime: format.mimeType, fmtName: format.name,
+          W, H, dur, fps, vCodec, vBitrate, canV, hdr,
+          aCodec: a?.aCodec ?? null, sr: a?.sr ?? 0, ch: a?.ch ?? 0, canA: a?.canA ?? false, aBitrate: a?.aBitrate ?? 0,
+          keys: [], thumbs: [], peaks: null,
+        };
+        ed = { in: clamp(first || 0, 0, dur), out: dur, crop: null, speed: 1, pitch: true, volume: 1, mute: false, overlays: [], lead: 0, tail: 0, blankColor: '#000000' };
+        blankT = null;
+        blankPlaying = false;
+        sel = null;
+        hist.undo.length = hist.redo.length = 0;
+        hist.last = JSON.stringify(ed);
+        syncUndo();
+
+        $('#fileInfo').textContent = `${file.name} · ${W}×${H} · ${fps.toFixed(fps % 1 ? 2 : 0)} fps · ${vCodec || '?'}${src.aCodec ? ' + ' + src.aCodec : ''} · ${fmtT(dur)} · ${fmtRate(vBitrate)}`;
+        if (!canV) note('warn', `this browser can't decode ${vCodec || 'this'} video${vCodec === 'hevc' ? ' (on Windows, HEVC needs the "HEVC Video Extensions" from the Microsoft Store)' : ''}. lossless trimming still works; anything that changes the picture needs a browser that can decode it.`);
+        if (atrack && !src.canA) note('warn', `this browser can't decode ${src.aCodec} audio. the audio can still be copied as-is, but speed and volume changes can't touch it.`);
+        if (hdr) note('info', 'this is an HDR video. lossless trims keep it HDR; edits that re-encode are rendered in standard range (SDR).');
+
+        await setupPlayer(file, token);
+        if (token !== loadToken) return;
+
+        $('#drop').hidden = true;
+        $('#view').hidden = false;
+        enableUI(true);
+        syncClip();
+        buildSel();
+        applyAudio();
+        layoutView();
+        tl.fit = true;
+        tlLayout();
+        seekT(ed.in);
+        redraw();
+        analyze(token);
+      } catch (e) {
+        if (token !== loadToken) return;
+        input?.dispose();
+        src = null;
+        ed = null;
+        $('#fileInfo').textContent = 'nothing open';
+        note('error', e?.message || String(e));
+      }
+    }
+
+    async function setupPlayer(file, token) {
+      const v = $('#vid');
+      v.src = URL.createObjectURL(file);
+      const ok = await new Promise((res) => {
+        const done = (r) => { v.onloadeddata = v.onerror = null; clearTimeout(timer); res(r); };
+        v.onloadeddata = () => done(true);
+        v.onerror = () => done(false);
+        const timer = setTimeout(() => done(v.readyState >= 2), 10000);
+      });
+      if (token !== loadToken) return;
+      // the element must agree with the file on the picture size, or its frames would be stretched
+      const sameSize = v.videoWidth === src.W && v.videoHeight === src.H;
+      if (ok && v.videoWidth && sameSize) {
+        player = new ElementPlayer(v);
+        return;
+      }
+      URL.revokeObjectURL(v.src);
+      v.removeAttribute('src');
+      v.load();
+      if (src.canV) {
+        player = new DecoderPlayer(src.vtrack);
+        note('info', "this browser's player can't open this file directly, so the preview is decoded frame by frame and is silent. the export still has its audio.");
+      } else {
+        player = new NullPlayer();
+      }
+    }
+
+    function closeCurrent() {
+      job = null;
+      player?.pause();
+      player?.dispose();
+      player = null;
+      src?.input?.dispose();
+      src = null;
+      ed = null;
+      sel = null;
+      setTool('select');
+      enableUI(false);
+      $('#drop').hidden = false;
+      $('#view').hidden = true;
+      $('#selSec').hidden = true;
+      drawTimeline();
+    }
+
+    function enableUI(on) {
+      const visual = on && src?.canV;
+      document.querySelectorAll('#tools button').forEach((b) => { b.disabled = !on || (b.dataset.tool !== 'select' && !visual); });
+      for (const id of ['playBtn', 'prevBtn', 'nextBtn', 'loopBtn', 'inBtn', 'outBtn', 'zoomOut', 'zoomFit', 'zoomIn', 'exportBtn']) $('#' + id).disabled = !on;
+      document.querySelectorAll('.side input, .side select, .side button').forEach((el) => { el.disabled = !on; });
+      if (on && !visual) for (const id of ['cCropEdit', 'cCropReset', 'cAspect', 'cSpeedSel', 'cSpeed', 'cPitch', 'cLead', 'cTail', 'cBlankColor']) $('#' + id).disabled = true;
+      if (on && src.atrack && !src.canA) { $('#cVol').disabled = true; }
+    }
+
+    // ---- background work after opening: thumbnails, waveform, keyframes ----
+    async function analyze(token) {
+      const alive = () => token === loadToken && src;
+      const jobs = [];
+      if (src.canV) jobs.push((async () => {
+        const th = 72, tw = clamp(Math.round(th * src.W / src.H), 24, 160);
+        const n = clamp(Math.round(src.dur * 2), 16, 160);
+        const times = Array.from({ length: n }, (_, i) => ((i + 0.5) * src.dur) / n);
+        src.thumbs = new Array(n).fill(null);
+        const sink = new MB.CanvasSink(src.vtrack, { width: tw, height: th, fit: 'cover', poolSize: 0 });
+        let i = 0;
+        for await (const wc of sink.canvasesAtTimestamps(times)) {
+          if (!alive()) return;
+          src.thumbs[i++] = wc?.canvas || null;
+          if (i % 4 === 0) drawTimeline();
+        }
+        drawTimeline();
+      })().catch(() => {}));
+      if (src.atrack && src.canA) jobs.push((async () => {
+        const BPS = 100;
+        const nb = Math.ceil(src.dur * BPS) + 1;
+        const peaks = new Float32Array(nb);
+        src.peaks = peaks;
+        src.peakRate = BPS;
+        const sink = new MB.AudioBufferSink(src.atrack);
+        let k = 0;
+        for await (const { buffer, timestamp } of sink.buffers()) {
+          if (!alive()) return;
+          const sr = buffer.sampleRate, n = buffer.length;
+          for (let c = 0; c < buffer.numberOfChannels; c++) {
+            const d = buffer.getChannelData(c);
+            for (let i = 0; i < n; i++) {
+              const b = Math.floor((timestamp + i / sr) * BPS);
+              const v = d[i] < 0 ? -d[i] : d[i];
+              if (b >= 0 && b < nb && v > peaks[b]) peaks[b] = v;
+            }
+          }
+          if (++k % 40 === 0) { drawTimeline(); await new Promise((r) => setTimeout(r)); }
+        }
+        drawTimeline();
+      })().catch(() => {}));
+      jobs.push((async () => {
+        const sink = new MB.EncodedPacketSink(src.vtrack);
+        let k = 0;
+        for await (const p of sink.packets(undefined, undefined, { metadataOnly: true })) {
+          if (!alive()) return;
+          if (p.type === 'key') src.keys.push(p.timestamp);
+          if (++k % 2000 === 0) { drawTimeline(); await new Promise((r) => setTimeout(r)); }
+        }
+        drawTimeline();
+      })().catch(() => {}));
+      await Promise.all(jobs);
+    }
+
+    // ============================================================================================
+    // preview stage
+    // ============================================================================================
+
+    const stage = $('#stage'), vcan = $('#view'), vctx = vcan.getContext('2d', { alpha: false });
+    const previewScratch = makeScratch();
+    let view = { R: { x: 0, y: 0, w: 1, h: 1 }, k: 1, dpr: 1 };
+
+    const viewRegion = () => (tool === 'crop' || !ed.crop ? full() : ed.crop);
+
+    function layoutView() {
+      if (!src) return;
+      const box = stage.getBoundingClientRect();
+      const R = viewRegion();
+      const pad = 12;
+      const s = Math.min((box.width - pad * 2) / R.w, (box.height - pad * 2) / R.h);
+      const cssW = Math.max(1, Math.floor(R.w * s)), cssH = Math.max(1, Math.floor(R.h * s));
+      const dpr = window.devicePixelRatio || 1;
+      vcan.style.width = cssW + 'px';
+      vcan.style.height = cssH + 'px';
+      const pw = Math.max(1, Math.round(cssW * dpr)), ph = Math.max(1, Math.round(cssH * dpr));
+      if (vcan.width !== pw || vcan.height !== ph) { vcan.width = pw; vcan.height = ph; }
+      view = { R, k: pw / R.w, dpr };
+      redraw();
+    }
+
+    new ResizeObserver(() => { layoutView(); tlLayout(); }).observe(stage);
+
+    let drawQueued = false;
+    function redraw() {
+      if (drawQueued) return;
+      drawQueued = true;
+      requestAnimationFrame(() => { drawQueued = false; drawNow(); });
+    }
+
+    function drawNow() {
+      drawTimeline();
+      if (!src || !player) return;
+      const t = now();
+      const drawSrc = blankT !== null ? blankFill(ed) : (c) => player.drawTo(c);
+      renderFrame(vctx, view.R, vcan.width, vcan.height, t, drawSrc, previewScratch, ed);
+      drawGuides(t);
+      // source time (what the ruler and fields use), then where that lands in the finished clip
+      $('#timeV').innerHTML = `${fmtT(t)} <span>· clip ${fmtT(outTime(t))} / ${fmtT(outLen())}</span>`;
+      const label = isPlaying() ? 'pause' : 'play';
+      if ($('#playBtn').textContent !== label) $('#playBtn').textContent = label;
+    }
+
+    const vx = (x) => (x - view.R.x) * view.k;
+    const vy = (y) => (y - view.R.y) * view.k;
+
+    function handlesOf(o) {
+      if (o.type === 'line' || o.type === 'arrow') return [{ id: 'p1', x: o.x, y: o.y }, { id: 'p2', x: o.x + o.w, y: o.y + o.h }];
+      const b = bbox(o);
+      if (o.type === 'text') return [{ id: 'se', x: b.x + b.w, y: b.y + b.h }];
+      return boxHandles(b, false);
+    }
+
+    function boxHandles(b, cornersOnly) {
+      const xs = { w: b.x, c: b.x + b.w / 2, e: b.x + b.w }, ys = { n: b.y, c: b.y + b.h / 2, s: b.y + b.h };
+      const ids = cornersOnly ? ['nw', 'ne', 'se', 'sw'] : ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+      return ids.map((id) => ({
+        id,
+        x: id.includes('w') ? xs.w : id.includes('e') ? xs.e : xs.c,
+        y: id.includes('n') ? ys.n : id.includes('s') ? ys.s : ys.c,
+      }));
+    }
+
+    function drawHandles(g, hs) {
+      const d = view.dpr, r = 4 * d;
+      for (const h of hs) {
+        const x = Math.round(vx(h.x)), y = Math.round(vy(h.y));
+        g.fillStyle = '#000';
+        g.fillRect(x - r - d, y - r - d, r * 2 + d * 2, r * 2 + d * 2);
+        g.fillStyle = '#3ddc97';
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+    }
+
+    function drawGuides(t) {
+      const g = vctx, d = view.dpr;
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      if (tool === 'crop') {
+        const C = ed.crop || full();
+        g.fillStyle = 'rgba(0, 0, 0, 0.62)';
+        g.beginPath();
+        g.rect(0, 0, vcan.width, vcan.height);
+        g.rect(vx(C.x), vy(C.y), C.w * view.k, C.h * view.k);
+        g.fill('evenodd');
+        g.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+        g.lineWidth = d;
+        g.beginPath();
+        for (let i = 1; i < 3; i++) {
+          const x = Math.round(vx(C.x + (C.w * i) / 3)) + 0.5, y = Math.round(vy(C.y + (C.h * i) / 3)) + 0.5;
+          g.moveTo(x, vy(C.y)); g.lineTo(x, vy(C.y + C.h));
+          g.moveTo(vx(C.x), y); g.lineTo(vx(C.x + C.w), y);
+        }
+        g.stroke();
+        g.strokeStyle = '#3ddc97';
+        g.strokeRect(Math.round(vx(C.x)) + 0.5, Math.round(vy(C.y)) + 0.5, Math.round(C.w * view.k) - 1, Math.round(C.h * view.k) - 1);
+        drawHandles(g, boxHandles(C, aspectValue() !== null));
+        g.font = `${11 * d}px Monocraft, monospace`;
+        g.fillStyle = '#3ddc97';
+        g.textBaseline = 'top';
+        g.fillText(`${Math.round(C.w)}×${Math.round(C.h)}`, vx(C.x) + 6 * d, vy(C.y) + 6 * d);
+      } else {
+        const o = selected();
+        if (o) {
+          const on = active(o, t);
+          g.setLineDash(on ? [] : [4 * d, 4 * d]);
+          g.strokeStyle = on ? '#3ddc97' : 'rgba(255, 255, 255, 0.4)';
+          g.lineWidth = d;
+          if (o.type !== 'line' && o.type !== 'arrow') {
+            const b = bbox(o);
+            g.strokeRect(Math.round(vx(b.x)) - 0.5, Math.round(vy(b.y)) - 0.5, Math.round(b.w * view.k) + 1, Math.round(b.h * view.k) + 1);
+          }
+          g.setLineDash([]);
+          if (on) drawHandles(g, handlesOf(o));
+        }
+      }
+      g.restore();
+    }
+
+    // ---- pointer work on the stage ----
+    const toSrc = (e) => {
+      const r = vcan.getBoundingClientRect();
+      return { x: view.R.x + ((e.clientX - r.left) / r.width) * view.R.w, y: view.R.y + ((e.clientY - r.top) / r.height) * view.R.h };
+    };
+    const tolSrc = () => (8 * view.dpr) / view.k; // 8 css px in source pixels
+
+    function hitHandle(hs, p) {
+      const tol = tolSrc();
+      for (const h of hs) if (Math.abs(h.x - p.x) <= tol && Math.abs(h.y - p.y) <= tol) return h.id;
+      return null;
+    }
+
+    function distToSeg(p, x1, y1, x2, y2) {
+      const dx = x2 - x1, dy = y2 - y1, l2 = dx * dx + dy * dy;
+      const u = l2 ? clamp(((p.x - x1) * dx + (p.y - y1) * dy) / l2, 0, 1) : 0;
+      return Math.hypot(p.x - (x1 + u * dx), p.y - (y1 + u * dy));
+    }
+
+    function hitOverlay(p, t) {
+      const tol = tolSrc();
+      for (let i = ed.overlays.length - 1; i >= 0; i--) {
+        const o = ed.overlays[i];
+        if (!active(o, t)) continue;
+        if (o.type === 'line' || o.type === 'arrow') {
+          if (distToSeg(p, o.x, o.y, o.x + o.w, o.y + o.h) <= Math.max(tol, o.width / 2)) return o;
+        } else {
+          const b = bbox(o);
+          if (p.x >= b.x - tol && p.x <= b.x + b.w + tol && p.y >= b.y - tol && p.y <= b.y + b.h + tol) return o;
+        }
+      }
+      return null;
+    }
+
+    const CURSORS = { n: 'ns-resize', s: 'ns-resize', e: 'ew-resize', w: 'ew-resize', nw: 'nwse-resize', se: 'nwse-resize', ne: 'nesw-resize', sw: 'nesw-resize', p1: 'move', p2: 'move' };
+    let drag = null;
+
+    vcan.addEventListener('pointerdown', (e) => {
+      if (!src || e.button !== 0 || job) return;
+      vcan.setPointerCapture(e.pointerId);
+      const p = toSrc(e), t = now();
+      if (tool === 'crop') {
+        const C = ed.crop || full();
+        const h = hitHandle(boxHandles(C, aspectValue() !== null), p);
+        if (h) drag = { kind: 'crop', h, O: { ...C }, start: p };
+        else if (p.x > C.x && p.x < C.x + C.w && p.y > C.y && p.y < C.y + C.h) drag = { kind: 'cropmove', O: { ...C }, start: p };
+        else drag = { kind: 'cropnew', start: p };
+        return;
+      }
+      if (tool === 'select') {
+        const o = selected();
+        const h = o && active(o, t) ? hitHandle(handlesOf(o), p) : null;
+        if (h) { drag = { kind: 'resize', o, h, O: structuredClone(o), start: p }; return; }
+        const hit = hitOverlay(p, t);
+        if (hit) {
+          select(hit.id);
+          drag = { kind: 'move', o: hit, O: structuredClone(hit), start: p };
+          if (e.detail === 2 && hit.type === 'text') focusText();
+        } else select(null);
+        return;
+      }
+      pauseAll();
+      if (tool === 'text') {
+        const o = newOverlay('text', p.x, p.y);
+        addOverlay(o);
+        setTool('select');
+        commit();
+        focusText();
+        return;
+      }
+      const o = newOverlay(tool, p.x, p.y);
+      if (tool === 'pen') o.raw = [p.x, p.y];
+      addOverlay(o);
+      drag = { kind: tool === 'pen' ? 'pen' : 'create', o, start: p };
+    });
+
+    vcan.addEventListener('pointermove', (e) => {
+      if (!src) return;
+      const p = toSrc(e);
+      if (!drag) { vcan.style.cursor = hoverCursor(p); return; }
+      const dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+      const o = drag.o, O = drag.O;
+      switch (drag.kind) {
+        case 'move':
+          o.x = O.x + dx;
+          o.y = O.y + dy;
+          break;
+        case 'resize':
+          if (o.type === 'line' || o.type === 'arrow') {
+            if (drag.h === 'p1') { o.x = O.x + dx; o.y = O.y + dy; o.w = O.w - dx; o.h = O.h - dy; }
+            else { o.w = O.w + dx; o.h = O.h + dy; }
+            if (e.shiftKey) snapAngle(o, drag.h);
+          } else if (o.type === 'text') {
+            const b = textBox(O);
+            o.size = Math.max(4, Math.round(O.size * Math.max(0.05, (b.w + dx) / b.w)));
+          } else {
+            Object.assign(o, resizeBox(O, drag.h, dx, dy, e.shiftKey));
+          }
+          break;
+        case 'create':
+          if (o.type === 'line' || o.type === 'arrow') {
+            o.w = dx; o.h = dy;
+            if (e.shiftKey) snapAngle(o, 'p2');
+          } else {
+            let w = dx, h = dy;
+            if (e.shiftKey) { const m = Math.max(Math.abs(w), Math.abs(h)); w = Math.sign(w || 1) * m; h = Math.sign(h || 1) * m; }
+            o.x = Math.min(drag.start.x, drag.start.x + w);
+            o.y = Math.min(drag.start.y, drag.start.y + h);
+            o.w = Math.abs(w);
+            o.h = Math.abs(h);
+          }
+          break;
+        case 'pen':
+          o.raw.push(p.x, p.y);
+          normalizePen(o);
+          break;
+        case 'crop':
+          ed.crop = cropResize(drag.O, drag.h, p);
+          break;
+        case 'cropmove':
+          ed.crop = {
+            x: clamp(O.x + dx, 0, src.W - O.w), y: clamp(O.y + dy, 0, src.H - O.h), w: O.w, h: O.h,
+          };
+          break;
+        case 'cropnew': {
+          const h = (p.y < drag.start.y ? 'n' : 's') + (p.x < drag.start.x ? 'w' : 'e');
+          ed.crop = cropResize({ x: drag.start.x, y: drag.start.y, w: 0, h: 0 }, h, p);
+          break;
+        }
+      }
+      if (drag.kind.startsWith('crop')) syncCropLabel();
+      else if (drag.o) syncSelFields();
+      redraw();
+    });
+
+    const endDrag = () => {
+      if (!drag) return;
+      const d = drag;
+      drag = null;
+      if (d.kind === 'create') {
+        const o = d.o, tiny = 6 / view.k * view.dpr;
+        if (o.type === 'line' || o.type === 'arrow') {
+          if (Math.hypot(o.w, o.h) < tiny) { o.w = src.W * 0.15; o.h = 0; }
+        } else if (o.w < tiny || o.h < tiny) {
+          o.w = Math.round(src.W * 0.2);
+          o.h = Math.round(src.H * 0.15);
+          o.x = d.start.x - o.w / 2;
+          o.y = d.start.y - o.h / 2;
+        }
+        setTool('select');
+      } else if (d.kind === 'pen') {
+        normalizePen(d.o);
+        delete d.o.raw;
+      } else if (d.kind.startsWith('crop')) {
+        finishCrop();
+        return;
+      }
+      if (d.o) rememberStyle(d.o);
+      buildSel();
+      commit();
+      redraw();
+    };
+    vcan.addEventListener('pointerup', endDrag);
+    vcan.addEventListener('pointercancel', endDrag);
+    vcan.addEventListener('dblclick', (e) => {
+      const o = selected();
+      if (o?.type === 'text') focusText();
+    });
+
+    function hoverCursor(p) {
+      const t = now();
+      if (tool === 'crop') {
+        const C = ed.crop || full();
+        const h = hitHandle(boxHandles(C, aspectValue() !== null), p);
+        if (h) return CURSORS[h];
+        return p.x > C.x && p.x < C.x + C.w && p.y > C.y && p.y < C.y + C.h ? 'move' : 'crosshair';
+      }
+      if (tool === 'text') return 'text';
+      if (tool !== 'select') return 'crosshair';
+      const o = selected();
+      const h = o && active(o, t) ? hitHandle(handlesOf(o), p) : null;
+      if (h) return CURSORS[h];
+      return hitOverlay(p, t) ? 'move' : 'default';
+    }
+
+    function resizeBox(O, h, dx, dy, keep) {
+      let x0 = O.x, y0 = O.y, x1 = O.x + O.w, y1 = O.y + O.h;
+      if (h.includes('w')) x0 += dx;
+      if (h.includes('e')) x1 += dx;
+      if (h.includes('n')) y0 += dy;
+      if (h.includes('s')) y1 += dy;
+      if (keep && h.length === 2 && O.w && O.h) {
+        const a = O.w / O.h;
+        let w = Math.abs(x1 - x0), hh = Math.abs(y1 - y0);
+        if (w / hh > a) hh = w / a; else w = hh * a;
+        if (h.includes('w')) x0 = x1 - w; else x1 = x0 + w;
+        if (h.includes('n')) y0 = y1 - hh; else y1 = y0 + hh;
+      }
+      return { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) };
+    }
+
+    function snapAngle(o, end) {
+      const len = Math.hypot(o.w, o.h);
+      const a = Math.round(Math.atan2(o.h, o.w) / (Math.PI / 4)) * (Math.PI / 4);
+      if (end === 'p1') {
+        const x2 = o.x + o.w, y2 = o.y + o.h;
+        o.w = Math.cos(a) * len; o.h = Math.sin(a) * len;
+        o.x = x2 - o.w; o.y = y2 - o.h;
+      } else {
+        o.w = Math.cos(a) * len; o.h = Math.sin(a) * len;
+      }
+    }
+
+    // pen points live normalized inside the stroke's box, so moving and scaling it is just the box
+    function normalizePen(o) {
+      const r = o.raw;
+      if (!r) return;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let i = 0; i < r.length; i += 2) {
+        x0 = Math.min(x0, r[i]); x1 = Math.max(x1, r[i]);
+        y0 = Math.min(y0, r[i + 1]); y1 = Math.max(y1, r[i + 1]);
+      }
+      const w = Math.max(1, x1 - x0), h = Math.max(1, y1 - y0);
+      o.x = x0; o.y = y0; o.w = w; o.h = h;
+      o.pts = r.map((v, i) => (i % 2 ? (v - y0) / h : (v - x0) / w));
+    }
+
+    // ---- crop ----
+    function aspectValue() {
+      if (cropAspect === 'free') return null;
+      if (cropAspect === 'src') return src.W / src.H;
+      const [a, b] = cropAspect.split(':').map(Number);
+      return a / b;
+    }
+
+    function cropResize(O, h, p) {
+      const W = src.W, H = src.H, asp = aspectValue();
+      let x0 = O.x, y0 = O.y, x1 = O.x + O.w, y1 = O.y + O.h;
+      const px = clamp(p.x, 0, W), py = clamp(p.y, 0, H);
+      if (asp && h.length === 2) {
+        const ax = h.includes('w') ? O.x + O.w : O.x, ay = h.includes('n') ? O.y + O.h : O.y;
+        let w = Math.abs(px - ax), hh = Math.abs(py - ay);
+        if (w / Math.max(hh, 1e-6) > asp) hh = w / asp; else w = hh * asp;
+        const maxW = h.includes('w') ? ax : W - ax, maxH = h.includes('n') ? ay : H - ay;
+        if (w > maxW) { w = maxW; hh = w / asp; }
+        if (hh > maxH) { hh = maxH; w = hh * asp; }
+        x0 = h.includes('w') ? ax - w : ax;
+        y0 = h.includes('n') ? ay - hh : ay;
+        return { x: x0, y: y0, w, h: hh };
+      }
+      if (h.includes('w')) x0 = px;
+      if (h.includes('e')) x1 = px;
+      if (h.includes('n')) y0 = py;
+      if (h.includes('s')) y1 = py;
+      return { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) };
+    }
+
+    // crops land on even pixel edges, which every encoder is happy with
+    function finishCrop() {
+      const C = ed.crop;
+      if (C) {
+        let x = Math.round(C.x / 2) * 2, y = Math.round(C.y / 2) * 2;
+        let w = even(C.w), h = even(C.h);
+        w = Math.min(w, src.W - x); h = Math.min(h, src.H - y);
+        w -= w % 2; h -= h % 2;
+        if (w < 16 || h < 16) ed.crop = null;
+        else if (x === 0 && y === 0 && w >= src.W - 1 && h >= src.H - 1) ed.crop = null;
+        else ed.crop = { x, y, w, h };
+      }
+      syncCropLabel();
+      commit();
+      redraw();
+    }
+
+    function applyAspect() {
+      const asp = aspectValue();
+      if (asp === null || !src) return;
+      const B = ed.crop || full();
+      let w = B.w, h = w / asp;
+      if (h > B.h) { h = B.h; w = h * asp; }
+      ed.crop = { x: B.x + (B.w - w) / 2, y: B.y + (B.h - h) / 2, w, h };
+      finishCrop();
+      layoutView();
+    }
+
+    function syncCropLabel() {
+      const C = ed?.crop;
+      $('#cCropV').textContent = C ? `${Math.round(C.w)}×${Math.round(C.h)}` : 'full frame';
+    }
+
+    // ============================================================================================
+    // tools, selection and the properties panel
+    // ============================================================================================
+
+    function setTool(t) {
+      if (tool === t) return;
+      const wasCrop = tool === 'crop';
+      tool = t;
+      document.querySelectorAll('#tools button').forEach((b) => b.classList.toggle('on', b.dataset.tool === t));
+      $('#cCropEdit').classList.toggle('on', t === 'crop');
+      if (src && (wasCrop || t === 'crop')) layoutView();
+      vcan.style.cursor = t === 'select' ? 'default' : t === 'text' ? 'text' : 'crosshair';
+      redraw();
+    }
+
+    document.querySelectorAll('#tools button').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
+
+    function select(id) {
+      if (sel === id) return;
+      sel = id;
+      revealLane(id);
+      buildSel();
+      redraw();
+    }
+
+    function addOverlay(o) {
+      ed.overlays.push(o);
+      sel = o.id;
+      if (!active(o, now())) seekT(o.start);
+      buildSel();
+      tlLayout();
+      redraw();
+    }
+
+    function removeSelected() {
+      if (!sel) return;
+      ed.overlays = ed.overlays.filter((o) => o.id !== sel);
+      sel = null;
+      buildSel();
+      tlLayout();
+      commit();
+      redraw();
+    }
+
+    function duplicateSelected() {
+      const o = selected();
+      if (!o) return;
+      const c = structuredClone(o);
+      c.id = uid();
+      const off = Math.round(Math.max(src.W, src.H) * 0.02);
+      c.x += off; c.y += off;
+      ed.overlays.push(c);
+      sel = c.id;
+      buildSel();
+      tlLayout();
+      revealLane(c.id);
+      commit();
+      redraw();
+    }
+
+    function reorder(dir) {
+      const i = ed.overlays.findIndex((o) => o.id === sel);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= ed.overlays.length) return;
+      [ed.overlays[i], ed.overlays[j]] = [ed.overlays[j], ed.overlays[i]];
+      commit();
+      tlLayout();
+      redraw();
+    }
+
+    // move to the very top or bottom of the stack
+    function toEdge(front) {
+      const i = ed.overlays.findIndex((o) => o.id === sel);
+      if (i < 0) return;
+      const [o] = ed.overlays.splice(i, 1);
+      if (front) ed.overlays.push(o); else ed.overlays.unshift(o);
+      commit();
+      tlLayout();
+      revealLane(o.id);
+      redraw();
+    }
+
+    // ---- copy / cut / paste, kept inside snippy ----
+    let clipboard = null;
+    function copySelected() {
+      const o = selected();
+      if (o) clipboard = structuredClone(o);
+      return !!o;
+    }
+    function cutSelected() { if (copySelected()) removeSelected(); }
+    function pasteAt(t) {
+      if (!clipboard || !src) return;
+      const c = structuredClone(clipboard), min = 1 / (src.fps || 30);
+      const len = c.end - c.start;
+      c.id = uid();
+      c.start = clamp(t, keepStart(), keepEnd() - min);
+      c.end = Math.min(keepEnd(), c.start + len);
+      // don't land exactly on top of the one it came from
+      if (ed.overlays.some((o) => o.x === c.x && o.y === c.y && active(o, c.start))) {
+        const off = Math.round(Math.max(src.W, src.H) * 0.02);
+        c.x += off; c.y += off;
+      }
+      ed.overlays.push(c);
+      sel = c.id;
+      clampOverlays();
+      buildSel();
+      tlLayout();
+      revealLane(c.id);
+      commit();
+      if (!active(c, now())) seekT(c.start);
+      redraw();
+    }
+
+    function focusText() {
+      const ta = $('#selSec textarea');
+      if (ta) { ta.focus(); ta.select(); }
+    }
+
+    const NAMES = { text: 'text', rect: 'box', ellipse: 'oval', line: 'line', arrow: 'arrow', pen: 'pen', censor: 'censor' };
+
+    // the selected overlay's fields, rebuilt when the selection changes
+    function buildSel() {
+      const box = $('#selSec');
+      const o = selected();
+      if (!o) { box.hidden = true; box.innerHTML = ''; return; }
+      box.hidden = false;
+      const color = (k) => `<input type="color" data-k="${k}" />`;
+      const num = (k, step = 1, min = 0) => `<input type="number" data-k="${k}" step="${step}" min="${min}" />`;
+      const row = (label, html) => `<div class="row"><label>${label}</label>${html}</div>`;
+      let h = `<h3>${NAMES[o.type]}<span class="acts">
+        <button class="b sm" data-act="down" title="send back">back</button><button class="b sm" data-act="up" title="bring forward">front</button>
+        <button class="b sm" data-act="dup" title="duplicate (ctrl+d)">dup</button><button class="b sm" data-act="del" title="delete (del)">del</button></span></h3>`;
+      h += row('from', `<input type="text" data-t="start" inputmode="decimal" /><button class="b sm" data-here-o="start" title="set to playhead">here</button>`);
+      h += row('to', `<input type="text" data-t="end" inputmode="decimal" /><button class="b sm" data-here-o="end" title="set to playhead">here</button>`);
+      if (o.type === 'text') {
+        h += `<textarea data-k="text" rows="2" spellcheck="false"></textarea>`;
+        h += row('font', `<select data-k="font">${Object.keys(FONTS).map((f) => `<option value="${f}">${f}</option>`).join('')}</select>${color('color')}`);
+        h += row('size', `${num('size', 1, 4)}<label class="chk"><input type="checkbox" data-k="bold" /> bold</label>`);
+        h += row('outline', `${num('outline', 1, 0)}${color('outlineColor')}`);
+        h += row('box', `<label class="chk"><input type="checkbox" data-k="box" /> behind</label>${color('boxColor')}`);
+        h += row('align', `<select data-k="align"><option value="left">left</option><option value="center">center</option><option value="right">right</option></select>`);
+      } else if (o.type === 'rect' || o.type === 'ellipse') {
+        h += row('stroke', `${num('width', 1, 0)}${color('stroke')}`);
+        h += row('fill', `<label class="chk"><input type="checkbox" data-k="fill" /> on</label>${color('fillColor')}`);
+        h += row('opacity', `<input type="range" data-k="fillAlpha" min="0" max="1" step="0.01" />`);
+      } else if (o.type === 'line' || o.type === 'arrow' || o.type === 'pen') {
+        h += row('stroke', `${num('width', 1, 1)}${color('stroke')}`);
+      } else if (o.type === 'censor') {
+        h += row('style', `<select data-k="mode"><option value="blur">blur</option><option value="pixel">pixelate</option><option value="solid">solid bar</option></select>`);
+        h += o.mode === 'solid' ? row('color', color('color')) : row('strength', num('strength', 1, 1));
+      }
+      if (o.type !== 'text' && o.type !== 'line' && o.type !== 'arrow') {
+        h += row('x y w h', `<div class="quad">${['x', 'y', 'w', 'h'].map((k) => `<input type="number" data-g="${k}" step="1" />`).join('')}</div>`);
+      }
+      box.innerHTML = h;
+      syncSelFields(true);
+    }
+
+    function syncSelFields(all) {
+      const o = selected();
+      if (!o) return;
+      const box = $('#selSec');
+      const focused = document.activeElement;
+      box.querySelectorAll('[data-k]').forEach((el) => {
+        if (el === focused && !all) return;
+        const v = o[el.dataset.k];
+        if (el.type === 'checkbox') el.checked = !!v;
+        else if (el.type === 'number') el.value = Math.round(v * 100) / 100;
+        else el.value = v;
+      });
+      box.querySelectorAll('[data-t]').forEach((el) => { if (el !== focused || all) el.value = fmtT(o[el.dataset.t]); });
+      box.querySelectorAll('[data-g]').forEach((el) => { if (el !== focused || all) el.value = Math.round(o[el.dataset.g]); });
+    }
+
+    $('#selSec').addEventListener('input', (e) => {
+      const o = selected(), el = e.target;
+      if (!o) return;
+      if (el.dataset.k) {
+        const k = el.dataset.k;
+        let v = el.type === 'checkbox' ? el.checked : el.type === 'number' || el.type === 'range' ? parseFloat(el.value) : el.value;
+        if (typeof v === 'number' && !Number.isFinite(v)) return;
+        o[k] = v;
+        rememberStyle(o);
+        if (k === 'mode') buildSel();
+      } else if (el.dataset.g) {
+        const v = parseFloat(el.value);
+        if (!Number.isFinite(v)) return;
+        o[el.dataset.g] = el.dataset.g === 'w' || el.dataset.g === 'h' ? Math.max(1, v) : v;
+      }
+      redraw();
+    });
+
+    $('#selSec').addEventListener('change', (e) => {
+      const o = selected(), el = e.target;
+      if (!o) return;
+      if (el.dataset.t) {
+        const v = parseT(el.value);
+        if (v !== null) setOverlayTime(o, el.dataset.t, v);
+        syncSelFields(true);
+      }
+      commit();
+      tlLayout();
+      redraw();
+    });
+
+    $('#selSec').addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      const o = selected();
+      if (b.dataset.act === 'del') removeSelected();
+      else if (b.dataset.act === 'dup') duplicateSelected();
+      else if (b.dataset.act === 'up') reorder(1);
+      else if (b.dataset.act === 'down') reorder(-1);
+      else if (b.dataset.hereO && o) {
+        setOverlayTime(o, b.dataset.hereO, now());
+        syncSelFields(true);
+        commit();
+        redraw();
+      }
+    });
+
+    function setOverlayTime(o, which, v) {
+      const min = 1 / (src.fps || 30);
+      v = clamp(v, keepStart(), keepEnd());
+      if (which === 'start') o.start = Math.min(v, o.end - min);
+      else o.end = Math.max(v, o.start + min);
+      clampOverlays();
+    }
+
+    // ---- clip panel ----
+    function syncClip() {
+      if (!ed) return;
+      $('#cIn').value = fmtT(ed.in);
+      $('#cOut').value = fmtT(ed.out);
+      const extra = [ed.speed !== 1 ? `${ed.speed}×` : '', ed.lead || ed.tail ? 'with blanks' : ''].filter(Boolean).join(', ');
+      $('#cLen').textContent = fmtT(outLen()) + (extra ? ` (${extra})` : '');
+      const preset = [...$('#cSpeedSel').options].some((op) => Number(op.value) === ed.speed);
+      $('#cSpeedSel').value = preset ? String(ed.speed) : 'custom';
+      $('#cSpeed').value = ed.speed;
+      $('#cPitch').checked = ed.pitch;
+      $('#cVol').value = Math.round(ed.volume * 100);
+      $('#cVolV').textContent = Math.round(ed.volume * 100) + '%';
+      $('#cMute').checked = ed.mute;
+      if (document.activeElement !== $('#cLead')) $('#cLead').value = ed.lead ? Math.round(ed.lead * 100) / 100 : '';
+      if (document.activeElement !== $('#cTail')) $('#cTail').value = ed.tail ? Math.round(ed.tail * 100) / 100 : '';
+      $('#cBlankColor').value = ed.blankColor;
+      syncCropLabel();
+    }
+
+    // after the kept range changes: overlays get cut to it, and the panels catch up
+    function trimmed() {
+      clampOverlays();
+      syncClip();
+      syncSelFields(true);
+      drawTimeline();
+      redraw();
+    }
+
+    function setIn(t) {
+      ed.in = clamp(t, 0, ed.out - 1 / (src.fps || 30));
+      trimmed(); commit();
+    }
+    function setOut(t) {
+      ed.out = clamp(t, ed.in + 1 / (src.fps || 30), src.dur);
+      trimmed(); commit();
+    }
+
+    // blank (solid color) sections before and after the video, for titles and outros
+    function setBlank(which, secs) {
+      if (!src) return;
+      secs = Number.isFinite(secs) ? clamp(Math.round(secs * 1000) / 1000, 0, 600) : 0;
+      const at = now();
+      ed[which] = secs;
+      if (blankT !== null && !inLead(blankT) && !inTail(blankT)) { blankT = null; blankPlaying = false; player.seek(clamp(at, 0, src.dur)); }
+      tl.fit = true;
+      tlLayout();
+      trimmed();
+      commit();
+    }
+
+    $('#cIn').addEventListener('change', (e) => { const v = parseT(e.target.value); if (v !== null) setIn(v); else syncClip(); });
+    $('#cOut').addEventListener('change', (e) => { const v = parseT(e.target.value); if (v !== null) setOut(v); else syncClip(); });
+    document.querySelectorAll('[data-here]').forEach((b) => b.addEventListener('click', () => (b.dataset.here === 'in' ? setIn(now()) : setOut(now()))));
+    $('#inBtn').addEventListener('click', () => setIn(now()));
+    $('#outBtn').addEventListener('click', () => setOut(now()));
+
+    function setSpeed(v) {
+      if (!Number.isFinite(v)) return;
+      ed.speed = clamp(Math.round(v * 100) / 100, 0.25, 4);
+      applyAudio(); syncClip(); commit();
+    }
+    $('#cSpeedSel').addEventListener('change', (e) => { if (e.target.value !== 'custom') setSpeed(Number(e.target.value)); else $('#cSpeed').focus(); });
+    $('#cSpeed').addEventListener('change', (e) => setSpeed(parseFloat(e.target.value)));
+    $('#cPitch').addEventListener('change', (e) => { ed.pitch = e.target.checked; applyAudio(); commit(); });
+    $('#cVol').addEventListener('input', (e) => { ed.volume = Number(e.target.value) / 100; $('#cVolV').textContent = e.target.value + '%'; applyAudio(); });
+    $('#cVol').addEventListener('change', () => commit());
+    $('#cMute').addEventListener('change', (e) => { ed.mute = e.target.checked; applyAudio(); commit(); });
+    $('#cAspect').addEventListener('change', (e) => { cropAspect = e.target.value; setTool('crop'); applyAspect(); });
+    $('#cCropEdit').addEventListener('click', () => setTool(tool === 'crop' ? 'select' : 'crop'));
+    $('#cCropReset').addEventListener('click', () => { ed.crop = null; syncCropLabel(); commit(); layoutView(); });
+    $('#cLead').addEventListener('change', (e) => setBlank('lead', parseFloat(e.target.value)));
+    $('#cTail').addEventListener('change', (e) => setBlank('tail', parseFloat(e.target.value)));
+    $('#cBlankColor').addEventListener('input', (e) => { ed.blankColor = e.target.value; redraw(); });
+    $('#cBlankColor').addEventListener('change', () => commit());
+
+    // ============================================================================================
+    // timeline
+    // ============================================================================================
+
+    const tlHeadC = $('#tlHead'), tlLaneC = $('#tlLane'), tlPane = $('#tlPane'), tlLanes = $('#tlLanes');
+    const tlH = $('#tlH'), tlHInner = $('#tlHInner');
+    const hctx = tlHeadC.getContext('2d'), lctx = tlLaneC.getContext('2d');
+    const TL = { RULER: 20, THUMB: 40, WAVE: 30, LANE: 20, PAD: 18, GRIP: 12 };
+    const HEAD_H = TL.RULER + TL.THUMB + TL.WAVE + 4;
+    const ROW = { thumb: TL.RULER, wave: TL.RULER + TL.THUMB };
+    const tl = { pps: 1, t0: 0, w: 1, laneH: 1, fit: true, hover: null };
+    // PAD keeps a gutter at both ends so the trim handles never sit on the window edge
+    const tToX = (t) => TL.PAD + (t - tl.t0) * tl.pps;
+    const xToT = (x) => (x - TL.PAD) / tl.pps + tl.t0;
+    const innerW = () => Math.max(1, tl.w - TL.PAD * 2);
+
+    function sizeCanvas(c, w, h) {
+      const dpr = window.devicePixelRatio || 1;
+      c.style.width = w + 'px';
+      c.style.height = h + 'px';
+      const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+      if (c.width !== pw || c.height !== ph) { c.width = pw; c.height = ph; }
+    }
+
+    function tlLayout() {
+      // the lane list's width excludes its scrollbar, and both canvases use it so they line up
+      tl.w = Math.max(1, tlLanes.clientWidth);
+      const n = ed ? ed.overlays.length : 0;
+      tl.laneH = Math.max(tlLanes.clientHeight, n * TL.LANE + 8);
+      sizeCanvas(tlHeadC, tl.w, HEAD_H);
+      sizeCanvas(tlLaneC, tl.w, tl.laneH);
+      if (src && ed) {
+        if (tl.fit) { tl.pps = innerW() / (spanEnd() - spanStart()); tl.t0 = spanStart(); }
+        tlClamp();
+      }
+      syncHScroll();
+      drawTimeline();
+    }
+
+    function tlClamp() {
+      const span = spanEnd() - spanStart();
+      tl.pps = clamp(tl.pps, innerW() / span, 4000);
+      tl.t0 = clamp(tl.t0, spanStart(), Math.max(spanStart(), spanEnd() - innerW() / tl.pps));
+    }
+
+    // native horizontal scrollbar, shown once you zoom in
+    function syncHScroll() {
+      const show = !!(src && ed && !tl.fit);
+      if (tlH.hidden === show) tlH.hidden = !show;
+      if (!show) return;
+      tlHInner.style.width = Math.round((spanEnd() - spanStart()) * tl.pps + TL.PAD * 2) + 'px';
+      const want = Math.round((tl.t0 - spanStart()) * tl.pps);
+      if (Math.abs(tlH.scrollLeft - want) > 1) tlH.scrollLeft = want;
+    }
+
+    tlH.addEventListener('scroll', () => {
+      if (!src || tl.fit) return;
+      const t0 = spanStart() + tlH.scrollLeft / tl.pps;
+      if (Math.abs(t0 - tl.t0) * tl.pps < 1) return; // our own sync, not the user
+      tl.t0 = t0;
+      tlClamp();
+      drawTimeline();
+    });
+
+    function tlPan(dx) {
+      tl.t0 += dx / tl.pps;
+      tlClamp();
+      syncHScroll();
+      drawTimeline();
+    }
+
+    function tlZoom(f, ax = tl.w / 2) {
+      if (!src) return;
+      const ta = xToT(ax);
+      tl.pps *= f;
+      tl.fit = false;
+      tlClamp();
+      tl.t0 = ta - (ax - TL.PAD) / tl.pps;
+      tlClamp();
+      if (tl.pps <= innerW() / (spanEnd() - spanStart()) + 1e-9) tl.fit = true;
+      syncHScroll();
+      drawTimeline();
+    }
+
+    function followPlayhead() {
+      const x = tToX(now());
+      if (x < TL.PAD || x > tl.w - TL.PAD) { tl.t0 = now() - (innerW() * 0.1) / tl.pps; tlClamp(); syncHScroll(); }
+    }
+
+    const lanes = () => ed.overlays.slice().reverse(); // top lane = topmost layer
+
+    // scrolls the lane list so the selected overlay's lane is visible
+    function revealLane(id) {
+      if (!ed || !id) return;
+      const i = lanes().findIndex((o) => o.id === id);
+      if (i < 0) return;
+      const top = i * TL.LANE, bottom = top + TL.LANE;
+      if (top < tlLanes.scrollTop) tlLanes.scrollTop = top;
+      else if (bottom > tlLanes.scrollTop + tlLanes.clientHeight) tlLanes.scrollTop = bottom - tlLanes.clientHeight;
+    }
+
+    function pickStep() {
+      const steps = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
+      return steps.find((s) => s * tl.pps >= 70) || 3600;
+    }
+
+    // trim handle boxes, drawn just inside the kept range so they stay on screen
+    function handleBoxes() {
+      const xi = tToX(ed.in), xo = tToX(ed.out);
+      const w = Math.max(4, Math.min(TL.GRIP, (xo - xi) / 2));
+      return { in: [xi, xi + w], out: [xo - w, xo] };
+    }
+
+    // the stretches that make it into the export, in timeline x
+    function keptXs() {
+      const r = [[tToX(ed.in), tToX(ed.out)]];
+      if (ed.lead > 0) r.push([tToX(-ed.lead), tToX(0)]);
+      if (ed.tail > 0) r.push([tToX(src.dur), tToX(src.dur + ed.tail)]);
+      return r;
+    }
+
+    let tlQueued = false;
+    function drawTimeline() {
+      if (tlQueued) return;
+      tlQueued = true;
+      requestAnimationFrame(() => { tlQueued = false; drawHead(); drawLanes(); });
+    }
+
+    const hatches = new WeakMap();
+    function blankPattern(g) {
+      if (!hatches.has(g)) {
+        const c = document.createElement('canvas');
+        c.width = c.height = 8;
+        const h = c.getContext('2d');
+        h.fillStyle = '#060908';
+        h.fillRect(0, 0, 8, 8);
+        h.fillStyle = '#0f3324';
+        for (let i = 0; i < 8; i++) h.fillRect(i, 7 - i, 1, 1);
+        hatches.set(g, g.createPattern(c, 'repeat'));
+      }
+      return hatches.get(g);
+    }
+
+    function startCanvas(g, h) {
+      const dpr = window.devicePixelRatio || 1;
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.fillStyle = '#000';
+      g.fillRect(0, 0, tl.w, h);
+      g.font = '10px Monocraft, monospace';
+      g.textBaseline = 'top';
+    }
+
+    function drawPlayhead(g, h, head) {
+      const px = Math.round(tToX(now()));
+      g.fillStyle = '#fff';
+      g.fillRect(px, 0, 1, h);
+      if (head) g.fillRect(px - 4, 0, 9, 6);
+    }
+
+    function drawHead() {
+      const g = hctx, W = tl.w;
+      startCanvas(g, HEAD_H);
+      if (!src || !ed) return;
+      const th = TL.THUMB, wh = TL.WAVE, rowsH = th + wh;
+
+      // ruler
+      const step = pickStep(), minor = step / (step >= 60 || String(step).includes('5') ? 5 : 4);
+      const tA = xToT(0), tB = xToT(W);
+      g.fillStyle = 'rgba(255,255,255,0.25)';
+      for (let t = Math.floor(tA / minor) * minor; t <= tB; t += minor) g.fillRect(Math.round(tToX(t)), TL.RULER - 4, 1, 4);
+      g.fillStyle = 'rgba(255,255,255,0.6)';
+      for (let t = Math.floor(tA / step) * step; t <= tB; t += step) {
+        const x = Math.round(tToX(t));
+        g.fillRect(x, TL.RULER - 9, 1, 9);
+        const label = step < 1 ? fmtT(t).replace(/0+$/, '').replace(/\.$/, '') : fmtT(t).replace(/\.000$/, '');
+        g.fillText(label, x + 3, 3);
+      }
+      // keyframes: where lossless cuts can land
+      g.fillStyle = '#1fae74';
+      for (const k of src.keys) {
+        const x = tToX(k);
+        if (x >= -2 && x <= W + 2) g.fillRect(Math.round(x) - 1, TL.RULER - 3, 3, 3);
+      }
+
+      // thumbnails and waveform, only over the video itself
+      const x0v = tToX(0), x1v = tToX(src.dur);
+      g.save();
+      g.beginPath();
+      g.rect(Math.max(0, x0v), ROW.thumb, Math.max(0, Math.min(W, x1v) - Math.max(0, x0v)), rowsH);
+      g.clip();
+      const tw = clamp(Math.round(th * src.W / src.H), 24, 120), tdur = tw / tl.pps;
+      const n = src.thumbs.length;
+      for (let k = Math.max(0, Math.floor(tA / tdur)); k * tdur < src.dur; k++) {
+        const x = tToX(k * tdur);
+        if (x > W) break;
+        const t = Math.min((k + 0.5) * tdur, src.dur - 1e-3);
+        const c = n ? src.thumbs[clamp(Math.floor((t / src.dur) * n), 0, n - 1)] : null;
+        if (c) {
+          const cw = c.width, ch = c.height, sc = Math.max(tw / cw, th / ch);
+          const sw = tw / sc, sh = th / sc;
+          g.drawImage(c, (cw - sw) / 2, (ch - sh) / 2, sw, sh, x, ROW.thumb, tw, th);
+        } else {
+          g.fillStyle = k % 2 ? '#0c100e' : '#0a0d0c';
+          g.fillRect(x, ROW.thumb, tw, th);
+        }
+      }
+      const wy = ROW.wave, mid = wy + wh / 2;
+      g.fillStyle = '#050706';
+      g.fillRect(x0v, wy, x1v - x0v, wh);
+      if (src.peaks) {
+        const P = src.peaks, rate = src.peakRate;
+        g.fillStyle = ed.mute ? 'rgba(255,255,255,0.2)' : '#1fae74';
+        const gain = ed.mute ? 1 : ed.volume;
+        for (let x = Math.max(0, Math.floor(x0v)); x < Math.min(W, x1v); x++) {
+          const b0 = Math.floor(xToT(x) * rate), b1 = Math.max(b0 + 1, Math.floor(xToT(x + 1) * rate));
+          let m = 0;
+          for (let b = Math.max(0, b0); b < b1 && b < P.length; b++) if (P[b] > m) m = P[b];
+          const hgt = Math.max(1, Math.sqrt(Math.min(1, m * gain)) * (wh - 2)); // sqrt so quiet audio still shows
+          g.fillRect(x, mid - hgt / 2, 1, hgt);
+        }
+      } else {
+        g.fillStyle = 'rgba(255,255,255,0.35)';
+        g.fillText(!src.atrack ? 'no audio' : src.canA ? 'reading audio…' : 'audio (no preview)', x0v + 6, wy + 9);
+      }
+      g.restore();
+
+      // blank sections before and after the video
+      const blocks = [];
+      if (ed.lead > 0) blocks.push([tToX(-ed.lead), x0v, ed.lead]);
+      if (ed.tail > 0) blocks.push([x1v, tToX(src.dur + ed.tail), ed.tail]);
+      for (const [a, b, len] of blocks) {
+        g.fillStyle = blankPattern(g);
+        g.fillRect(a, ROW.thumb, b - a, rowsH);
+        g.fillStyle = ed.blankColor;
+        g.fillRect(a + 4, ROW.thumb + 4, 10, 10);
+        g.strokeStyle = 'rgba(255,255,255,0.5)';
+        g.lineWidth = 1;
+        g.strokeRect(a + 4.5, ROW.thumb + 4.5, 9, 9);
+        g.fillStyle = 'rgba(255,255,255,0.8)';
+        g.fillText(`blank ${len.toFixed(len % 1 ? 1 : 0)} s`, a + 18, ROW.thumb + 5);
+      }
+
+      // trimmed-away video is dimmed
+      const xi = tToX(ed.in), xo = tToX(ed.out);
+      g.fillStyle = 'rgba(0,0,0,0.7)';
+      if (xi > x0v) g.fillRect(x0v, ROW.thumb, xi - x0v, rowsH);
+      if (xo < x1v) g.fillRect(xo, ROW.thumb, x1v - xo, rowsH);
+
+      // a bright frame around everything that will be exported
+      g.fillStyle = '#3ddc97';
+      for (const [a, b] of keptXs()) {
+        g.fillRect(a, ROW.thumb, Math.max(0, b - a), 2);
+        g.fillRect(a, ROW.thumb + rowsH - 2, Math.max(0, b - a), 2);
+      }
+
+      // trim handles
+      const hb = handleBoxes();
+      for (const k of ['in', 'out']) {
+        const [a, b] = hb[k];
+        const hot = tl.hover === k || tdrag?.kind === k;
+        g.fillStyle = hot ? '#ffffff' : '#3ddc97';
+        g.fillRect(a, ROW.thumb, b - a, rowsH);
+        g.fillStyle = '#021a10';
+        const cx = Math.round((a + b) / 2);
+        g.fillRect(cx - 2, ROW.thumb + rowsH / 2 - 8, 1, 16);
+        g.fillRect(cx + 1, ROW.thumb + rowsH / 2 - 8, 1, 16);
+      }
+
+      drawPlayhead(g, HEAD_H, true);
+    }
+
+    function drawLanes() {
+      const g = lctx, W = tl.w, H = tl.laneH;
+      startCanvas(g, H);
+      if (!src || !ed) return;
+      const L = lanes();
+      for (let i = 0; i * TL.LANE < H; i++) {
+        g.fillStyle = i % 2 ? '#040605' : '#080b0a';
+        g.fillRect(0, i * TL.LANE, W, TL.LANE);
+      }
+      // shade what won't be exported, so it's clear where an overlay can't show
+      const kept = keptXs().sort((a, b) => a[0] - b[0]);
+      g.fillStyle = 'rgba(0,0,0,0.6)';
+      let x = tToX(spanStart());
+      for (const [a, b] of kept) { if (a > x) g.fillRect(x, 0, a - x, H); x = Math.max(x, b); }
+      if (x < tToX(spanEnd())) g.fillRect(x, 0, tToX(spanEnd()) - x, H);
+      g.fillStyle = 'rgba(61,220,151,0.35)';
+      for (const [a, b] of kept) { g.fillRect(Math.round(a), 0, 1, H); g.fillRect(Math.round(b) - 1, 0, 1, H); }
+
+      L.forEach((o, i) => {
+        const y = i * TL.LANE;
+        const x0 = tToX(o.start), x1 = tToX(o.end);
+        if (x1 < 0 || x0 > W) return;
+        const isSel = o.id === sel, isCensor = o.type === 'censor';
+        g.fillStyle = isSel ? (isCensor ? '#f87171' : '#3ddc97') : isCensor ? 'rgba(248,113,113,0.28)' : 'rgba(61,220,151,0.22)';
+        g.fillRect(x0, y + 2, Math.max(2, x1 - x0), TL.LANE - 4);
+        g.strokeStyle = isSel ? '#ffffff' : isCensor ? '#f87171' : '#3ddc97';
+        g.lineWidth = 1;
+        g.strokeRect(Math.round(x0) + 0.5, y + 2.5, Math.max(1, Math.round(x1 - x0) - 1), TL.LANE - 5);
+        g.save();
+        g.beginPath();
+        g.rect(Math.max(0, x0 + 4), y, Math.max(0, x1 - x0 - 8), TL.LANE);
+        g.clip();
+        g.fillStyle = isSel ? '#021a10' : '#ffffff';
+        const label = NAMES[o.type] + (o.type === 'text' ? ' · ' + String(o.text).split('\n')[0] : o.type === 'censor' ? ' · ' + o.mode : '');
+        g.fillText(label, Math.max(4, x0 + 5), y + 5);
+        g.restore();
+      });
+      if (!L.length) {
+        g.fillStyle = 'rgba(255,255,255,0.4)';
+        g.fillText('text, shapes, drawings and censors show up here · right-click for blank sections', TL.PAD, 6);
+      }
+      drawPlayhead(g, H, false);
+    }
+
+    // ---- timeline pointer ----
+    let tdrag = null;
+    const local = (c, e) => { const r = c.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+
+    function headHit(p) {
+      if (p.y >= ROW.thumb) {
+        const hb = handleBoxes(), slop = 5;
+        const onIn = p.x >= hb.in[0] - slop && p.x <= hb.in[1] + 1;
+        const onOut = p.x >= hb.out[0] - 1 && p.x <= hb.out[1] + slop;
+        if (onIn && onOut) return { kind: Math.abs(p.x - hb.in[0]) <= Math.abs(p.x - hb.out[1]) ? 'in' : 'out' };
+        if (onIn) return { kind: 'in' };
+        if (onOut) return { kind: 'out' };
+      }
+      return { kind: 'scrub' };
+    }
+
+    function laneHit(p) {
+      const o = lanes()[Math.floor(p.y / TL.LANE)];
+      if (o) {
+        const x0 = tToX(o.start), x1 = tToX(o.end);
+        if (p.x >= x0 - 5 && p.x <= x1 + 5) {
+          if (Math.abs(p.x - x0) <= 5 && x1 - x0 > 10) return { kind: 'ostart', o };
+          if (Math.abs(p.x - x1) <= 5) return { kind: 'oend', o };
+          if (Math.abs(p.x - x0) <= 5) return { kind: 'ostart', o };
+          return { kind: 'omove', o };
+        }
+      }
+      return { kind: 'scrub' };
+    }
+
+    // snaps to nearby edges, but returns null when nothing is close
+    function snapTo(t, o) {
+      const tol = 6 / tl.pps;
+      const marks = [now(), ed.in, ed.out, ...ed.overlays.filter((x) => x !== o).flatMap((x) => [x.start, x.end])];
+      if (ed.lead > 0) marks.push(-ed.lead, 0);
+      if (ed.tail > 0) marks.push(src.dur, src.dur + ed.tail);
+      let best = null, bd = tol;
+      for (const m of marks) { const d = Math.abs(t - m); if (d <= bd) { bd = d; best = m; } }
+      return best;
+    }
+    const snapT = (t, o) => snapTo(t, o) ?? t;
+
+    // an overlay dragged into a trimmed-away stretch slides onto the nearest kept part instead
+    function skipGap(s, len) {
+      const min = 1 / (src.fps || 30), lo = keepStart(), hi = keepEnd();
+      if (keptLen(s, s + len) >= Math.min(len, min)) return s;
+      const options = [ed.in, ed.out - len];
+      if (ed.lead > 0) options.push(-len);
+      if (ed.tail > 0) options.push(src.dur);
+      let best = s, bd = Infinity;
+      for (const c of options) {
+        const v = clamp(c, lo, Math.max(lo, hi - len));
+        if (keptLen(v, v + len) > 0 && Math.abs(v - s) < bd) { bd = Math.abs(v - s); best = v; }
+      }
+      return best;
+    }
+
+    function tlDown(e, hit) {
+      if (!src || e.button !== 0 || job) return;
+      closeMenu();
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const p = local(e.currentTarget, e), h = hit(p), t = clamp(xToT(p.x), spanStart(), spanEnd());
+      pauseAll();
+      if (h.o) {
+        select(h.o.id);
+        tdrag = { ...h, O: { start: h.o.start, end: h.o.end }, t0: t };
+      } else if (h.kind === 'in' || h.kind === 'out') {
+        // overlays are re-cut from where they were when the drag started, so dragging back undoes the cut
+        tdrag = { ...h, snap: ed.overlays.map((o) => [o.start, o.end]) };
+      } else {
+        tdrag = { kind: 'scrub' };
+        seekT(t);
+      }
+      drawTimeline();
+      redraw();
+    }
+
+    function tlMove(e, hit) {
+      if (!src) return;
+      const c = e.currentTarget, p = local(c, e);
+      if (!tdrag) {
+        const h = hit(p);
+        const hover = h.kind === 'in' || h.kind === 'out' ? h.kind : null;
+        if (hover !== tl.hover) { tl.hover = hover; drawTimeline(); }
+        c.style.cursor = hover || h.kind === 'ostart' || h.kind === 'oend' ? 'ew-resize' : h.kind === 'omove' ? 'grab' : 'text';
+        return;
+      }
+      const t = clamp(xToT(p.x), spanStart(), spanEnd()), min = 1 / (src.fps || 30);
+      const d = tdrag, lo = keepStart(), hi = keepEnd();
+      if (d.kind === 'scrub') seekT(t);
+      else if (d.kind === 'in' || d.kind === 'out') {
+        ed.overlays.forEach((o, i) => { [o.start, o.end] = d.snap[i]; });
+        if (d.kind === 'in') ed.in = clamp(snapT(t), 0, ed.out - min);
+        else ed.out = clamp(snapT(t), ed.in + min, src.dur);
+        clampOverlays();
+        seekT(d.kind === 'in' ? ed.in : ed.out - min);
+        syncClip();
+        syncSelFields();
+      } else if (d.kind === 'ostart') {
+        d.o.start = clamp(snapT(t, d.o), lo, d.o.end - min);
+        seekT(d.o.start);
+        syncSelFields();
+      } else if (d.kind === 'oend') {
+        d.o.end = clamp(snapT(t, d.o), d.o.start + min, hi);
+        seekT(Math.max(d.o.start, d.o.end - min));
+        syncSelFields();
+      } else if (d.kind === 'omove') {
+        const len = Math.min(d.O.end - d.O.start, hi - lo);
+        const maxS = Math.max(lo, hi - len);
+        let s = clamp(d.O.start + (t - d.t0), lo, maxS);
+        // pinned against an end: stay flush with it. otherwise snap whichever edge is closer to a mark
+        if (s > lo && s < maxS) {
+          const ss = snapTo(s, d.o), se = snapTo(s + len, d.o);
+          const ds = ss === null ? Infinity : Math.abs(ss - s), de = se === null ? Infinity : Math.abs(se - len - s);
+          if (ds <= de && ds < Infinity) s = ss;
+          else if (de < Infinity) s = se - len;
+          s = clamp(s, lo, maxS);
+        }
+        s = skipGap(s, len);
+        d.o.start = s;
+        d.o.end = Math.min(hi, s + len);
+        syncSelFields();
+      }
+      drawTimeline();
+      redraw();
+    }
+
+    function tlUp() {
+      if (!tdrag) return;
+      if (tdrag.kind !== 'scrub') { clampOverlays(); syncSelFields(true); commit(); }
+      tdrag = null;
+      drawTimeline();
+      redraw();
+    }
+
+    for (const [c, hit] of [[tlHeadC, headHit], [tlLaneC, laneHit]]) {
+      c.addEventListener('pointerdown', (e) => tlDown(e, hit));
+      c.addEventListener('pointermove', (e) => tlMove(e, hit));
+      c.addEventListener('pointerup', tlUp);
+      c.addEventListener('pointercancel', tlUp);
+      c.addEventListener('pointerleave', () => { if (tl.hover && !tdrag) { tl.hover = null; drawTimeline(); } });
+      c.addEventListener('wheel', (e) => {
+        if (!src) return;
+        const lanesList = c === tlLaneC;
+        if (e.ctrlKey || e.metaKey || e.altKey) {
+          e.preventDefault();
+          tlZoom(Math.exp(-e.deltaY * 0.0025), local(c, e).x);
+        } else if (!tl.fit && (e.shiftKey || !lanesList || Math.abs(e.deltaX) > Math.abs(e.deltaY))) {
+          // over the ruler any wheel pans; over the lanes plain wheel scrolls the list
+          e.preventDefault();
+          tlPan(Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY);
+        }
+      }, { passive: false });
+      c.addEventListener('contextmenu', (e) => {
+        if (!src || job) return;
+        e.preventDefault();
+        pauseAll();
+        const p = local(c, e);
+        const h = c === tlLaneC ? laneHit(p) : null;
+        if (h?.o) openObjMenu(h.o, e.clientX, e.clientY);
+        else openMenu(e.clientX, e.clientY, xToT(p.x));
+      });
+    }
+
+    $('#zoomIn').addEventListener('click', () => tlZoom(1.6, tToX(now())));
+    $('#zoomOut').addEventListener('click', () => tlZoom(1 / 1.6, tToX(now())));
+    $('#zoomFit').addEventListener('click', () => { tl.fit = true; tlLayout(); });
+    new ResizeObserver(() => tlLayout()).observe(tlLanes);
+
+    // ---- resizing the timeline: drag the bar above the transport ----
+    const PANE_KEY = 'snippy.timelineHeight', PANE_DEFAULT = 220;
+    function setPaneH(h) {
+      const max = Math.max(HEAD_H + 60, window.innerHeight * 0.75);
+      h = clamp(Math.round(h), HEAD_H + 40, max);
+      tlPane.style.height = h + 'px';
+      return h;
+    }
+    try { const v = Number(localStorage.getItem(PANE_KEY)); if (v) setPaneH(v); } catch { /* no storage, default height */ }
+    const savePane = (h) => { try { localStorage.setItem(PANE_KEY, String(h)); } catch { /* fine */ } };
+
+    let paneDrag = null;
+    const split = $('#split');
+    split.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      split.setPointerCapture(e.pointerId);
+      split.classList.add('drag');
+      paneDrag = { y: e.clientY, h: tlPane.offsetHeight };
+    });
+    split.addEventListener('pointermove', (e) => { if (paneDrag) setPaneH(paneDrag.h - (e.clientY - paneDrag.y)); });
+    const endPane = () => {
+      if (!paneDrag) return;
+      paneDrag = null;
+      split.classList.remove('drag');
+      savePane(tlPane.offsetHeight);
+    };
+    split.addEventListener('pointerup', endPane);
+    split.addEventListener('pointercancel', endPane);
+    split.addEventListener('dblclick', () => savePane(setPaneH(PANE_DEFAULT)));
+    window.addEventListener('resize', () => setPaneH(tlPane.offsetHeight));
+
+    // ---- right-click menu: trim here, and blank sections before/after the video ----
+    const menu = $('#tlMenu');
+    let menuT = 0;
+
+    const oMenu = $('#oMenu');
+    let menuO = null;
+
+    // opens a menu next to the pointer, kept inside the window (above the pointer when there's room)
+    function placeMenu(el, x, y) {
+      closeMenu();
+      el.hidden = false;
+      const r = el.getBoundingClientRect();
+      el.style.left = clamp(x, 8, window.innerWidth - r.width - 8) + 'px';
+      el.style.top = clamp(y - r.height, 8, window.innerHeight - r.height - 8) + 'px';
+    }
+
+    function openObjMenu(o, x, y) {
+      menuO = o;
+      select(o.id);
+      $('#oName').textContent = NAMES[o.type] + (o.type === 'text' ? ' · ' + String(o.text).split('\n')[0] : '') + ` · ${fmtT(o.start)} – ${fmtT(o.end)}`;
+      oMenu.querySelector('[data-o="paste"]').disabled = !clipboard;
+      const i = ed.overlays.indexOf(o);
+      oMenu.querySelector('[data-o="front"]').disabled = i === ed.overlays.length - 1;
+      oMenu.querySelector('[data-o="back"]').disabled = i === 0;
+      placeMenu(oMenu, x, y);
+    }
+
+    oMenu.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      const o = menuO;
+      if (!b || !o) return;
+      closeMenu();
+      sel = o.id;
+      const act = b.dataset.o;
+      if (act === 'dup') duplicateSelected();
+      else if (act === 'copy') copySelected();
+      else if (act === 'cut') cutSelected();
+      else if (act === 'paste') pasteAt(now());
+      else if (act === 'del') removeSelected();
+      else if (act === 'front') toEdge(true);
+      else if (act === 'back') toEdge(false);
+      else {
+        if (act === 'startHere') setOverlayTime(o, 'start', now());
+        else if (act === 'endHere') setOverlayTime(o, 'end', now());
+        else if (act === 'whole') { o.start = keepStart(); o.end = keepEnd(); }
+        clampOverlays();
+        syncSelFields(true);
+        commit();
+        redraw();
+      }
+    });
+
+    function openMenu(x, y, t) {
+      menuT = t;
+      $('#mLead').value = ed.lead || '';
+      $('#mTail').value = ed.tail || '';
+      $('#mClear').disabled = !ed.lead && !ed.tail;
+      const inVideo = t >= 0 && t <= src.dur;
+      $('#mIn').disabled = $('#mOut').disabled = !inVideo;
+      $('#mPaste').disabled = !clipboard;
+      placeMenu(menu, x, y);
+      // right-click left of the clip edits the lead-in, right of it the tail
+      const field = t < ed.in ? $('#mLead') : t > ed.out ? $('#mTail') : null;
+      field?.focus();
+      field?.select();
+    }
+
+    function closeMenu() { menu.hidden = true; oMenu.hidden = true; }
+
+    function applyMenu() {
+      const lead = parseFloat($('#mLead').value), tail = parseFloat($('#mTail').value);
+      ed.lead = Number.isFinite(lead) ? clamp(lead, 0, 600) : 0;
+      setBlank('tail', Number.isFinite(tail) ? tail : 0);
+      closeMenu();
+    }
+
+    menu.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      const t = clamp(menuT, 0, src.dur);
+      if (b.id === 'mPaste') { closeMenu(); pasteAt(menuT); }
+      else if (b.id === 'mIn') { setIn(t); closeMenu(); }
+      else if (b.id === 'mOut') { setOut(t); closeMenu(); }
+      else if (b.id === 'mApply') applyMenu();
+      else if (b.id === 'mClear') { ed.lead = 0; setBlank('tail', 0); closeMenu(); }
+    });
+    menu.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); applyMenu(); }
+      else if (e.key === 'Escape') { e.preventDefault(); closeMenu(); }
+    });
+    window.addEventListener('pointerdown', (e) => {
+      if ((!menu.hidden && !menu.contains(e.target)) || (!oMenu.hidden && !oMenu.contains(e.target))) closeMenu();
+    });
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !oMenu.hidden) closeMenu(); });
+
+    // right-clicking an overlay on the picture opens the same menu
+    vcan.addEventListener('contextmenu', (e) => {
+      if (!src || job) return;
+      const o = tool === 'select' ? hitOverlay(toSrc(e), now()) : null;
+      if (!o) return;
+      e.preventDefault();
+      pauseAll();
+      openObjMenu(o, e.clientX, e.clientY);
+    });
+
+    // ============================================================================================
+    // audio processing for export: time-stretch that keeps pitch, a resampler for when pitch
+    // should follow speed, and a buffer they share
+    // ============================================================================================
+
+    class InBuf {
+      constructor(nch) { this.nch = nch; this.d = Array.from({ length: nch }, () => new Float32Array(1 << 15)); this.n = 0; }
+      push(chs) {
+        const m = chs[0].length;
+        if (this.n + m > this.d[0].length) {
+          let cap = this.d[0].length;
+          while (cap < this.n + m) cap *= 2;
+          this.d = this.d.map((a) => { const b = new Float32Array(cap); b.set(a.subarray(0, this.n)); return b; });
+        }
+        for (let c = 0; c < this.nch; c++) this.d[c].set(chs[c], this.n);
+        this.n += m;
+      }
+      drop(k) {
+        k = Math.min(k, this.n);
+        if (k <= 0) return;
+        for (let c = 0; c < this.nch; c++) this.d[c].copyWithin(0, k, this.n);
+        this.n -= k;
+      }
+    }
+
+    function joinChunks(chunks, nch) {
+      const total = chunks.reduce((s, c) => s + c[0].length, 0);
+      if (!total) return null;
+      const out = Array.from({ length: nch }, () => new Float32Array(total));
+      let o = 0;
+      for (const ch of chunks) { for (let c = 0; c < nch; c++) out[c].set(ch[c], o); o += ch[0].length; }
+      return out;
+    }
+
+    // waveform-similarity overlap-add: short 40 ms sequences laid end to end, each one nudged
+    // (within 15 ms) to where it best lines up with the tail of the previous one, then crossfaded
+    class Stretch {
+      constructor(nch, sr, speed) {
+        this.nch = nch;
+        this.speed = speed;
+        this.S = Math.round(sr * 0.04);
+        this.O = Math.round(sr * 0.008);
+        this.W = Math.round(sr * 0.015);
+        this.b = new InBuf(nch);
+        this.pos = 0;
+        this.mid = null;
+        this.ref = new Float32Array(this.O);
+        this.mono = new Float32Array(this.W + this.O);
+      }
+      push(chs) { this.b.push(chs); return this.run(); }
+      seek(ip) {
+        const { O, W, nch, b, mono, ref } = this;
+        for (let i = 0; i < W + O; i++) { let s = 0; for (let c = 0; c < nch; c++) s += b.d[c][ip + i]; mono[i] = s; }
+        const corr = (k, step) => {
+          let xy = 0, yy = 1e-9;
+          for (let i = 0; i < O; i += step) { const y = mono[k + i]; xy += ref[i] * y; yy += y * y; }
+          return xy / Math.sqrt(yy);
+        };
+        let best = 0, bv = -Infinity;
+        for (let k = 0; k < W; k += 4) { const v = corr(k, 2); if (v > bv) { bv = v; best = k; } }
+        let fine = best;
+        bv = -Infinity;
+        for (let k = Math.max(0, best - 3); k <= Math.min(W - 1, best + 3); k++) { const v = corr(k, 1); if (v > bv) { bv = v; fine = k; } }
+        return fine;
+      }
+      run() {
+        const { S, O, W, b, nch } = this;
+        const chunks = [];
+        while (b.n - Math.floor(this.pos) >= S + W) {
+          const ip = Math.floor(this.pos);
+          const off = this.mid ? ip + this.seek(ip) : ip;
+          const seg = Array.from({ length: nch }, () => new Float32Array(S - O));
+          for (let c = 0; c < nch; c++) {
+            const d = b.d[c], o = seg[c];
+            if (this.mid) { const m = this.mid[c]; for (let i = 0; i < O; i++) { const w = i / O; o[i] = m[i] * (1 - w) + d[off + i] * w; } }
+            else o.set(d.subarray(off, off + O), 0);
+            o.set(d.subarray(off + O, off + S - O), O);
+          }
+          this.mid = Array.from({ length: nch }, (_, c) => b.d[c].slice(off + S - O, off + S));
+          this.ref.fill(0);
+          for (let c = 0; c < nch; c++) for (let i = 0; i < O; i++) this.ref[i] += this.mid[c][i];
+          chunks.push(seg);
+          this.pos += this.speed * (S - O);
+        }
+        const k = Math.min(Math.floor(this.pos), b.n);
+        if (k > 0) { b.drop(k); this.pos -= k; }
+        return joinChunks(chunks, nch);
+      }
+      flush() {
+        const { b, nch, O } = this;
+        const chunks = [];
+        if (this.mid) chunks.push(this.mid);
+        const ip = Math.min(Math.floor(this.pos) + (this.mid ? O : 0), b.n);
+        const m = Math.floor((b.n - ip) / this.speed);
+        if (m > 0) chunks.push(Array.from({ length: nch }, (_, c) => {
+          const o = new Float32Array(m);
+          for (let i = 0; i < m; i++) o[i] = b.d[c][Math.min(b.n - 1, ip + Math.floor(i * this.speed))];
+          return o;
+        }));
+        b.n = 0;
+        return joinChunks(chunks, nch);
+      }
+    }
+
+    function lowpass(sr, fc) {
+      const w = (2 * Math.PI * fc) / sr, cs = Math.cos(w), al = Math.sin(w) / (2 * Math.SQRT1_2), a0 = 1 + al;
+      const b0 = (1 - cs) / 2 / a0, b1 = (1 - cs) / a0, b2 = b0, a1 = (-2 * cs) / a0, a2 = (1 - al) / a0;
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+      return (x) => {
+        const y = new Float32Array(x.length);
+        for (let i = 0; i < x.length; i++) {
+          const v = b0 * x[i] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+          x2 = x1; x1 = x[i]; y2 = y1; y1 = v; y[i] = v;
+        }
+        return y;
+      };
+    }
+
+    // plays the audio faster/slower like a tape: cubic interpolation, low-passed first when speeding up
+    class Resample {
+      constructor(nch, sr, speed) {
+        this.nch = nch;
+        this.r = speed;
+        this.b = new InBuf(nch);
+        this.pos = 1;
+        this.lp = speed > 1 ? Array.from({ length: nch }, () => [lowpass(sr, (0.45 * sr) / speed), lowpass(sr, (0.45 * sr) / speed)]) : null;
+      }
+      push(chs) {
+        if (this.lp) chs = chs.map((x, c) => this.lp[c].reduce((y, f) => f(y), x));
+        this.b.push(chs);
+        return this.run(false);
+      }
+      run(final) {
+        const { b, nch, r } = this;
+        const lim = final ? b.n - 1 : b.n - 2;
+        const count = Math.max(0, Math.ceil((lim - this.pos) / r));
+        if (!count) return null;
+        const out = Array.from({ length: nch }, () => new Float32Array(count));
+        for (let c = 0; c < nch; c++) {
+          const d = b.d[c], o = out[c];
+          let p = this.pos;
+          for (let i = 0; i < count; i++, p += r) {
+            const j = Math.floor(p), f = p - j;
+            const y0 = d[j - 1], y1 = d[j], y2 = d[j + 1], y3 = j + 2 < b.n ? d[j + 2] : y2;
+            const c1 = 0.5 * (y2 - y0), c2 = y0 - 2.5 * y1 + 2 * y2 - 0.5 * y3, c3 = 0.5 * (y3 - y0) + 1.5 * (y1 - y2);
+            o[i] = ((c3 * f + c2) * f + c1) * f + y1;
+          }
+        }
+        this.pos += count * r;
+        const k = Math.min(Math.floor(this.pos) - 1, b.n);
+        if (k > 0) { b.drop(k); this.pos -= k; }
+        return out;
+      }
+      flush() { return this.run(true); }
+    }
+
+    function gainSample(s, g) {
+      const n = s.numberOfFrames, c = s.numberOfChannels;
+      const data = new Float32Array(n * c);
+      for (let ch = 0; ch < c; ch++) s.copyTo(data.subarray(ch * n, (ch + 1) * n), { planeIndex: ch, format: 'f32-planar' });
+      for (let i = 0; i < data.length; i++) data[i] = clamp(data[i] * g, -1, 1);
+      const out = new MB.AudioSample({ data, format: 'f32-planar', numberOfChannels: c, sampleRate: s.sampleRate, timestamp: s.timestamp });
+      s.close();
+      return out;
+    }
+
+    // ============================================================================================
+    // export
+    // ============================================================================================
+
+    const MIME = { mp4: 'video/mp4', mov: 'video/quicktime', webm: 'video/webm', mkv: 'video/x-matroska' };
+    const EFF = { avc: 1, hevc: 0.6, vp9: 0.65, av1: 0.5, vp8: 1.15, prores: 1 }; // bits needed relative to h264
+    const CODEC_NAMES = { avc: 'H.264', hevc: 'H.265', vp9: 'VP9', av1: 'AV1', vp8: 'VP8', prores: 'ProRes', aac: 'AAC', opus: 'Opus', vorbis: 'Vorbis', mp3: 'MP3', flac: 'FLAC' };
+    const cname = (c) => CODEC_NAMES[c] || c || '?';
+    const X = { res: 'source', fmt: 'mp4', fps: 'source', exact: false, rate: null };
+    let xplan = null, xToken = 0;
+
+    function makeFormat(key, streaming) {
+      const fastStart = streaming ? false : 'in-memory';
+      if (key === 'mp4') return new MB.Mp4OutputFormat({ fastStart });
+      if (key === 'mov') return new MB.MovOutputFormat({ fastStart });
+      if (key === 'webm') return new MB.WebMOutputFormat();
+      return new MB.MkvOutputFormat();
+    }
+
+    function sourceFmt() {
+      const m = src.mime || '';
+      if (m.includes('quicktime')) return 'mov';
+      if (m.includes('webm')) return 'webm';
+      if (m.includes('matroska')) return 'mkv';
+      return 'mp4';
+    }
+
+    function outSize(res, R) {
+      if (res === 'source') return [even(R.w), even(R.h)];
+      const p = Number(res);
+      return R.w >= R.h ? [even((p * R.w) / R.h), even(p)] : [even(p), even((p * R.h) / R.w)];
+    }
+
+    function fillResOptions() {
+      const R = ed.crop || full();
+      const short = Math.min(R.w, R.h);
+      const opts = [['source', `source · ${outSize('source', R).join('×')}`]];
+      for (const p of [2160, 1440, 1080, 720, 480, 360]) {
+        if (Math.abs(p - short) < 2) continue;
+        const [w, h] = outSize(String(p), R);
+        opts.push([String(p), `${p}p · ${w}×${h}${p > short ? ' (upscale)' : ''}`]);
+      }
+      $('#xRes').innerHTML = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+      if (!opts.some(([v]) => v === X.res)) X.res = 'source';
+      $('#xRes').value = X.res;
+    }
+
+    // the source's own bits per pixel, carried over to the output size and frame rate (and scaled
+    // when the codec changes), so a crop or downscale comes out proportionally smaller, never bigger
+    function autoRate(codec, ow, oh, fps) {
+      const px = ow * oh * fps;
+      if (!src.vBitrate) return Math.round(0.08 * (EFF[codec] || 1) * px);
+      const srcBpp = src.vBitrate / (src.W * src.H * (src.fps || 30));
+      const r = srcBpp * ((EFF[codec] || 1) / (EFF[src.vCodec] || 1)) * px;
+      return Math.round(clamp(r, 100e3, 400e6));
+    }
+
+    // keyframe spacing like the source's (it affects size), 1 to 10 s
+    function sourceGop() {
+      const k = src.keys;
+      if (k.length < 3) return 5;
+      return clamp((k.at(-1) - k[0]) / (k.length - 1), 1, 10);
+    }
+
+    async function pickVideoCodec(fmt, ow, oh, fps) {
+      const supported = fmt.getSupportedVideoCodecs();
+      const order = [...new Set([src.vCodec, ...(fmt instanceof MB.WebMOutputFormat ? ['vp9', 'av1', 'vp8'] : ['avc', 'hevc', 'av1', 'vp9', 'vp8'])])]
+        .filter((c) => c && c !== 'prores' && supported.includes(c));
+      for (const hw of ['prefer-hardware', 'no-preference']) {
+        for (const c of order) {
+          const rate = X.rate ? X.rate * 1e6 : autoRate(c, ow, oh, fps);
+          const ok = await MB.canEncodeVideo(c, { width: ow, height: oh, bitrate: rate, hardwareAcceleration: hw }).catch(() => false);
+          if (ok) return { codec: c, hw: hw === 'prefer-hardware', rate };
+        }
+      }
+      return null;
+    }
+
+    async function pickAudioCodec(fmt) {
+      const supported = fmt.getSupportedAudioCodecs();
+      const order = (fmt instanceof MB.WebMOutputFormat ? ['opus', 'vorbis'] : ['aac', 'opus', 'mp3']).filter((c) => supported.includes(c));
+      for (const c of order) {
+        const sr = c === 'opus' ? 48000 : src.sr;
+        for (const ch of [...new Set([src.ch, 2])]) {
+          if (ch > src.ch) continue;
+          const srcRate = Number.isFinite(src.aBitrate) ? src.aBitrate : 0;
+          // same bitrate as the source's audio; a typical rate only when the source doesn't say
+          const want = srcRate || (ch >= 2 ? 160000 : 96000);
+          const bitrate = Math.round(clamp(want, 32000 * ch, c === 'opus' ? Math.min(510000, 256000 * ch) : 320000) / 1000) * 1000;
+          const ok = await MB.canEncodeAudio(c, { numberOfChannels: ch, sampleRate: sr, bitrate }).catch(() => false);
+          if (ok) return { codec: c, ch, sr, bitrate, resample: sr !== src.sr };
+        }
+      }
+      return null;
+    }
+
+    async function computePlan() {
+      const R = ed.crop || full();
+      const [ow, oh] = outSize(X.res, R);
+      const fmt = makeFormat(X.fmt, false);
+      const warn = [];
+      const blanks = ed.lead > 0 || ed.tail > 0;
+      const visual = !!(ed.crop || ed.overlays.length || ed.speed !== 1 || X.res !== 'source' || X.exact || blanks);
+      const vFits = fmt.getSupportedVideoCodecs().includes(src.vCodec);
+      const p = { ok: true, fmtKey: X.fmt, ow, oh, warn, mode: visual || !vFits ? 'encode' : 'copy', audio: null, why: [] };
+      if (!visual && !vFits) p.why.push(`${X.fmt} can't hold ${cname(src.vCodec)} video as-is (pick ${sourceFmt()} to keep it lossless)`);
+      if (ed.crop) p.why.push('crop');
+      if (ed.overlays.length) p.why.push('overlays');
+      if (ed.speed !== 1) p.why.push('speed');
+      if (blanks) p.why.push('blank sections');
+      if (X.res !== 'source') p.why.push('resize');
+      if (X.exact && !ed.crop && !ed.overlays.length && ed.speed === 1 && X.res === 'source' && !blanks) p.why.push('frame-exact cut');
+
+      // audio
+      const wantAudio = src.atrack && !ed.mute;
+      if (wantAudio) {
+        const aFits = fmt.getSupportedAudioCodecs().includes(src.aCodec);
+        // a lead-in gets real silence encoded in front: a delayed audio track isn't played right everywhere
+        const needEncode = ed.speed !== 1 || ed.volume !== 1 || ed.lead > 0 || !aFits;
+        if (!needEncode) p.audio = { mode: 'copy' };
+        else if (!src.canA) warn.push({ err: true, text: `this browser can't decode the ${cname(src.aCodec)} audio, so it can't be ${ed.speed !== 1 || ed.volume !== 1 ? 'sped up or re-leveled' : `put in ${X.fmt}`}. the export will have no sound unless you undo that.` });
+        else {
+          const a = await pickAudioCodec(fmt);
+          if (a) p.audio = { mode: 'encode', ...a, why: !aFits ? `${X.fmt} can't hold ${cname(src.aCodec)}` : ed.speed !== 1 ? 'speed' : ed.volume !== 1 ? 'volume' : 'the blank lead-in' };
+          else warn.push({ err: true, text: `no audio encoder for ${X.fmt} in this browser; the export will be silent.` });
+        }
+      }
+
+      if (p.mode === 'copy') {
+        const ps = new MB.EncodedPacketSink(src.vtrack);
+        const kp = await ps.getKeyPacket(ed.in, { metadataOnly: true }).catch(() => null);
+        p.keyT = kp ? kp.timestamp : 0;
+        // mp4/mov can carry the lead-in from the keyframe but hide it (edit list), so playback starts
+        // right on the in point; webm/mkv can't, so there the cut moves back to the keyframe for both tracks
+        p.exactStart = fmt.negativeTimestampSupport === 'full';
+        return p;
+      }
+
+      // re-encode
+      if (!src.canV) {
+        p.ok = false;
+        warn.push({ err: true, text: `this browser can't decode ${cname(src.vCodec)} video, so it can't re-encode it. only a plain trim (no crop, overlays, speed or resize) works here.` });
+        return p;
+      }
+      p.decimate = ed.speed > 1 && X.fps === 'source';
+      p.fps = (src.fps || 30) * (p.decimate ? 1 : ed.speed);
+      const v = await pickVideoCodec(fmt, ow, oh, p.fps);
+      if (!v) {
+        p.ok = false;
+        warn.push({ err: true, text: `no ${X.fmt} video encoder in this browser can do ${ow}×${oh}. try a smaller size or another format.` });
+        return p;
+      }
+      Object.assign(p, { vc: v.codec, hw: v.hw, rate: v.rate });
+      if (src.hdr) warn.push({ text: 'HDR source: re-encoding renders in standard range (SDR), so bright highlights are tone-mapped.' });
+      if (src.vCodec !== v.codec) {
+        const swOk = fmt.getSupportedVideoCodecs().includes(src.vCodec) && await MB.canEncodeVideo(src.vCodec, { width: ow, height: oh, bitrate: v.rate }).catch(() => false);
+        warn.push({ text: swOk
+          ? `there's no hardware ${cname(src.vCodec)} encoder here, so this uses hardware ${cname(v.codec)} (much faster); the bitrate is scaled to match.`
+          : `${cname(src.vCodec)} can't be encoded here in ${X.fmt}, so this uses ${cname(v.codec)}; the bitrate is scaled to match.` });
+      }
+      return p;
+    }
+
+    function renderPlan(p) {
+      const parts = [];
+      if (p.mode === 'copy') {
+        const shift = ed.in - p.keyT;
+        parts.push(`<b>lossless copy</b> <span class="k">· no re-encode, original ${cname(src.vCodec)} ${src.W}×${src.H} untouched</span>`);
+        if (shift <= 0.0005) parts.push('starts exactly on your in point (it is a keyframe)');
+        else if (p.exactStart) parts.push(`plays from exactly your in point <span class="k">(the ${shift.toFixed(3)} s back to the keyframe at ${fmtT(p.keyT)} is kept hidden in the file, so nothing gets re-encoded)</span>`);
+        else parts.push(`starts at the keyframe at ${fmtT(p.keyT)}, ${shift.toFixed(3)} s before your in point <span class="k">(${p.fmtKey} can't hide the lead-in: use mp4/mov, or tick frame-exact)</span>`);
+      } else {
+        parts.push(`<b>re-encode</b> <span class="k">· because of ${p.why.join(', ') || 'settings'}</span>`);
+        if (p.ok && p.vc) parts.push(`video ${cname(p.vc)} ${p.hw ? '(hardware)' : '(software)'} · ${p.ow}×${p.oh} · ${p.fps.toFixed(p.fps % 1 ? 2 : 0)} fps · ${fmtRate(p.rate)} <span class="k">(source ${src.vBitrate ? fmtRate(src.vBitrate) : '?'})</span>`);
+      }
+      if (!src.atrack) parts.push('audio: none in source');
+      else if (ed.mute) parts.push('audio: removed');
+      else if (!p.audio) parts.push('audio: none');
+      else if (p.audio.mode === 'copy') parts.push(`audio: ${cname(src.aCodec)} copied as-is`);
+      else parts.push(`audio: ${cname(p.audio.codec)} ${fmtRate(p.audio.bitrate)}${p.audio.ch !== src.ch ? ` · ${p.audio.ch} ch` : ''} <span class="k">(re-encoded for ${p.audio.why})</span>`);
+      // rough size: what the chosen rates add up to, next to what that stretch of the source weighs
+      const len = outLen();
+      const srcSize = ((src.vBitrate + (src.atrack ? src.aBitrate : 0)) * (ed.out - ed.in)) / 8;
+      const aRate = !p.audio ? 0 : p.audio.mode === 'copy' ? src.aBitrate : p.audio.bitrate;
+      const vRate = p.mode === 'copy' ? src.vBitrate : p.rate || 0;
+      // blank sections are solid frames, which cost next to nothing, so only the video stretch counts for picture
+      const estSize = p.mode === 'copy' ? ((vRate + aRate) * (ed.out - ed.in)) / 8 : (vRate * ((ed.out - ed.in) / ed.speed) + aRate * len) / 8;
+      if (p.ok && src.vBitrate) parts.push(`size ≈ ${fmtSize(estSize)} <span class="k">(that part of the source is ≈ ${fmtSize(srcSize)})</span>`);
+      $('#xPlan').innerHTML = parts.map((s) => `<div>${s}</div>`).join('');
+      $('#xWarn').innerHTML = p.warn.map((w) => `<div class="${w.err ? 'err' : ''}">${esc(w.text)}</div>`).join('');
+      const encode = p.mode === 'encode';
+      $('#xRateRow').hidden = !encode || !p.vc;
+      if (encode && p.rate && document.activeElement !== $('#xRate')) $('#xRate').value = (p.rate / 1e6).toFixed(1);
+      $('#xFpsRow').hidden = !(ed.speed > 1);
+      const trimOnly = !ed.crop && !ed.overlays.length && ed.speed === 1 && X.res === 'source' && !ed.lead && !ed.tail;
+      $('#xExactRow').hidden = !trimOnly;
+    }
+
+    async function refreshPlan() {
+      const tok = ++xToken;
+      $('#xGo').disabled = true;
+      try {
+        const p = await computePlan();
+        if (tok !== xToken) return;
+        xplan = p;
+        renderPlan(p);
+        $('#xGo').disabled = !p.ok || !!job;
+      } catch (e) {
+        if (tok !== xToken) return;
+        xplan = null;
+        $('#xPlan').textContent = '';
+        $('#xWarn').innerHTML = `<div class="err">${esc(e?.message || String(e))}</div>`;
+      }
+    }
+
+    function openExport() {
+      if (!src || job) return;
+      pauseAll();
+      if (!X.fmtSet) X.fmt = sourceFmt();
+      $('#xFmt').value = X.fmt;
+      $('#xFps').value = X.fps;
+      $('#xExact').checked = X.exact;
+      fillResOptions();
+      $('#xProg').hidden = true;
+      $('#xStat').textContent = '';
+      $('#xCancel').hidden = true;
+      $('#xGo').hidden = false;
+      $('#xdlg').showModal();
+      refreshPlan();
+    }
+
+    $('#exportBtn').addEventListener('click', openExport);
+    $('#xClose').addEventListener('click', () => { if (job) cancelExport(); $('#xdlg').close(); });
+    $('#xdlg').addEventListener('cancel', (e) => { if (job) e.preventDefault(); });
+    $('#xRes').addEventListener('change', (e) => { X.res = e.target.value; X.rate = null; refreshPlan(); });
+    $('#xFmt').addEventListener('change', (e) => { X.fmt = e.target.value; X.fmtSet = true; X.rate = null; refreshPlan(); });
+    $('#xFps').addEventListener('change', (e) => { X.fps = e.target.value; X.rate = null; refreshPlan(); });
+    $('#xExact').addEventListener('change', (e) => { X.exact = e.target.checked; refreshPlan(); });
+    $('#xRate').addEventListener('change', (e) => { const v = parseFloat(e.target.value); X.rate = Number.isFinite(v) && v > 0 ? v : null; refreshPlan(); });
+    $('#xAuto').addEventListener('click', () => { X.rate = null; refreshPlan(); });
+    $('#xGo').addEventListener('click', () => runExport());
+    $('#xCancel').addEventListener('click', () => cancelExport());
+
+    function bar(el, cells = 30) {
+      const b = document.createElement('div');
+      b.className = 'sqbar';
+      const dots = [];
+      for (let i = 0; i < cells; i++) dots.push(b.appendChild(document.createElement('i')));
+      el.replaceChildren(...b.childNodes);
+      return (ratio) => {
+        const n = Math.round(clamp(ratio, 0, 1) * cells);
+        for (let i = 0; i < cells; i++) dots[i].className = i < n ? (i === n - 1 ? 'fill edge' : 'fill') : '';
+      };
+    }
+
+    function cancelExport() {
+      if (!job) return;
+      job.cancel = true;
+      job.conv?.cancel().catch(() => {});
+    }
+
+    class Canceled extends Error {}
+
+    const SCRATCH = 'snippy-export-';
+    async function clearScratch() {
+      try {
+        const dir = await navigator.storage.getDirectory();
+        for await (const name of dir.keys()) if (name.startsWith(SCRATCH)) await dir.removeEntry(name).catch(() => {});
+      } catch { /* no private storage */ }
+    }
+
+    async function runExport() {
+      const p = xplan;
+      if (!p?.ok || job || !src) return;
+      const E = structuredClone(ed);
+      const base = src.file.name.replace(/\.[^.]+$/, '');
+      const name = `${base}-snippy.${p.fmtKey}`;
+
+      // write into the browser's private storage on disk, then hand that file to a normal download:
+      // it lands in downloads like any other, and big exports never have to fit in memory
+      await clearScratch();
+      let handle = null, writable = null;
+      try {
+        const dir = await navigator.storage.getDirectory();
+        handle = await dir.getFileHandle(`${SCRATCH}${Date.now()}.${p.fmtKey}`, { create: true });
+        writable = await handle.createWritable();
+      } catch {
+        handle = writable = null; // no writable private storage here: build it in memory instead
+      }
+      const target = writable ? new MB.StreamTarget(writable, { chunked: true }) : new MB.BufferTarget();
+      const output = new MB.Output({ format: makeFormat(p.fmtKey, !!writable), target });
+
+      job = { cancel: false, conv: null };
+      const setBar = bar($('#xBar'));
+      $('#xProg').hidden = false;
+      $('#xGo').hidden = true;
+      $('#xCancel').hidden = false;
+      $('#xStat').className = 'xstat';
+      $('#xStat').textContent = 'starting…';
+      document.querySelectorAll('.xbody select, .xbody input, .xbody button').forEach((el) => { el.disabled = true; });
+      let lock = null;
+      try { lock = await navigator.wakeLock?.request('screen'); } catch { /* fine without */ }
+
+      const t0 = performance.now();
+      let frames = 0;
+      const progress = (r) => {
+        setBar(r);
+        const el = (performance.now() - t0) / 1000;
+        const left = r > 0.01 ? (el / r) * (1 - r) : null;
+        $('#xStat').textContent = `${Math.round(r * 100)}%${frames ? ` · ${Math.round(frames / el)} fps` : ''}${left !== null ? ` · ${fmtT(left).replace(/\.\d+$/, '')} left` : ''}`;
+      };
+
+      try {
+        if (p.mode === 'copy') await exportCopy(p, E, output, progress);
+        else await exportEncode(p, E, output, progress, () => frames++);
+        const blob = writable ? await handle.getFile() : new Blob([target.buffer], { type: MIME[p.fmtKey] });
+        const size = blob.size;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        // the private copy is cleared at the next export or visit, once the download has read it
+        setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+        setBar(1);
+        $('#xStat').className = 'xstat ok';
+        $('#xStat').textContent = `done · ${name} · ${fmtSize(size)} · ${((performance.now() - t0) / 1000).toFixed(1)} s`;
+      } catch (e) {
+        const canceled = job.cancel || e instanceof Canceled || e?.name === 'ConversionCanceledError';
+        try { await output.cancel(); } catch { /* already gone */ }
+        try { await writable?.abort(); } catch { /* closed by the output */ }
+        try { await handle?.remove?.(); } catch { /* leave it */ }
+        $('#xStat').className = canceled ? 'xstat' : 'xstat err';
+        $('#xStat').textContent = canceled ? 'canceled' : 'failed: ' + (e?.message || String(e));
+        if (!canceled) console.error(e);
+      } finally {
+        lock?.release().catch(() => {});
+        job = null;
+        $('#xCancel').hidden = true;
+        $('#xGo').hidden = false;
+        document.querySelectorAll('.xbody select, .xbody input, .xbody button').forEach((el) => { el.disabled = false; });
+        refreshPlan();
+      }
+    }
+
+    // lossless: packets are copied out of the source untouched; only the audio may be re-encoded
+    async function exportCopy(p, E, output, progress) {
+      let audio;
+      if (!p.audio) audio = { discard: true };
+      else if (p.audio.mode === 'copy') audio = {};
+      else {
+        audio = {
+          forceTranscode: true,
+          codec: p.audio.codec,
+          quality: new MB.Quality({ bitrate: p.audio.bitrate }),
+          numberOfChannels: p.audio.ch,
+          sampleRate: p.audio.sr,
+        };
+        if (E.volume !== 1) audio.process = (s) => gainSample(s, E.volume);
+      }
+      const conv = await MB.Conversion.init({
+        input: src.input,
+        output,
+        tracks: 'primary',
+        showWarnings: false,
+        trim: { start: p.exactStart ? E.in : p.keyT, end: E.out },
+        video: { forceTranscode: false },
+        audio,
+        copy: { mode: 'preferred', boundaryPolicy: 'expand', shiftTolerance: Infinity },
+      });
+      if (!conv.isValid) throw new Error(conv.discardedTracks.map((d) => d.reason).join(', ') || "this can't be copied");
+      job.conv = conv;
+      if (job.cancel) throw new Canceled();
+      conv.onProgress = (r) => progress(r);
+      await conv.execute();
+    }
+
+    // re-encode: decode each frame, draw it through renderFrame at the output size, encode it.
+    // video and audio are fed in step so the muxer can interleave without piling up memory.
+    async function exportEncode(p, E, output, progress, countFrame) {
+      const R = E.crop || full();
+      const { ow, oh } = p;
+      const canvas = mkCanvas(ow, oh);
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const vsrc = new MB.CanvasSource(canvas, {
+        codec: p.vc,
+        // hardware encoders overshoot a variable-rate target by 20-45%; constant rate lands on it
+        quality: new MB.Quality({ bitrate: p.rate, bitrateMode: 'constant' }),
+        keyFrameInterval: sourceGop(),
+        hardwareAcceleration: p.hw ? 'prefer-hardware' : 'no-preference',
+        latencyMode: 'quality',
+      });
+      output.addVideoTrack(vsrc);
+
+      let asrc = null;
+      if (p.audio?.mode === 'copy') {
+        asrc = new MB.EncodedAudioPacketSource(src.aCodec);
+        output.addAudioTrack(asrc);
+      } else if (p.audio) {
+        const cfg = { codec: p.audio.codec, quality: new MB.Quality({ bitrate: p.audio.bitrate }) };
+        if (p.audio.resample || p.audio.ch !== src.ch) cfg.transform = { sampleRate: p.audio.sr, numberOfChannels: p.audio.ch };
+        asrc = new MB.AudioBufferSource(cfg);
+        output.addAudioTrack(asrc);
+      }
+
+      await output.start();
+      const outDur = outLen(E);
+      const vg = videoGen(p, E, R, ctx, vsrc, outDur, countFrame);
+      const ag = asrc ? (p.audio.mode === 'copy' ? audioCopyGen(E, asrc) : audioEncodeGen(E, asrc)) : null;
+      let vt = 0, at = 0, vDone = false, aDone = !ag;
+      try {
+        while (!vDone || !aDone) {
+          if (job.cancel) throw new Canceled();
+          if (!vDone && (aDone || vt <= at)) {
+            const r = await vg.next();
+            if (r.done) vDone = true;
+            else { vt = r.value; progress(Math.min(1, vt / outDur)); }
+          } else {
+            const r = await ag.next();
+            if (r.done) aDone = true;
+            else at = r.value;
+          }
+        }
+      } finally {
+        await vg.return().catch(() => {});
+        await ag?.return().catch(() => {});
+      }
+      vsrc.close();
+      asrc?.close();
+      await output.finalize();
+    }
+
+    async function* videoGen(p, E, R, ctx, vsrc, outDur, countFrame) {
+      const sink = new MB.VideoSampleSink(src.vtrack);
+      const scratch = makeScratch();
+      const fi = 1 / (src.fps || 30);
+      const srcEnd = E.lead + (E.out - E.in) / E.speed;
+
+      // blank sections are drawn at the source frame rate: solid color plus whatever overlays sit there
+      async function* blank(from, len, t0) {
+        for (let k = 0; k * fi < len - 1e-6; k++) {
+          if (job.cancel) throw new Canceled();
+          const ot = from + k * fi, dur = Math.min(fi, from + len - ot);
+          renderFrame(ctx, R, p.ow, p.oh, t0 + k * fi, blankFill(E), scratch, E);
+          await vsrc.add(ot, dur);
+          countFrame();
+          yield ot + dur;
+        }
+      }
+
+      if (E.lead > 0) yield* blank(0, E.lead, -E.lead);
+
+      let nextT = 0;
+      for await (const s of sink.samples(E.in, E.out)) {
+        try {
+          if (job.cancel) throw new Canceled();
+          const st = s.timestamp;
+          if (st >= E.out) break;
+          const rel = Math.max(0, st - E.in) / E.speed; // time within the video part
+          const ot = E.lead + rel;
+          if (ot >= srcEnd) break;
+          let dur = (st < E.in ? st + s.duration - E.in : s.duration) / E.speed;
+          if (p.decimate) {
+            if (rel + 1e-6 < nextT) continue;
+            nextT = (Math.floor(rel / fi + 1e-6) + 1) * fi;
+            dur = fi;
+          }
+          dur = Math.max(1e-4, Math.min(dur, srcEnd - ot));
+          renderFrame(ctx, R, p.ow, p.oh, Math.max(st, E.in), (c) => s.draw(c, 0, 0, src.W, src.H), scratch, E);
+          await vsrc.add(ot, dur);
+          countFrame();
+          yield ot + dur;
+        } finally {
+          s.close();
+        }
+      }
+
+      if (E.tail > 0) yield* blank(srcEnd, E.tail, src.dur);
+    }
+
+    async function* audioCopyGen(E, asrc) {
+      const ps = new MB.EncodedPacketSink(src.atrack);
+      const decoderConfig = await src.atrack.getDecoderConfig();
+      let pk = await ps.getPacket(E.in);
+      if (pk && pk.timestamp < E.in - 1e-4) pk = await ps.getNextPacket(pk);
+      if (!pk) return;
+      let first = true;
+      for await (const q of ps.packets(pk)) {
+        if (q.timestamp >= E.out) break;
+        const ot = E.lead + Math.max(0, q.timestamp - E.in);
+        await asrc.add(q.clone({ timestamp: ot }), first ? { decoderConfig } : undefined);
+        first = false;
+        yield ot + q.duration;
+      }
+    }
+
+    async function* audioEncodeGen(E, asrc) {
+      const sr = src.sr, nch = src.ch;
+      const sink = new MB.AudioBufferSink(src.atrack);
+      const proc = E.speed === 1 ? null : E.pitch ? new Stretch(nch, sr, E.speed) : new Resample(nch, sr, E.speed);
+      const totalIn = Math.round((E.out - E.in) * sr);
+      const leadN = Math.round(E.lead * sr);
+      const videoN = Math.round(totalIn / E.speed);
+      const total = leadN + videoN + Math.round(E.tail * sr);
+      const gain = E.volume;
+      let fed = 0, emitted = 0, cap = leadN + videoN;
+
+      const zeros = (n) => Array.from({ length: nch }, () => new Float32Array(n));
+      const emit = async (chs) => {
+        if (!chs) return;
+        const n = Math.min(chs[0].length, cap - emitted);
+        if (n <= 0) return;
+        const ab = new AudioBuffer({ length: n, numberOfChannels: nch, sampleRate: sr });
+        for (let c = 0; c < nch; c++) ab.copyToChannel(chs[c].subarray(0, n), c);
+        await asrc.add(ab);
+        emitted += n;
+      };
+      const pad = async (upTo) => { while (emitted < upTo) await emit(zeros(Math.min(sr, upTo - emitted))); };
+      const feed = async (chs) => { fed += chs[0].length; await emit(proc ? proc.push(chs) : chs); };
+      const silence = async (n) => {
+        while (n > 0) { const m = Math.min(n, sr); await feed(zeros(m)); n -= m; }
+      };
+
+      // lead-in: plain silence, before anything goes through the time-stretcher
+      await pad(leadN);
+      yield emitted / sr;
+
+      for await (const { buffer, timestamp } of sink.buffers(E.in, E.out)) {
+        if (job.cancel) throw new Canceled();
+        const start = Math.round((timestamp - E.in) * sr);
+        if (start > fed) await silence(Math.min(start - fed, totalIn - fed));
+        const i0 = Math.max(0, fed - start);
+        const i1 = Math.min(buffer.length, totalIn - start);
+        if (i1 <= i0) { if (start >= totalIn) break; continue; }
+        const chs = [];
+        for (let c = 0; c < nch; c++) {
+          const d = buffer.getChannelData(Math.min(c, buffer.numberOfChannels - 1)).slice(i0, i1);
+          if (gain !== 1) for (let i = 0; i < d.length; i++) d[i] = clamp(d[i] * gain, -1, 1);
+          chs.push(d);
+        }
+        await feed(chs);
+        yield emitted / sr;
+      }
+      if (fed < totalIn) await silence(totalIn - fed);
+      if (proc) await emit(proc.flush());
+      await pad(leadN + videoN);
+
+      // tail: silence again
+      cap = total;
+      await pad(total);
+      yield emitted / sr;
+    }
+
+    // ============================================================================================
+    // wiring: open, drop, transport, keys
+    // ============================================================================================
+
+    $('#openBtn').addEventListener('click', () => $('#fileInput').click());
+    $('#drop').addEventListener('click', () => $('#fileInput').click());
+    $('#fileInput').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; openFile(f); });
+
+    let dragDepth = 0;
+    window.addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; $('#drop').classList.add('over'); });
+    window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('#drop').classList.remove('over'); } });
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragDepth = 0;
+      $('#drop').classList.remove('over');
+      const f = [...(e.dataTransfer?.files || [])].find((x) => /^video\//.test(x.type) || /\.(mkv|mov|webm|mp4|m4v|ts|ogv)$/i.test(x.name));
+      if (f) openFile(f);
+    });
+
+    $('#playBtn').addEventListener('click', togglePlay);
+    $('#prevBtn').addEventListener('click', () => stepFrame(-1));
+    $('#nextBtn').addEventListener('click', () => stepFrame(1));
+    $('#loopBtn').addEventListener('click', () => { loop = !loop; $('#loopBtn').classList.toggle('on', loop); });
+    $('#undoBtn').addEventListener('click', undo);
+    $('#redoBtn').addEventListener('click', redo);
+
+    const TOOL_KEYS = { v: 'select', c: 'crop', t: 'text', b: 'rect', e: 'ellipse', l: 'line', a: 'arrow', p: 'pen', x: 'censor' };
+
+    window.addEventListener('keydown', (e) => {
+      const typing = e.target.closest?.('input, textarea, select') && e.target.type !== 'checkbox' && e.target.type !== 'range';
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+      if (mod && e.key.toLowerCase() === 'y' && !typing) { e.preventDefault(); redo(); return; }
+      if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); openExport(); return; }
+      if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('#fileInput').click(); return; }
+      if (mod && e.key.toLowerCase() === 'd' && !typing) { e.preventDefault(); duplicateSelected(); return; }
+      if (mod && e.key.toLowerCase() === 'c' && !typing && selected()) { e.preventDefault(); copySelected(); return; }
+      if (mod && e.key.toLowerCase() === 'x' && !typing && selected()) { e.preventDefault(); cutSelected(); return; }
+      if (mod && e.key.toLowerCase() === 'v' && !typing && clipboard && src) { e.preventDefault(); pasteAt(now()); return; }
+      if (typing || mod || e.altKey || !src || $('#xdlg').open) return;
+      const k = e.key;
+      if (k === ' ') { e.preventDefault(); togglePlay(); }
+      else if (k === 'ArrowLeft') { e.preventDefault(); stepFrame(-1, e.shiftKey ? 1 : 0); }
+      else if (k === 'ArrowRight') { e.preventDefault(); stepFrame(1, e.shiftKey ? 1 : 0); }
+      else if (k === 'Home') { pauseAll(); seekT(keepStart()); }
+      else if (k === 'End') { pauseAll(); seekT(lastFrameT()); }
+      else if (k === 'i') setIn(now());
+      else if (k === 'o') setOut(now());
+      else if (k === 'Delete' || k === 'Backspace') { e.preventDefault(); removeSelected(); }
+      else if (k === 'Escape') { if (tool !== 'select') setTool('select'); else select(null); }
+      else if (TOOL_KEYS[k.toLowerCase()] && (src.canV || k.toLowerCase() === 'v')) setTool(TOOL_KEYS[k.toLowerCase()]);
+    });
+
+    enableUI(false);
+    clearScratch();
+    $('#openBtn').disabled = !MB;
+    document.body.dataset.ready = '1';
+  </script>
+</body>
+</html>

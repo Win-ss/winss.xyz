@@ -16,6 +16,7 @@
     <meta name="theme-color" content="#000000">
     
     <link rel="stylesheet" href="mint.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Egyptian+Hieroglyphs&display=swap">
     <style>
         .title {
             transition: all 0.5s ease;
@@ -93,7 +94,7 @@
             border: 1px solid rgba(255, 255, 255, 0.3);
             border-radius: 8px;
             padding: 8px 35px 8px 12px;
-            font-family: 'Monocraft', monospace;
+            font-family: 'Monocraft', 'Noto Sans Egyptian Hieroglyphs', 'Segoe UI Historic', monospace;
             font-size: 0.9rem;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -151,7 +152,7 @@
             padding: 10px 12px;
             cursor: pointer;
             transition: all 0.2s ease;
-            font-family: 'Monocraft', monospace;
+            font-family: 'Monocraft', 'Noto Sans Egyptian Hieroglyphs', 'Segoe UI Historic', monospace;
             font-size: 0.9rem;
         }
 
@@ -176,7 +177,7 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
             padding: 15px;
-            font-family: 'Monocraft', monospace;
+            font-family: 'Monocraft', 'Noto Sans Egyptian Hieroglyphs', 'Segoe UI Historic', monospace;
             font-size: 1rem;
             resize: vertical;
             transition: all 0.3s ease;
@@ -235,7 +236,7 @@
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 6px;
             padding: 6px 12px;
-            font-family: 'Monocraft', monospace;
+            font-family: 'Monocraft', 'Noto Sans Egyptian Hieroglyphs', 'Segoe UI Historic', monospace;
             font-size: 0.8rem;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -383,8 +384,8 @@
         const hieroglyphicsMap = {
             'a': '𓄿', 'b': '𓃀', 'c': '𓍿', 'd': '𓂧', 'e': '𓇌', 'f': '𓆑', 'g': '𓎼', 'h': '𓉔',
             'i': '𓇋', 'j': '𓆓', 'k': '𓎡', 'l': '𓃭', 'm': '𓅓', 'n': '𓈖', 'o': '𓍯', 'p': '𓊪',
-            'q': '𓈎', 'r': '𓂋', 's': '𓋴', 't': '𓏏', 'u': '𓅱', 'v': '�', 'w': '𓅳', 'x': '𓐍',
-            'y': '𓇋𓇌', 'z': '𓊃'
+            'q': '𓈎', 'r': '𓂋', 's': '𓋴', 't': '𓏏', 'u': '𓅱', 'v': '𓆐', 'w': '𓅳', 'x': '𓐍',
+            'y': '𓏭', 'z': '𓊃'
         };
 
         const inputText = document.getElementById('inputText');
@@ -662,32 +663,54 @@
             }
         }
 
+        // share of the non-space characters that pass the test
+        function coverage(text, isKnown) {
+            const chars = Array.from(text).filter(c => !/\s/.test(c));
+            if (!chars.length) return 0;
+            return chars.filter(isKnown).length / chars.length;
+        }
+
+        const galacticParts = new Set(Object.values(galacticMap).flatMap(v => Array.from(v)));
+        const upsideOnly = new Set(Array.from(upsideChars).filter(c => !normalChars.includes(c)));
+
+        function looksLikeBase64(t) {
+            if (t.length < 8 || t.length % 4 || !/^[A-Za-z0-9+/]+={0,2}$/.test(t)) return false;
+            // plain words like "password" fit the alphabet too; real base64 nearly always has digits or mixed case
+            if (!/[0-9+/=]/.test(t) && !/[a-z][A-Z]/.test(t.slice(1))) return false;
+            try {
+                const out = decodeURIComponent(escape(atob(t)));
+                return coverage(out, c => c >= ' ' && c !== '\uFFFD') > 0.95;
+            } catch (e) {
+                return false;
+            }
+        }
+
         function detectLanguage(text) {
-            if (!text.trim()) return 'english';
+            const t = text.trim();
+            if (!t) return 'english';
 
-            const hasGalactic = Object.values(galacticMap).some(char => text.includes(char));
-            if (hasGalactic) return 'galactic';
+            if (/[\u{13000}-\u{1342F}]/u.test(t)) return 'hieroglyphics';
+            if ((t.match(/[\u0300-\u036F]/g) || []).length >= 3 && coverage(t, c => /[\u0300-\u036F]/.test(c)) > 0.3) return 'zalgo';
+            // morse leaves punctuation it has no code for, so allow a little of that
+            if (/[.\-]/.test(t) && coverage(t, c => '.-/'.includes(c)) > 0.85) return 'morse';
+            // galactic shares a few symbols with normal text (! | /), so most of the text has to be galactic
+            if (coverage(t, c => galacticParts.has(c) && !/[a-z0-9]/i.test(c)) > 0.6) return 'galactic';
+            if (coverage(t, c => upsideOnly.has(c)) > 0.25) return 'upsidedown';
+            if (looksLikeBase64(t)) return 'base64';
 
-            const hasHieroglyphics = Object.values(hieroglyphicsMap).some(char => text.includes(char));
-            if (hasHieroglyphics) return 'hieroglyphics';
-
-            if (/^[\.\-\s\/]+$/.test(text.trim()) && (text.includes('.') || text.includes('-'))) {
-                return 'morse';
-            }
-            
-            if (/[ɐɔǝɟƃɥᴉɾʞɯuɹʇʌʍʎ]/.test(text)) {
-                return 'upsidedown';
-            }
-
-            if (/^[A-Za-z0-9+/=]+$/.test(text.trim()) && text.length % 4 === 0) {
-                try {
-                    fromBase64(text);
-                    return 'base64';
-                } catch (e) {}
-            }
+            const words = t.split(/\s+/);
+            // leet: digits sitting inside words, like h3ll0
+            const leetWords = words.filter(w => /[a-z]/i.test(w) && /[4830951]/.test(w)).length;
+            if (leetWords && leetWords / words.length >= 0.3) return 'leet';
+            // mockery: case flips inside words, mOcKiNg style
+            const long = words.filter(w => w.replace(/[^a-z]/gi, '').length > 2);
+            const mixed = long.filter(w => /[A-Z]/.test(w.slice(1)) && /[a-z]/.test(w)).length;
+            if (long.length >= 3 && mixed / long.length >= 0.5) return 'mockery';
 
             return 'english';
         }
+
+        const LANG_NAMES = { english: 'english', galactic: 'galactic', hieroglyphics: 'hieroglyphics', mockery: 'mockery', base64: 'base64', morse: 'morse', upsidedown: 'upside down', leet: '1337', zalgo: 'zalgo', reverse: 'reverse' };
 
         function translate(text, fromLang, toLang) {
             if (!text) return '';
@@ -757,6 +780,9 @@
             const toLang = outputLangValue;
 
             const result = translate(input, fromLang, toLang);
+            if (fromLang === 'auto') {
+                inputSelect.button.textContent = input.trim() ? 'Auto-Detect (' + LANG_NAMES[detectLanguage(input)] + ')' : 'Auto-Detect';
+            }
             outputText.value = result;
 
             inputCount.textContent = `${input.length} characters`;

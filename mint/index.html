@@ -1,148 +1,213 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mint - Mini Tools</title>
-    <link rel="icon" type="image/png" href="../assets/favicon.png">
-    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
-    
-    <meta name="description" content="Mint - Small but powerful utility tools">
-    <meta property="og:title" content="Mint">
-    <meta property="og:description" content="A collection of small but powerful utility tools">
-    <meta property="og:image" content="https://winss.xyz/assets/favicon.png">
-    <meta property="og:url" content="https://winss.xyz/mint">
-    <meta property="og:type" content="website">
-    <meta name="theme-color" content="#000000">
-    
-    <link rel="stylesheet" href="mint.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mint</title>
+  <link rel="icon" type="image/png" href="../assets/mint.png" />
+  <link rel="apple-touch-icon" href="../assets/mint-180.png" />
+  <meta name="description" content="Mint: mini instruments and niche tools." />
+  <meta property="og:title" content="Mint" />
+  <meta property="og:description" content="Mini instruments and niche tools." />
+  <meta property="og:image" content="https://winss.xyz/assets/mint-180.png" />
+  <meta property="og:url" content="https://winss.xyz/mint/" />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#3ddc97" />
+  <link rel="stylesheet" href="base.css" />
+  <style>
+    body { gap: 1.6rem; padding-top: 3rem; padding-bottom: 2.5rem; }
+
+    #fx {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .hero {
+      text-align: center;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .hero-title {
+      display: inline-flex;
+      font-size: clamp(3.4rem, 14vw, 6.2rem);
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: 0.02em;
+      color: #effff7;
+      cursor: pointer;
+      padding: 0.15em 0.1em 0.05em;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .hero-title span {
+      display: inline-block;
+      animation: idle 3.2s steps(1) infinite;
+    }
+
+    .hero-title span:nth-child(2) { animation-delay: 0.4s; }
+    .hero-title span:nth-child(3) { animation-delay: 0.8s; }
+    .hero-title span:nth-child(4) { animation-delay: 1.2s; }
+
+    @keyframes idle {
+      0%, 88%, 100% { transform: translateY(0); }
+      90%, 94% { transform: translateY(-0.04em); }
+    }
+
+    .hero-title span.pop { animation: pop 0.55s steps(6) 1; }
+
+    @keyframes pop {
+      0% { transform: translateY(0); }
+      30% { transform: translateY(-0.18em); }
+      60% { transform: translateY(0.03em); }
+      100% { transform: translateY(0); }
+    }
+
+    .hero .sub {
+      margin-top: 0.9rem;
+      font-size: 0.75rem;
+      letter-spacing: 0.04em;
+    }
+
+    .tools {
+      width: 100%;
+      max-width: 54rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+      gap: 0.75rem;
+    }
+
+    .card {
+      aspect-ratio: 1 / 1;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 0.95rem;
+      border: 1px solid var(--line);
+      background: rgba(0, 0, 0, 0.6);
+      color: var(--text);
+      text-decoration: none;
+      text-align: left;
+      transition: border-color 0.12s ease, background-color 0.12s ease;
+    }
+
+    .card canvas {
+      width: 32px;
+      height: 32px;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .card b { display: block; font-size: 0.95rem; margin-bottom: 0.3rem; transition: color 0.12s ease; }
+    .card .d { display: block; font-size: 0.66rem; line-height: 1.45; color: var(--text-muted); transition: color 0.12s ease; }
+
+    .card::after {
+      content: '';
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      width: 0;
+      height: 0;
+      background: var(--mint);
+      transition: width 0.15s steps(3), height 0.15s steps(3);
+    }
+
+    .card:hover,
+    .card:focus-visible {
+      border-color: var(--mint);
+      background: rgba(6, 42, 29, 0.78);
+      outline: none;
+    }
+
+    .card:hover::after,
+    .card:focus-visible::after { width: 12px; height: 12px; }
+    .card:hover b, .card:focus-visible b { color: var(--mint-light); }
+    .card:hover .d, .card:focus-visible .d { color: var(--text-soft); }
+    .card:hover canvas, .card:focus-visible canvas { animation: hop 0.4s steps(4) 1; }
+
+    @keyframes hop {
+      50% { transform: translateY(-4px); }
+    }
+
+    .card:active { background: rgba(10, 74, 51, 0.85); }
+
+    @media (max-width: 420px) {
+      .tools { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+      .card { padding: 0.75rem; }
+      .card b { font-size: 0.85rem; }
+      .card .d { font-size: 0.6rem; }
+    }
+  </style>
 </head>
 <body>
-    <div class="content">    
-        <header class="main-header">
-            <h1 class="title">Mint</h1>
-            <p class="subtitle">Mini Instruments & Niche Tools</p>
-        </header>
-        
-        <div class="tools-grid">
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="frost" aria-hidden="true"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
 
-            <a href="crumble/index.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">Crumble</h2>
-                    <p class="tool-description">no bs file sharing</p>
-                </div>
-            </a>
-            <a href="Insomniac.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">Insomniac</h2>
-                    <p class="tool-description">Keep your screen awake and prevent device sleep (works on most devices)</p>
-                </div>
-            </a>
-            
-            <a href="mazeify.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">Mazeify</h2>
-                    <p class="tool-description">Maze generator game</p>
-                </div>
-            </a>
-            
-            <a href="../birbday.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">Birbday</h2>
-                    <p class="tool-description">Birbday...</p>
-                </div>
-            </a>            
-            <a href="../python.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">Python Rant</h2>
-                    <p class="tool-description">Thoughts on Python</p>
-                </div>
-            </a>
+  <header class="hero">
+    <h1 class="hero-title" id="title" aria-label="mint"><span>m</span><span>i</span><span>n</span><span>t</span></h1>
+    <p class="sub">mini instruments &amp; niche tools</p>
+  </header>
 
-            <a href="ENDE.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">ENDE</h2>
-                    <p class="tool-description">Universal translator for text, encoding, and fun languages</p>
-                </div>
-            </a>
+  <main class="tools" data-veil aria-label="tools">
+    <a class="card" href="crumble/" data-icon="crumble"><canvas width="8" height="8"></canvas><span><b>crumble</b><span class="d">drop a file, grab it, gone</span></span></a>
+    <a class="card" href="sumthing.html" data-icon="sum"><canvas width="8" height="8"></canvas><span><b>sumthing</b><span class="d">type it, it tallies</span></span></a>
+    <a class="card" href="snag.html" data-icon="snag"><canvas width="8" height="8"></canvas><span><b>snag</b><span class="d">save media from links</span></span></a>
+    <a class="card" href="snippy.html" data-icon="snip"><canvas width="8" height="8"></canvas><span><b>snippy</b><span class="d">trim, crop, censor, draw</span></span></a>
+    <a class="card" href="webm2webp.html" data-icon="film"><canvas width="8" height="8"></canvas><span><b>webm → webp</b><span class="d">video to animated webp</span></span></a>
+    <a class="card" href="pdf2png.html" data-icon="page"><canvas width="8" height="8"></canvas><span><b>pdf → png</b><span class="d">every page as a png</span></span></a>
+    <a class="card" href="qr.html" data-icon="qr"><canvas width="8" height="8"></canvas><span><b>qr</b><span class="d">make and read qr codes</span></span></a>
+    <a class="card" href="chroma.html" data-icon="chroma"><canvas width="8" height="8"></canvas><span><b>chroma</b><span class="d">picker &amp; palettes</span></span></a>
+    <a class="card" href="ENDE.html" data-icon="ende"><canvas width="8" height="8"></canvas><span><b>ende</b><span class="d">encode, decode, translate</span></span></a>
+    <a class="card" href="Insomniac.html" data-icon="eye"><canvas width="8" height="8"></canvas><span><b>insomniac</b><span class="d">keep the screen on</span></span></a>
+    <a class="card" href="mazeify.html" data-icon="maze"><canvas width="8" height="8"></canvas><span><b>mazeify</b><span class="d">maze game</span></span></a>
+    <a class="card" href="../birbday.html" data-icon="birb"><canvas width="8" height="8"></canvas><span><b>birbday</b><span class="d">birbday</span></span></a>
+  </main>
 
-            <a href="chroma.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">Chroma</h2>
-                    <p class="tool-description">Color Picker & Palette Generator</p>
-                </div>
-            </a>
+  <p class="foot"><a href="../">← winss.xyz</a></p>
 
-            <a href="testinfo.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">Display Test Info</h2>
-                    <p class="tool-description">Test information page</p>
-                </div>
-            </a>
-            
-            <a href="keycodes.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">KeyCodes</h2>
-                    <p class="tool-description">JavaScript Event KeyCodes Visualizer</p>
-                </div>
-            </a>
-            <a href="../rand/index.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">Rand</h2>
-                    <p class="tool-description">Random broken minigames collection for 1-2 players</p>
-                </div>
-            </a>
+  <script>
+    // 8x8 pixel icons 
+    const ICONS = {
+      crumble: ['..####..', '.#o####.', '####.o##', '#o####..', '####o#..', '.##o###.', '..####..', '+.....+.'],
+      sum:     ['#######.', '.#....+.', '..#.....', '...#....', '..#.....', '.#....+.', '#######.', '.ooooooo'],
+      snag:    ['.....##.', '.....#..', '.....#..', '.....#..', '.+...#..', '.#...#..', '..###...', '........'],
+      snip:    ['+......+', '.+....+.', '..+..+..', '...oo...', '..#..#..', '###..###', '#.#..#.#', '###..###'],
+      film:    ['########', '#.#..#.#', '########', '#..+...#', '#..++..#', '#..+...#', '########', '#.#..#.#'],
+      page:    ['#####...', '#...##..', '#...#+#.', '#....++.', '#.ooo.#.', '#.....#.', '#.ooo.#.', '#######.'],
+      qr:      ['###..###', '#+#.##+#', '###..###', '..#.#...', '###.##.#', '#+#..#..', '###.#.##', '....##.#'],
+      chroma:  ['rrr.ggg.', 'rrr.ggg.', 'rrr.ggg.', '........', 'bbb.yyy.', 'bbb.yyy.', 'bbb.yyy.', '........'],
+      ende:    ['.##.....', '#..#....', '####.+..', '#..#.++.', '#..#++++', '.....++.', '.....+..', '........'],
+      eye:     ['........', '..####..', '.#....#.', '#..++..#', '#..++..#', '.#....#.', '..####..', '........'],
+      maze:    ['########', '#......#', '#.####.#', '#.#..#.#', '#.#+##.#', '#.#....#', '#.######', '#.......'],
+      birb:    ['........', '...###..', '..#+####', '..#####.', '.#####..', '######..', '..##....', '..#.#...'],
+    };
+    const COLORS = { '#': '#3ddc97', '+': '#c2fbe0', o: '#138a5c', r: '#f87171', g: '#3ddc97', b: '#60a5fa', y: '#facc15' };
 
-            <a href="qr-generator.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">QR Generator</h2>
-                    <p class="tool-description">Create custom QR codes with logos</p>
-                </div>
-            </a>
-
-            <a href="qr-reader.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">QR Reader</h2>
-                    <p class="tool-description">Scan QR codes from camera or image</p>
-                </div>
-            </a>
-
-            <a href="webm2webp.html" class="tool-card">
-                <div class="tool-content">
-                    <h2 class="tool-title">WebM → WebP</h2>
-                    <p class="tool-description">Convert animated WebM videos to animated WebP images locally</p>
-                </div>
-            </a>
-            <!-- Placeholder cards for future bits -->
-            <div class="tool-card placeholder">
-                <div class="tool-content">
-                    <h2 class="tool-title">Coming Soon</h2>
-                    <p class="tool-description">More bits on the way...</p>
-                </div>
-            </div>
-            
-            <div class="tool-card placeholder">
-                <div class="tool-content">
-                    <h2 class="tool-title">Coming Soon</h2>
-                    <p class="tool-description">More bits on the way...</p>
-                </div>
-            </div>
-            
-            <div class="tool-card placeholder">
-                <div class="tool-content">
-                    <h2 class="tool-title">Coming Soon</h2>
-                    <p class="tool-description">More bits on the way...</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="back-link-container">
-            <a href="../index.html" class="back-link">← Back to Main</a>
-        </div>
-    </div>
-
-    <div class="version-text">v 1.0</div>
-
-    <script src="mint.js"></script>
+    document.querySelectorAll('.card').forEach((card) => {
+      const rows = ICONS[card.dataset.icon];
+      const g = card.querySelector('canvas').getContext('2d');
+      rows.forEach((row, y) => [...row].forEach((ch, x) => {
+        if (!COLORS[ch]) return;
+        g.fillStyle = COLORS[ch];
+        g.fillRect(x, y, 1, 1);
+      }));
+      // a little puff of leaves from the corner on hover
+      card.addEventListener('pointerenter', (e) => {
+        if (e.pointerType !== 'mouse' || !window.mintFx) return;
+        const r = card.getBoundingClientRect();
+        mintFx.burst(r.right - 6, r.top + 6, 3, { spread: 0.5, up: 0.6, sparks: 0.34 });
+      });
+    });
+  </script>
+  <script src="bg.js" defer></script>
+  <script src="hero.js" defer></script>
 </body>
 </html>

@@ -1,955 +1,471 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebM to Animated WebP Converter</title>
-    <link rel="icon" type="image/png" href="../assets/favicon.png">
-    <link rel="shortcut icon" type="image/png" href="../assets/favicon.png">
-
-    <meta name="description" content="Convert WebM videos to animated WebP format — 100% client-side">
-    <meta property="og:title" content="WebM to WebP Converter">
-    <meta property="og:description" content="Convert WebM videos to animated WebP — no server uploads">
-    <meta property="og:image" content="https://winss.xyz/assets/favicon.png">
-    <meta property="og:url" content="https://winss.xyz/mint/webm2webp.html">
-    <meta property="og:type" content="website">
-    <meta name="theme-color" content="#000000">
-
-    <link rel="stylesheet" href="mint.css">
-    <style>
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #111; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #555; }
-
-        body {
-            background: linear-gradient(180deg, #060606 0%, #0b0b0b 100%);
-            color: #e6e6e6;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            margin: 0;
-            font-family: 'Monocraft', monospace;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .page-wrap {
-            max-width: 1100px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 30px 40px 80px;
-            animation: fadeInUp 0.6s ease;
-        }
-
-        /* Header */
-        .main-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .main-header a {
-            text-decoration: none;
-            color: inherit;
-        }
-
-        .main-title {
-            font-size: 1.6rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.5s ease;
-            display: inline-block;
-            padding: 6px 24px;
-            border-radius: 12px;
-            font-family: 'Monocraft', monospace;
-        }
-
-        .main-title:hover {
-            color: #000000;
-            background: #ffffff;
-            filter: drop-shadow(0 0 30px rgba(255, 255, 255, 1)) drop-shadow(0 0 60px rgba(255, 255, 255, 0.8));
-        }
-
-        .main-subtitle {
-            font-size: 0.85rem;
-            opacity: 0.45;
-            margin-top: 6px;
-            font-family: 'Monocraft', monospace;
-        }
-
-        /* Two-column grid */
-        .app-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            align-items: start;
-        }
-
-        @media (max-width: 800px) {
-            .app-grid {
-                grid-template-columns: 1fr;
-            }
-            .page-wrap {
-                padding: 20px 16px 60px;
-            }
-        }
-
-        /* Cards / Panels */
-        .card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: 12px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 10px;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
-
-        .card-header .icon {
-            font-size: 1rem;
-            opacity: 0.7;
-        }
-
-        /* Dropzone */
-        .dropzone {
-            border: 2px dashed rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            padding: 40px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            background: rgba(0, 0, 0, 0.2);
-        }
-
-        .dropzone:hover {
-            border-color: #fff;
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        .dropzone.dragover {
-            border-color: #4ade80;
-            background: rgba(74, 222, 128, 0.05);
-        }
-
-        .dropzone input[type="file"] {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .dropzone-icon {
-            font-size: 2.4rem;
-            margin-bottom: 12px;
-            opacity: 0.35;
-        }
-
-        .dropzone-text {
-            font-size: 0.95rem;
-            opacity: 0.7;
-            margin-bottom: 4px;
-        }
-
-        .dropzone-hint {
-            font-size: 0.75rem;
-            opacity: 0.35;
-        }
-
-        /* Video preview */
-        .preview-container {
-            border-radius: 8px;
-            overflow: hidden;
-            background: #000;
-        }
-
-        .preview-container video {
-            width: 100%;
-            display: block;
-        }
-
-        /* Metadata grid */
-        .meta-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            text-align: center;
-        }
-
-        .meta-item {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 8px;
-        }
-
-        .meta-label {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            opacity: 0.45;
-        }
-
-        .meta-value {
-            font-size: 0.85rem;
-            font-weight: bold;
-            margin-top: 2px;
-        }
-
-        /* Form controls */
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .control-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .control-row label {
-            flex: 1;
-            font-size: 0.85rem;
-            opacity: 0.8;
-        }
-
-        .control-row input[type="number"] {
-            flex: 1;
-            width: 100%;
-            background: #111;
-            border: 1px solid #333;
-            color: #fff;
-            padding: 8px 10px;
-            border-radius: 6px;
-            font-family: 'Monocraft', monospace;
-            font-size: 0.85rem;
-            outline: none;
-        }
-
-        .control-row input[type="number"]:focus {
-            border-color: #555;
-        }
-
-        .control-row input[type="range"] {
-            flex: 2;
-            width: 100%;
-            accent-color: #fff;
-        }
-
-        .control-label {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-            font-size: 0.85rem;
-        }
-
-        .control-label span:first-child {
-            opacity: 0.7;
-        }
-
-        .badge {
-            font-size: 0.75rem;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        .hint {
-            font-size: 0.7rem;
-            opacity: 0.35;
-            margin-top: 2px;
-        }
-
-        .range-labels {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.7rem;
-            opacity: 0.35;
-            margin-top: 2px;
-        }
-
-        /* Buttons */
-        .btn {
-            background: #fff;
-            color: #000;
-            border: 1px solid #fff;
-            padding: 12px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: 'Monocraft', monospace;
-            font-weight: bold;
-            font-size: 0.85rem;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
-        }
-
-        .btn:disabled {
-            opacity: 0.35;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .btn-secondary {
-            background: transparent;
-            color: #e6e6e6;
-            border-color: #333;
-        }
-
-        .btn-secondary:hover {
-            background: #fff;
-            color: #000;
-            border-color: #fff;
-        }
-
-        .btn-full {
-            width: 100%;
-        }
-
-        .btn-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .remove-btn {
-            background: none;
-            border: none;
-            color: #f87171;
-            cursor: pointer;
-            font-family: 'Monocraft', monospace;
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-
-        .remove-btn:hover {
-            background: rgba(248, 113, 113, 0.1);
-        }
-
-        /* Output card */
-        .output-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 300px;
-        }
-
-        .placeholder {
-            text-align: center;
-            opacity: 0.4;
-        }
-
-        .placeholder-icon {
-            font-size: 2.5rem;
-            margin-bottom: 12px;
-            opacity: 0.5;
-        }
-
-        .placeholder p {
-            font-size: 0.85rem;
-            max-width: 220px;
-        }
-
-        /* Processing state */
-        .processing {
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .spinner {
-            width: 80px;
-            height: 80px;
-            border-radius: 0;
-            border: 4px solid #222;
-            border-top-color: #fff;
-            animation: spin 1s linear infinite;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .spinner-text {
-            font-weight: bold;
-            font-size: 0.85rem;
-        }
-
-        .progress-bar {
-            width: 100%;
-            max-width: 250px;
-            background: #222;
-            height: 6px;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: #fff;
-            width: 0%;
-            transition: width 0.15s ease;
-        }
-
-        .processing-step {
-            font-weight: bold;
-            font-size: 0.85rem;
-        }
-
-        .processing-hint {
-            font-size: 0.75rem;
-            opacity: 0.4;
-        }
-
-        /* Result state */
-        .result {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .result-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 10px;
-        }
-
-        .result-status {
-            color: #4ade80;
-            font-weight: bold;
-            font-size: 0.85rem;
-        }
-
-        .result-size {
-            font-size: 0.75rem;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-
-        .result-preview {
-            width: 100%;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #000;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px;
-        }
-
-        .result-preview img {
-            max-width: 100%;
-            max-height: 300px;
-            object-fit: contain;
-            border-radius: 4px;
-        }
-
-        .result-note {
-            font-size: 0.7rem;
-            text-align: center;
-            opacity: 0.35;
-            line-height: 1.5;
-        }
-
-        /* Footer */
-        .footer {
-            border-top: 1px solid #222;
-            padding: 16px 40px;
-            margin-top: auto;
-            font-size: 0.75rem;
-            opacity: 0.35;
-            text-align: center;
-        }
-
-        /* Message box */
-        .message-box {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            font-weight: bold;
-            font-family: 'Monocraft', monospace;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            opacity: 0;
-            transform: translateY(16px);
-            transition: all 0.3s ease;
-        }
-
-        .message-box.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .message-box.success {
-            background: #4ade80;
-            color: #000;
-        }
-
-        .message-box.error {
-            background: #f87171;
-            color: #000;
-        }
-
-        /* Animations */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .hidden { display: none !important; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebM to WebP</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png" />
+  <meta name="description" content="Turn a WebM or MP4 clip into an animated WebP, right in your browser." />
+  <meta property="og:title" content="WebM to WebP" />
+  <meta property="og:description" content="Turn a WebM or MP4 clip into an animated WebP, right in your browser." />
+  <meta property="og:image" content="https://winss.xyz/assets/favicon.png" />
+  <meta property="og:url" content="https://winss.xyz/mint/webm2webp.html" />
+  <meta name="theme-color" content="#3ddc97" />
+  <link rel="stylesheet" href="base.css" />
+  <style>
+    .wrap { max-width: 30rem; }
+
+    .drop {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      border: 1px dashed var(--line);
+      background: rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .drop:hover, .drop.over { border-color: var(--mint); border-style: solid; }
+    .drop.over { background: rgba(10, 74, 51, 0.35); }
+    .drop .big { font-size: 0.95rem; }
+    .drop .small { font-size: 0.68rem; color: var(--text-muted); }
+
+    .stage {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #000;
+      position: relative;
+    }
+
+    .stage video, .stage img {
+      display: block;
+      width: 100%;
+      max-height: 18rem;
+      object-fit: contain;
+      background: #000;
+    }
+
+    .stage .tag {
+      position: absolute;
+      left: 0;
+      top: 0;
+      font-size: 0.6rem;
+      padding: 0.15rem 0.45rem;
+      background: #000;
+      color: var(--text-muted);
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      pointer-events: none;
+    }
+
+    .stage.result { border-color: var(--mint-dark); }
+    .stage.result .tag { color: var(--mint-light); border-color: var(--mint-dark); }
+
+    .meta {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: -0.6rem;
+    }
+
+    .grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem 1rem;
+    }
+
+    .grid label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.03em;
+      color: var(--text-muted);
+      text-align: left;
+    }
+
+    .grid label b {
+      font-weight: normal;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .grid label b em { font-style: normal; color: var(--mint-light); }
+
+    input[type="number"] {
+      font: inherit;
+      font-size: 0.82rem;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--line);
+      outline: none;
+      padding: 0.35rem 0.1rem;
+      width: 100%;
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"]:focus { border-bottom-color: var(--mint); }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 1.7rem;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track { height: 1px; background: var(--line); }
+    input[type="range"]::-moz-range-track { height: 1px; background: var(--line); }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 10px;
+      height: 10px;
+      margin-top: -4.5px;
+      background: var(--mint);
+      border: 0;
+      border-radius: 0;
+    }
+    input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; background: var(--mint); border: 0; border-radius: 0; }
+    input[type="range"]:hover::-webkit-slider-thumb { background: var(--mint-light); }
+    input[type="range"]:hover::-moz-range-thumb { background: var(--mint-light); }
+
+    .full { grid-column: 1 / -1; }
+
+    .row { display: flex; gap: 0.75rem; width: 100%; }
+    .row .btn { flex: 1; }
+
+    #go { width: 100%; max-width: 14rem; }
+
+    .work {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.55rem;
+      font-size: 0.75rem;
+      color: var(--text-soft);
+    }
+
+    @media (max-width: 420px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
-    <div class="page-wrap">
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="frost" aria-hidden="true"></div>
+  <main class="wrap">
+    <h1 class="tagline"><a href="./">webm → webp</a></h1>
 
-        <!-- Header -->
-        <header class="main-header">
-            <a href="index.html">
-                <h1 class="main-title">WebM to WebP</h1>
-            </a>
-            <p class="main-subtitle">100% Client-Side Private Video Converter</p>
-        </header>
+    <div class="drop" id="drop" role="button" tabindex="0" aria-label="choose a video">
+      <p class="big">drop a video</p>
+      <p class="small">webm, mp4 or mov · or click to pick one</p>
+    </div>
+    <input type="file" id="file" accept="video/*" hidden />
 
-        <!-- App Grid -->
-        <div class="app-grid">
-
-            <!-- Left: Input & Config -->
-            <div style="display:flex;flex-direction:column;gap:24px;">
-
-                <!-- Dropzone -->
-                <div id="dropzone" class="dropzone">
-                    <input type="file" id="video-input" accept="video/webm,video/mp4,video/ogg" />
-                    <p class="dropzone-text">Click to upload or drag & drop</p>
-                    <p class="dropzone-hint">Supports WebM, MP4, and standard video containers</p>
-                </div>
-
-                <!-- Source Video Preview -->
-                <div id="source-preview-card" class="card hidden">
-                    <div class="card-header" style="justify-content:space-between;">
-                        <span>Source Video Timeline</span>
-                        <button id="remove-video-btn" class="remove-btn">Remove</button>
-                    </div>
-
-                    <div class="preview-container">
-                        <video id="preview-video" controls></video>
-                    </div>
-
-                    <div class="meta-grid">
-                        <div class="meta-item">
-                            <div class="meta-label">Duration</div>
-                            <div class="meta-value" id="info-duration">0.00s</div>
-                        </div>
-                        <div class="meta-item">
-                            <div class="meta-label">Resolution</div>
-                            <div class="meta-value" id="info-resolution">-- × --</div>
-                        </div>
-                        <div class="meta-item">
-                            <div class="meta-label">Aspect Ratio</div>
-                            <div class="meta-value" id="info-aspect">--</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Config Card -->
-                <div class="card">
-                    <div class="card-header">
-                        Optimization & Settings
-                    </div>
-
-                    <!-- Trim Range -->
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Convert Range (Trim)</span>
-                            <span class="badge" id="range-display">0.0s – 5.0s</span>
-                        </div>
-                        <div class="control-row">
-                            <label>Start (s)</label>
-                            <input type="number" id="trim-start" min="0" step="0.1" value="0.0" />
-                        </div>
-                        <div class="control-row">
-                            <label>End (s)</label>
-                            <input type="number" id="trim-end" min="0.1" step="0.1" value="5.0" />
-                        </div>
-                        <p class="hint">Keep chunks under 10 seconds for best performance.</p>
-                    </div>
-
-                    <!-- Resolution Scale -->
-                    <div class="control-group">
-                        <div class="control-label">
-                            <span>Target Output Scale</span>
-                            <span class="badge" id="scale-display">100% (Original)</span>
-                        </div>
-                        <input type="range" id="scale-slider" min="10" max="100" value="100" step="10" />
-                        <div class="range-labels">
-                            <span>10%</span>
-                            <span>50%</span>
-                            <span>100%</span>
-                        </div>
-                    </div>
-
-                    <!-- FPS & Quality -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Framerate</span>
-                                <span class="badge" id="fps-display">12 FPS</span>
-                            </div>
-                            <input type="range" id="fps-slider" min="5" max="30" value="12" step="1" />
-                            <p class="hint">Lower FPS = smaller file.</p>
-                        </div>
-                        <div class="control-group">
-                            <div class="control-label">
-                                <span>Quality</span>
-                                <span class="badge" id="quality-display">80</span>
-                            </div>
-                            <input type="range" id="quality-slider" min="10" max="100" value="80" step="5" />
-                            <p class="hint">80 is a good default.</p>
-                        </div>
-                    </div>
-
-                    <!-- Convert Button -->
-                    <button id="convert-btn" class="btn btn-full" disabled>
-                        Generate Animated WebP
-                    </button>
-                </div>
-            </div>
-
-            <!-- Right: Output -->
-            <div style="display:flex;flex-direction:column;">
-                <div class="card output-card" style="flex:1;">
-
-                    <!-- Placeholder -->
-                    <div id="output-placeholder" class="placeholder">
-                        <p>Upload a video on the left, configure settings, and click Generate.</p>
-                    </div>
-
-                    <!-- Processing -->
-                    <div id="output-processing" class="processing hidden">
-                        <div class="spinner">
-                            <span class="spinner-text" id="progress-text">0%</span>
-                        </div>
-                        <div>
-                            <p class="processing-step" id="processing-step">Extracting video frames…</p>
-                            <p class="processing-hint">Processing locally inside your browser.</p>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progress-bar-fill"></div>
-                        </div>
-                    </div>
-
-                    <!-- Result -->
-                    <div id="output-result" class="result hidden">
-                        <div class="result-header">
-                            <span class="result-status">Completed</span>
-                            <span class="result-size" id="output-filesize">-- KB</span>
-                        </div>
-
-                        <div class="result-preview">
-                            <img id="result-webp-img" alt="Generated WebP Animation" />
-                        </div>
-
-                        <div class="btn-group">
-                            <button id="download-btn" class="btn">Download WebP</button>
-                            <button id="copy-btn" class="btn btn-secondary">Copy WebP</button>
-                        </div>
-
-                        <p class="result-note">
-                            Verify magic byte containers rather than file extensions when filtering for this format.
-                        </p>
-                    </div>
-
-                </div>
-            </div>
-
-        </div>
+    <div class="stage hidden" id="source">
+      <video id="video" controls muted playsinline preload="auto"></video>
+      <span class="tag">source</span>
+    </div>
+    <div class="meta hidden" id="meta">
+      <span id="info"></span>
+      <button type="button" class="link" id="remove" style="font-size: inherit">remove</button>
     </div>
 
-    <!-- Message Box -->
-    <div id="message-box" class="message-box"></div>
+    <div class="grid hidden" id="opts">
+      <label>
+        <b>from (s)</b>
+        <input type="number" id="from" min="0" step="0.1" value="0" inputmode="decimal" />
+      </label>
+      <label>
+        <b>to (s)</b>
+        <input type="number" id="to" min="0.1" step="0.1" value="5" inputmode="decimal" />
+      </label>
+      <label>
+        <b>scale <em id="scale-v">100%</em></b>
+        <input type="range" id="scale" min="10" max="100" step="10" value="100" />
+      </label>
+      <label>
+        <b>fps <em id="fps-v">12</em></b>
+        <input type="range" id="fps" min="5" max="30" step="1" value="12" />
+      </label>
+      <label class="full">
+        <b>quality <em id="quality-v">80</em></b>
+        <input type="range" id="quality" min="10" max="100" step="5" value="80" />
+      </label>
+    </div>
 
-    <!-- Hidden canvas -->
-    <canvas id="conversion-canvas" style="display:none;"></canvas>
+    <button type="button" class="btn hidden" id="go">make webp</button>
 
-    <!-- Animated WebP Encoder -->
-    <script>
-        function concatBuffers(...buffers) {
-            let totalLength = buffers.reduce((acc, b) => acc + b.length, 0);
-            let result = new Uint8Array(totalLength);
-            let offset = 0;
-            for (let b of buffers) { result.set(b, offset); offset += b.length; }
-            return result;
+    <div class="work hidden" id="work" aria-live="polite">
+      <div id="throb"></div>
+      <span id="step">reading frames</span>
+      <div id="bar"></div>
+    </div>
+
+    <div class="stage result hidden" id="result">
+      <img id="out" alt="animated webp result" />
+      <span class="tag" id="size"></span>
+    </div>
+    <div class="row hidden" id="actions">
+      <button type="button" class="btn" id="save">save webp</button>
+      <button type="button" class="btn ghost" id="copy">copy</button>
+    </div>
+
+    <p class="status" id="status" aria-live="polite"></p>
+    <p class="foot"><a href="./">← mint</a> · nothing leaves your device</p>
+  </main>
+
+  <canvas id="canvas" hidden></canvas>
+
+  <script>
+    // Animated WebP muxer: takes still WebP frames from canvas and wraps them in VP8X + ANIM + ANMF chunks.
+    function concat(...parts) {
+      const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+      let off = 0;
+      for (const p of parts) { out.set(p, off); off += p.length; }
+      return out;
+    }
+    const u32 = (v) => new Uint8Array([v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >>> 24) & 0xff]);
+    const ascii = (s) => new TextEncoder().encode(s);
+    const tagOf = (b, o) => String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]);
+
+    function chunk(tag, data) {
+      return concat(ascii(tag), u32(data.length), data, data.length % 2 ? new Uint8Array(1) : new Uint8Array(0));
+    }
+
+    function readChunks(buf) {
+      if (tagOf(buf, 0) !== 'RIFF' || tagOf(buf, 8) !== 'WEBP') throw new Error('frame is not webp');
+      const out = [];
+      for (let o = 12; o + 8 <= buf.length;) {
+        const size = buf[o + 4] | (buf[o + 5] << 8) | (buf[o + 6] << 16) | (buf[o + 7] << 24);
+        if (o + 8 + size > buf.length) break;
+        out.push({ tag: tagOf(buf, o), data: buf.subarray(o + 8, o + 8 + size) });
+        o += 8 + size + (size & 1);
+      }
+      return out;
+    }
+
+    function put24(arr, at, v) { arr[at] = v & 0xff; arr[at + 1] = (v >> 8) & 0xff; arr[at + 2] = (v >> 16) & 0xff; }
+
+    function buildWebP(w, h, frames) {
+      const vp8x = new Uint8Array(10);
+      vp8x[0] = 0x12; // animation + alpha
+      put24(vp8x, 4, w - 1);
+      put24(vp8x, 7, h - 1);
+      const parts = [chunk('VP8X', vp8x), chunk('ANIM', new Uint8Array(6))]; // black bg, loop forever
+      for (const f of frames) {
+        const body = concat(...readChunks(f.buf).filter((c) => !['VP8X', 'ICCP', 'EXIF', 'XMP '].includes(c.tag)).map((c) => chunk(c.tag, c.data)));
+        const anmf = new Uint8Array(16 + body.length);
+        put24(anmf, 6, w - 1);
+        put24(anmf, 9, h - 1);
+        put24(anmf, 12, Math.round(f.ms));
+        anmf[15] = 0x01; // dispose to background, no blending
+        anmf.set(body, 16);
+        parts.push(chunk('ANMF', anmf));
+      }
+      const all = concat(...parts);
+      return new Blob([concat(ascii('RIFF'), u32(all.length + 4), ascii('WEBP'), all)], { type: 'image/webp' });
+    }
+  </script>
+  <script src="ui.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const $drop = $('drop'), $file = $('file'), $video = $('video');
+    const $from = $('from'), $to = $('to');
+    const $scale = $('scale'), $fps = $('fps'), $quality = $('quality');
+    const $go = $('go'), $work = $('work'), $step = $('step');
+    const $out = $('out'), $size = $('size'), $status = $('status');
+    const canvas = $('canvas');
+    const ctx = canvas.getContext('2d');
+
+    let src = null, result = null, resultUrl = null, busy = false;
+
+    // Safari's canvas can't write webp (it silently returns png), so check before promising anything
+    const canWebP = (() => {
+      const c = document.createElement('canvas');
+      c.width = c.height = 1;
+      return c.toDataURL('image/webp').startsWith('data:image/webp');
+    })();
+
+    function setStatus(text, kind) {
+      $status.textContent = text || '';
+      $status.className = 'status' + (kind ? ' ' + kind : '');
+    }
+
+    function show(ids, on) { ids.forEach((id) => $(id).classList.toggle('hidden', !on)); }
+
+    function load(f) {
+      if (!f || busy) return;
+      if (!/^video\//.test(f.type) && !/\.(webm|mp4|mov|mkv|ogv)$/i.test(f.name)) return setStatus("that's not a video", 'error');
+      if (src) URL.revokeObjectURL(src);
+      src = URL.createObjectURL(f);
+      $video.src = src;
+      setStatus('');
+      $video.onloadedmetadata = () => {
+        const d = $video.duration, w = $video.videoWidth, h = $video.videoHeight;
+        if (!w || !h) return setStatus("couldn't read that video", 'error');
+        const g = (a, b) => (b ? g(b, a % b) : a);
+        $('info').textContent = (isFinite(d) ? d.toFixed(2) + 's · ' : '') + w + '×' + h + ' · ' + w / g(w, h) + ':' + h / g(w, h);
+        $from.value = '0';
+        $from.max = $to.max = isFinite(d) ? d.toFixed(1) : '';
+        $to.value = (isFinite(d) ? Math.min(5, d) : 5).toFixed(1);
+        show(['drop'], false);
+        show(['source', 'meta', 'opts', 'go'], true);
+        clearResult();
+        if (!canWebP) setStatus("this browser can't encode webp, try chrome or firefox", 'error');
+      };
+      $video.onerror = () => setStatus("couldn't play that video here", 'error');
+    }
+
+    function clearResult() {
+      show(['result', 'actions'], false);
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
+      resultUrl = null;
+      result = null;
+    }
+
+    $('remove').addEventListener('click', () => {
+      if (busy) return;
+      if (src) URL.revokeObjectURL(src);
+      src = null;
+      $video.removeAttribute('src');
+      $video.load();
+      $file.value = '';
+      clearResult();
+      show(['source', 'meta', 'opts', 'go'], false);
+      show(['drop'], true);
+      setStatus('');
+    });
+
+    $scale.addEventListener('input', () => { $('scale-v').textContent = $scale.value + '%'; });
+    $fps.addEventListener('input', () => { $('fps-v').textContent = $fps.value; });
+    $quality.addEventListener('input', () => { $('quality-v').textContent = $quality.value; });
+
+    function clampTrim() {
+      const d = isFinite($video.duration) ? $video.duration : Infinity;
+      let a = Math.max(0, parseFloat($from.value) || 0);
+      let b = Math.min(d, parseFloat($to.value) || 0);
+      if (a >= d) a = Math.max(0, d - 0.1);
+      if (b < a + 0.1) b = Math.min(d, a + 0.1);
+      return [a, b];
+    }
+    [$from, $to].forEach((el) => el.addEventListener('change', () => {
+      const [a, b] = clampTrim();
+      $from.value = a.toFixed(1);
+      $to.value = b.toFixed(1);
+    }));
+
+    // seek and wait for the frame; setting the same time again never fires "seeked", which used to hang the job
+    function seek(t) {
+      return new Promise((resolve) => {
+        if (Math.abs($video.currentTime - t) < 0.001 && $video.readyState >= 2) return resolve();
+        const done = () => { clearTimeout(timer); $video.removeEventListener('seeked', done); resolve(); };
+        const timer = setTimeout(done, 3000);
+        $video.addEventListener('seeked', done);
+        $video.currentTime = t;
+      });
+    }
+
+    const toBlob = (q) => new Promise((res) => canvas.toBlob(res, 'image/webp', q));
+
+    $go.addEventListener('click', async () => {
+      if (!src || busy) return;
+      if (!canWebP) return setStatus("this browser can't encode webp, try chrome or firefox", 'error');
+      busy = true;
+      $go.disabled = true;
+      clearResult();
+      setStatus('');
+      show(['work'], true);
+      const stop = mintUI.comet($('throb'));
+      const setBar = mintUI.bar($('bar'), 20);
+      setBar(0);
+
+      const [start, end] = clampTrim();
+      const fps = +$fps.value;
+      const scale = +$scale.value / 100;
+      const quality = +$quality.value / 100;
+      const total = Math.max(1, Math.ceil((end - start) * fps));
+      const w = Math.max(1, Math.round($video.videoWidth * scale));
+      const h = Math.max(1, Math.round($video.videoHeight * scale));
+      canvas.width = w;
+      canvas.height = h;
+
+      try {
+        $video.pause();
+        const frames = [];
+        for (let i = 0; i < total; i++) {
+          await seek(Math.min(start + i / fps, end));
+          ctx.drawImage($video, 0, 0, w, h);
+          const blob = await toBlob(quality);
+          if (!blob) throw new Error('frame encode failed');
+          frames.push({ buf: new Uint8Array(await blob.arrayBuffer()), ms: 1000 / fps });
+          $step.textContent = 'frame ' + (i + 1) + ' / ' + total;
+          setBar((i + 1) / total * 0.95);
         }
-        function writeUint32(val) {
-            return new Uint8Array([val & 0xff, (val >> 8) & 0xff, (val >> 16) & 0xff, (val >> 24) & 0xff]);
-        }
-        function stringToBuffer(str) { return new TextEncoder().encode(str); }
-        function parseStaticWebP(buffer) {
-            const riff = String.fromCharCode(...buffer.slice(0, 4));
-            const webp = String.fromCharCode(...buffer.slice(8, 12));
-            if (riff !== 'RIFF' || webp !== 'WEBP') throw new Error("Invalid WebP format");
-            let offset = 12, chunks = [];
-            while (offset < buffer.length) {
-                if (offset + 8 > buffer.length) break;
-                const tag = String.fromCharCode(...buffer.slice(offset, offset + 4));
-                const size = buffer[offset + 4] | (buffer[offset + 5] << 8) | (buffer[offset + 6] << 16) | (buffer[offset + 7] << 24);
-                if (offset + 8 + size > buffer.length) break;
-                const data = buffer.slice(offset + 8, offset + 8 + size);
-                chunks.push({ tag, data });
-                offset += 8 + size;
-                if (size % 2 !== 0) offset++;
-            }
-            return chunks;
-        }
-        function createChunk(tag, data) {
-            const header = stringToBuffer(tag);
-            const size = writeUint32(data.length);
-            const padding = data.length % 2 !== 0 ? new Uint8Array([0]) : new Uint8Array([]);
-            return concatBuffers(header, size, data, padding);
-        }
-        class AnimatedWebPEncoder {
-            constructor(w, h) { this.width = w; this.height = h; this.frames = []; }
-            async addFrame(dataUrl, ms) {
-                const res = await fetch(dataUrl);
-                const buf = new Uint8Array(await res.arrayBuffer());
-                this.frames.push({ buffer: buf, duration: ms });
-            }
-            build() {
-                if (!this.frames.length) return null;
-                const vp8xData = new Uint8Array(10);
-                vp8xData[0] = 0x12;
-                const w1 = this.width - 1, h1 = this.height - 1;
-                vp8xData[4] = w1 & 0xff; vp8xData[5] = (w1 >> 8) & 0xff; vp8xData[6] = (w1 >> 16) & 0xff;
-                vp8xData[7] = h1 & 0xff; vp8xData[8] = (h1 >> 8) & 0xff; vp8xData[9] = (h1 >> 16) & 0xff;
-                const chunks = [createChunk('VP8X', vp8xData), createChunk('ANIM', new Uint8Array(6))];
-                for (const frame of this.frames) {
-                    const parsed = parseStaticWebP(frame.buffer);
-                    const payload = parsed.filter(c => c.tag !== 'VP8X' && c.tag !== 'ICCP' && c.tag !== 'EXIF' && c.tag !== 'XMP');
-                    let payloadBufs = [];
-                    for (const pc of payload) payloadBufs.push(createChunk(pc.tag, pc.data));
-                    const payloadData = concatBuffers(...payloadBufs);
-                    const anmfData = new Uint8Array(16 + payloadData.length);
-                    const fw1 = this.width - 1, fh1 = this.height - 1;
-                    anmfData[6] = fw1 & 0xff; anmfData[7] = (fw1 >> 8) & 0xff; anmfData[8] = (fw1 >> 16) & 0xff;
-                    anmfData[9] = fh1 & 0xff; anmfData[10] = (fh1 >> 8) & 0xff; anmfData[11] = (fh1 >> 16) & 0xff;
-                    const dur = Math.round(frame.duration);
-                    anmfData[12] = dur & 0xff; anmfData[13] = (dur >> 8) & 0xff; anmfData[14] = (dur >> 16) & 0xff;
-                    anmfData[15] = 0x01;
-                    anmfData.set(payloadData, 16);
-                    chunks.push(createChunk('ANMF', anmfData));
-                }
-                const total = concatBuffers(...chunks);
-                return new Blob([concatBuffers(stringToBuffer('RIFF'), writeUint32(total.length + 4), stringToBuffer('WEBP'), total)], { type: 'image/webp' });
-            }
-        }
-    </script>
+        $step.textContent = 'stitching';
+        await new Promise((r) => setTimeout(r, 30)); // let the label paint before the blocking mux
+        result = buildWebP(w, h, frames);
+        setBar(1);
+        resultUrl = URL.createObjectURL(result);
+        $out.src = resultUrl;
+        $size.textContent = 'webp · ' + w + '×' + h + ' · ' + (result.size / 1024).toFixed(1) + ' kb';
+        show(['result', 'actions'], true);
+        $('actions').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        setStatus(frames.length + ' frames at ' + fps + ' fps', 'ok');
+      } catch (err) {
+        console.error(err);
+        setStatus('conversion failed: ' + (err.message || err), 'error');
+      } finally {
+        stop();
+        show(['work'], false);
+        busy = false;
+        $go.disabled = false;
+      }
+    });
 
-    <!-- App Logic -->
-    <script>
-        const dropzone = document.getElementById('dropzone');
-        const videoInput = document.getElementById('video-input');
-        const sourcePreviewCard = document.getElementById('source-preview-card');
-        const previewVideo = document.getElementById('preview-video');
-        const removeVideoBtn = document.getElementById('remove-video-btn');
-        const convertBtn = document.getElementById('convert-btn');
+    $('save').addEventListener('click', () => {
+      if (result) mintUI.save(result, 'animation-' + Date.now() + '.webp');
+    });
 
-        const trimStartInput = document.getElementById('trim-start');
-        const trimEndInput = document.getElementById('trim-end');
-        const rangeDisplay = document.getElementById('range-display');
-        const scaleSlider = document.getElementById('scale-slider');
-        const scaleDisplay = document.getElementById('scale-display');
-        const fpsSlider = document.getElementById('fps-slider');
-        const fpsDisplay = document.getElementById('fps-display');
-        const qualitySlider = document.getElementById('quality-slider');
-        const qualityDisplay = document.getElementById('quality-display');
+    $('copy').addEventListener('click', async () => {
+      if (!result) return;
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/webp': result })]);
+        setStatus('copied', 'ok');
+      } catch {
+        setStatus("clipboard won't take webp here, save it instead", 'error');
+      }
+    });
 
-        const infoDuration = document.getElementById('info-duration');
-        const infoResolution = document.getElementById('info-resolution');
-        const infoAspect = document.getElementById('info-aspect');
+    $drop.addEventListener('click', () => $file.click());
+    $drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $file.click(); } });
+    $file.addEventListener('change', () => load($file.files[0]));
 
-        const outputPlaceholder = document.getElementById('output-placeholder');
-        const outputProcessing = document.getElementById('output-processing');
-        const outputResult = document.getElementById('output-result');
-        const resultWebpImg = document.getElementById('result-webp-img');
-        const outputFilesize = document.getElementById('output-filesize');
-        const progressText = document.getElementById('progress-text');
-        const progressBarFill = document.getElementById('progress-bar-fill');
-        const processingStep = document.getElementById('processing-step');
-        const downloadBtn = document.getElementById('download-btn');
-        const copyBtn = document.getElementById('copy-btn');
-
-        const conversionCanvas = document.getElementById('conversion-canvas');
-        const ctx = conversionCanvas.getContext('2d');
-        const messageBox = document.getElementById('message-box');
-
-        let videoFile = null, videoUrl = null, finalWebpBlob = null, activePreviewUrl = null;
-
-        function showNotification(msg, type = 'success') {
-            messageBox.textContent = (type === 'success' ? '✓ ' : '✕ ') + msg;
-            messageBox.className = 'message-box ' + type;
-            setTimeout(() => messageBox.classList.add('show'), 10);
-            setTimeout(() => messageBox.classList.remove('show'), 3000);
-        }
-
-        ['dragenter', 'dragover'].forEach(e => dropzone.addEventListener(e, ev => { ev.preventDefault(); dropzone.classList.add('dragover'); }));
-        ['dragleave', 'drop'].forEach(e => dropzone.addEventListener(e, ev => { ev.preventDefault(); dropzone.classList.remove('dragover'); }));
-
-        videoInput.addEventListener('change', handleVideoUpload);
-        dropzone.addEventListener('drop', e => {
-            if (e.dataTransfer.files.length) { videoInput.files = e.dataTransfer.files; handleVideoUpload(); }
-        });
-
-        function handleVideoUpload() {
-            const file = videoInput.files[0];
-            if (!file) return;
-            videoFile = file;
-            if (videoUrl) URL.revokeObjectURL(videoUrl);
-            videoUrl = URL.createObjectURL(file);
-            previewVideo.src = videoUrl;
-            previewVideo.load();
-            previewVideo.onloadedmetadata = () => {
-                const dur = previewVideo.duration, w = previewVideo.videoWidth, h = previewVideo.videoHeight;
-                infoDuration.textContent = dur.toFixed(2) + 's';
-                infoResolution.textContent = w + ' × ' + h;
-                const gcd = (a, b) => b ? gcd(b, a % b) : a;
-                const d = gcd(w, h);
-                infoAspect.textContent = (w / d) + ':' + (h / d);
-                trimStartInput.value = '0.0'; trimStartInput.max = dur.toFixed(1);
-                trimEndInput.value = Math.min(5.0, dur).toFixed(1); trimEndInput.max = dur.toFixed(1);
-                updateTrimDisplay();
-                sourcePreviewCard.classList.remove('hidden');
-                dropzone.classList.add('hidden');
-                convertBtn.disabled = false;
-                showNotification('Video loaded successfully!');
-            };
-        }
-
-        removeVideoBtn.addEventListener('click', () => {
-            videoFile = null; if (videoUrl) URL.revokeObjectURL(videoUrl); videoUrl = null;
-            previewVideo.src = '';
-            sourcePreviewCard.classList.add('hidden'); dropzone.classList.remove('hidden');
-            convertBtn.disabled = true;
-            outputPlaceholder.classList.remove('hidden'); outputProcessing.classList.add('hidden'); outputResult.classList.add('hidden');
-        });
-
-        scaleSlider.addEventListener('input', () => { scaleDisplay.textContent = scaleSlider.value === '100' ? '100% (Original)' : scaleSlider.value + '%'; });
-        fpsSlider.addEventListener('input', () => { fpsDisplay.textContent = fpsSlider.value + ' FPS'; });
-        qualitySlider.addEventListener('input', () => { qualityDisplay.textContent = qualitySlider.value; });
-        [trimStartInput, trimEndInput].forEach(el => el.addEventListener('input', () => {
-            let s = parseFloat(trimStartInput.value) || 0, e = parseFloat(trimEndInput.value) || 0;
-            if (s < 0) s = 0; if (e < s + 0.1) e = s + 0.1;
-            trimStartInput.value = s.toFixed(1); trimEndInput.value = e.toFixed(1);
-            updateTrimDisplay();
-        }));
-        function updateTrimDisplay() { rangeDisplay.textContent = parseFloat(trimStartInput.value).toFixed(1) + 's – ' + parseFloat(trimEndInput.value).toFixed(1) + 's'; }
-
-        convertBtn.addEventListener('click', async () => {
-            if (!videoFile || !videoUrl) return;
-            outputPlaceholder.classList.add('hidden'); outputResult.classList.add('hidden'); outputProcessing.classList.remove('hidden');
-            const start = parseFloat(trimStartInput.value), end = parseFloat(trimEndInput.value);
-            const duration = end - start, fps = parseInt(fpsSlider.value);
-            const scale = parseFloat(scaleSlider.value) / 100, quality = parseFloat(qualitySlider.value) / 100;
-            const totalFrames = Math.ceil(duration * fps), frameDelay = 1000 / fps;
-            processingStep.textContent = 'Initializing…'; updateProgress(0);
-            try {
-                previewVideo.pause(); previewVideo.currentTime = start;
-                const frames = [];
-                const tw = Math.floor(previewVideo.videoWidth * scale), th = Math.floor(previewVideo.videoHeight * scale);
-                conversionCanvas.width = tw; conversionCanvas.height = th;
-                await new Promise(r => setTimeout(r, 500));
-                for (let i = 0; i < totalFrames; i++) {
-                    const t = start + (i / fps);
-                    if (t > previewVideo.duration) break;
-                    previewVideo.currentTime = t;
-                    await new Promise(r => { const h = () => { previewVideo.removeEventListener('seeked', h); r(); }; previewVideo.addEventListener('seeked', h); });
-                    ctx.drawImage(previewVideo, 0, 0, tw, th);
-                    frames.push(conversionCanvas.toDataURL('image/webp', quality));
-                    updateProgress(Math.min(90, Math.floor((i / totalFrames) * 100)));
-                    processingStep.textContent = 'Extracting frames (' + (i + 1) + '/' + totalFrames + ')…';
-                }
-                processingStep.textContent = 'Assembling animated WebP…'; updateProgress(95);
-                if (frames.length > 0) {
-                    const encoder = new AnimatedWebPEncoder(tw, th);
-                    for (const f of frames) await encoder.addFrame(f, frameDelay);
-                    finalWebpBlob = encoder.build(); updateProgress(100);
-                    if (finalWebpBlob) {
-                        if (activePreviewUrl) URL.revokeObjectURL(activePreviewUrl);
-                        activePreviewUrl = URL.createObjectURL(finalWebpBlob);
-                        resultWebpImg.src = activePreviewUrl;
-                        outputFilesize.textContent = (finalWebpBlob.size / 1024).toFixed(1) + ' KB';
-                        setTimeout(() => { outputProcessing.classList.add('hidden'); outputResult.classList.remove('hidden'); showNotification('Animated WebP created!'); }, 500);
-                    } else throw new Error('WebP composition failed');
-                } else throw new Error('No frames extracted');
-            } catch (err) {
-                console.error(err); showNotification('Conversion failed', 'error');
-                outputProcessing.classList.add('hidden'); outputPlaceholder.classList.remove('hidden');
-            }
-        });
-
-        function updateProgress(p) { progressText.textContent = p + '%'; progressBarFill.style.width = p + '%'; }
-
-        downloadBtn.addEventListener('click', () => {
-            if (!finalWebpBlob) return;
-            const u = URL.createObjectURL(finalWebpBlob), a = document.createElement('a');
-            a.href = u; a.download = 'animation-' + Date.now() + '.webp';
-            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(u);
-            showNotification('Download started!');
-        });
-
-        copyBtn.addEventListener('click', async () => {
-            try {
-                if (!finalWebpBlob) return;
-                await navigator.clipboard.write([new ClipboardItem({ [finalWebpBlob.type]: finalWebpBlob })]);
-                showNotification('Copied to clipboard!');
-            } catch { showNotification('Download instead', 'error'); }
-        });
-    </script>
+    let depth = 0;
+    addEventListener('dragenter', (e) => { e.preventDefault(); depth++; $drop.classList.add('over'); });
+    addEventListener('dragover', (e) => e.preventDefault());
+    addEventListener('dragleave', () => { if (--depth <= 0) { depth = 0; $drop.classList.remove('over'); } });
+    addEventListener('drop', (e) => {
+      e.preventDefault();
+      depth = 0;
+      $drop.classList.remove('over');
+      load(e.dataTransfer && e.dataTransfer.files[0]);
+    });
+  </script>
+  <script src="bg.js" defer></script>
 </body>
 </html>

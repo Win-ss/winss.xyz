@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Device</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png" />
+  <meta name="description" content="Screen size, pixel ratio and JavaScript key codes for this device." />
+  <meta property="og:title" content="Device" />
+  <meta property="og:description" content="Screen size, pixel ratio and JavaScript key codes for this device." />
+  <meta property="og:image" content="https://winss.xyz/assets/favicon.png" />
+  <meta property="og:url" content="https://winss.xyz/mint/device.html" />
+  <meta name="theme-color" content="#3ddc97" />
+  <link rel="stylesheet" href="base.css" />
+  <style>
+    .wrap { max-width: 30rem; }
+
+    h2 {
+      width: 100%;
+      font-size: 0.7rem;
+      font-weight: normal;
+      letter-spacing: 0.06em;
+      color: var(--mint-light);
+      text-align: left;
+      margin-bottom: -0.6rem;
+    }
+
+    dl {
+      width: 100%;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      border-top: 1px solid var(--line);
+      font-size: 0.78rem;
+    }
+
+    dt, dd {
+      padding: 0.42rem 0.15rem;
+      border-bottom: 1px solid var(--line);
+    }
+
+    dt { color: var(--text-muted); text-align: left; padding-right: 1rem; }
+    dd { text-align: right; word-break: break-all; cursor: copy; }
+    dd:hover { color: var(--mint-light); }
+    dd.flash { color: var(--mint); }
+
+    .key {
+      width: 100%;
+      border: 1px solid var(--line);
+      padding: 1.4rem 1rem 1.1rem;
+      cursor: text;
+      position: relative;
+      transition: border-color 0.15s ease;
+    }
+
+    .key.live { border-color: var(--mint); }
+
+    .key .big {
+      font-size: 3.4rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .key .name {
+      margin-top: 0.6rem;
+      font-size: 0.78rem;
+      color: var(--text-soft);
+      min-height: 1.2em;
+    }
+
+    .key .big.idle { font-size: 0.85rem; font-weight: normal; color: var(--text-muted); line-height: 1.5; }
+
+    /* lets touch devices bring up the keyboard */
+    #catcher {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      width: 100%;
+      font-size: 16px;
+      border: 0;
+      background: transparent;
+      color: transparent;
+      caret-color: transparent;
+    }
+
+    .log {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.35rem;
+      min-height: 1.6rem;
+    }
+
+    .log span {
+      font-size: 0.68rem;
+      padding: 0.15rem 0.45rem;
+      border: 1px solid var(--line);
+      color: var(--text-soft);
+    }
+
+    .log span:first-child { border-color: var(--mint-dark); color: var(--mint-light); }
+  </style>
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+  <div class="frost" aria-hidden="true"></div>
+  <main class="wrap">
+    <h1 class="tagline"><a href="./">device</a></h1>
+    <p class="sub">tap any value to copy it</p>
+
+    <h2>display</h2>
+    <dl id="display"></dl>
+
+    <h2>keys</h2>
+    <div class="key" id="key">
+      <div class="big idle" id="big">press any key</div>
+      <div class="name" id="name"></div>
+      <label class="sr-only" for="catcher">type here</label>
+      <input id="catcher" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </div>
+    <dl id="keyinfo"></dl>
+    <div class="log" id="log" aria-live="polite"></div>
+
+    <p class="foot"><a href="./">← mint</a></p>
+  </main>
+
+  <script>
+    const $display = document.getElementById('display');
+    const $keyinfo = document.getElementById('keyinfo');
+    const $key = document.getElementById('key');
+    const $big = document.getElementById('big');
+    const $name = document.getElementById('name');
+    const $log = document.getElementById('log');
+    const $catcher = document.getElementById('catcher');
+
+    // render [label, value] pairs into a <dl>, reusing nodes so the copy hover doesn't flicker
+    function rows(dl, pairs) {
+      while (dl.children.length > pairs.length * 2) dl.lastChild.remove();
+      pairs.forEach(([k, v], i) => {
+        let dt = dl.children[i * 2], dd = dl.children[i * 2 + 1];
+        if (!dt) {
+          dt = dl.appendChild(document.createElement('dt'));
+          dd = dl.appendChild(document.createElement('dd'));
+        }
+        dt.textContent = k;
+        if (dd.textContent !== String(v)) dd.textContent = v;
+      });
+    }
+
+    const mq = (q) => matchMedia(q).matches;
+    let hz = '…';
+
+    // measure refresh rate from a run of animation frames
+    (function measureHz() {
+      const times = [];
+      const step = (t) => {
+        times.push(t);
+        if (times.length < 61) return requestAnimationFrame(step);
+        const gaps = times.slice(1).map((t, i) => t - times[i]).sort((a, b) => a - b);
+        hz = Math.round(1000 / gaps[gaps.length >> 1]) + ' hz';
+        renderDisplay();
+      };
+      requestAnimationFrame(step);
+    })();
+
+    function renderDisplay() {
+      const dpr = window.devicePixelRatio || 1;
+      const w = innerWidth, h = innerHeight;
+      const vv = window.visualViewport;
+      const orient = screen.orientation ? screen.orientation.type.replace('-primary', '').replace('-secondary', ' (flipped)') : (w > h ? 'landscape' : 'portrait');
+      rows($display, [
+        ['viewport', w + ' × ' + h],
+        ['visual viewport', vv ? Math.round(vv.width) + ' × ' + Math.round(vv.height) + (vv.scale !== 1 ? ' @ ' + vv.scale.toFixed(2) + 'x' : '') : 'n/a'],
+        ['pixel ratio', +dpr.toFixed(3)],
+        ['rendered', Math.round(w * dpr) + ' × ' + Math.round(h * dpr)],
+        ['screen', screen.width + ' × ' + screen.height],
+        ['screen (physical)', Math.round(screen.width * dpr) + ' × ' + Math.round(screen.height * dpr)],
+        ['orientation', orient],
+        ['refresh', hz],
+        ['color depth', screen.colorDepth + ' bit'],
+        ['gamut', mq('(color-gamut: rec2020)') ? 'rec2020' : mq('(color-gamut: p3)') ? 'p3' : 'srgb'],
+        ['hdr', mq('(dynamic-range: high)') ? 'yes' : 'no'],
+        ['pointer', (mq('(pointer: fine)') ? 'fine' : mq('(pointer: coarse)') ? 'coarse' : 'none') + (mq('(hover: hover)') ? ', hover' : '')],
+        ['touch points', navigator.maxTouchPoints || 0],
+        ['theme', mq('(prefers-color-scheme: dark)') ? 'dark' : 'light'],
+        ['reduced motion', mq('(prefers-reduced-motion: reduce)') ? 'yes' : 'no'],
+      ]);
+    }
+
+    const LOCATIONS = ['standard', 'left', 'right', 'numpad'];
+    const recent = [];
+
+    function showKey(e) {
+      const code = e.which || e.keyCode;
+      const label = e.key === ' ' ? 'space' : e.key;
+      $big.classList.remove('idle');
+      $big.textContent = code;
+      $name.textContent = label;
+      const mods = ['ctrl', 'shift', 'alt', 'meta'].filter((m) => e[m + 'Key']).join(' + ') || 'none';
+      rows($keyinfo, [
+        ['event.key', label],
+        ['event.code', e.code || '(empty)'],
+        ['event.which', code],
+        ['event.location', e.location + ' (' + (LOCATIONS[e.location] || '?') + ')'],
+        ['modifiers', mods],
+        ['repeat', e.repeat ? 'yes' : 'no'],
+      ]);
+      if (!e.repeat) {
+        recent.unshift(label + ' ' + code);
+        recent.length = Math.min(recent.length, 10);
+        $log.replaceChildren(...recent.map((t) => Object.assign(document.createElement('span'), { textContent: t })));
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.keyCode === 229) return; // on-screen keyboard; the input handler below takes it
+      // let browser shortcuts (reload, close tab, devtools) through
+      if (!(e.ctrlKey || e.metaKey) && !/^F\d+$/.test(e.key)) e.preventDefault();
+      showKey(e);
+    });
+
+    // on-screen keyboards often send keyCode 229 / "Unidentified"; read what was typed instead
+    $catcher.addEventListener('input', (e) => {
+      const ch = (e.data || '').slice(-1);
+      if (ch) showKey({ key: ch, code: '', which: ch.toUpperCase().charCodeAt(0), location: 0 });
+      $catcher.value = '';
+    });
+    $catcher.addEventListener('focus', () => $key.classList.add('live'));
+    $catcher.addEventListener('blur', () => $key.classList.remove('live'));
+
+    document.addEventListener('click', async (e) => {
+      const dd = e.target.closest('dd');
+      if (!dd) return;
+      try {
+        await navigator.clipboard.writeText(dd.textContent);
+        dd.classList.add('flash');
+        setTimeout(() => dd.classList.remove('flash'), 500);
+      } catch {}
+    });
+
+    renderDisplay();
+    addEventListener('resize', renderDisplay);
+    if (window.visualViewport) visualViewport.addEventListener('resize', renderDisplay);
+    if (screen.orientation) screen.orientation.addEventListener('change', renderDisplay);
+  </script>
+  <script src="bg.js" defer></script>
+</body>
+</html>

@@ -91,7 +91,7 @@
         .control-panel {
             background: var(--bg-surface);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 0;
             padding: 1.5rem;
             display: flex;
             flex-direction: column;
@@ -118,7 +118,7 @@
             background: rgba(0,0,0,0.3);
             border: 1px solid var(--border);
             padding: 0.75rem;
-            border-radius: 8px;
+            border-radius: 0;
             font-size: 1rem;
             transition: all 0.2s var(--ease-out);
             width: 100%;
@@ -140,7 +140,7 @@
         .picker-area {
             width: 100%;
             aspect-ratio: 1;
-            border-radius: 12px;
+            border-radius: 0;
             border: 1px solid var(--border);
             position: relative;
             overflow: hidden;
@@ -161,7 +161,7 @@
         .picker-cursor {
             width: 12px; height: 12px;
             border: 2px solid white;
-            border-radius: 50%;
+            border-radius: 0;
             position: absolute;
             transform: translate(-50%, -50%);
             box-shadow: 0 0 2px rgba(0,0,0,0.5);
@@ -171,7 +171,7 @@
         .hue-slider {
             width: 100%;
             height: 20px;
-            border-radius: 10px;
+            border-radius: 0;
             background: linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
             position: relative;
             cursor: pointer;
@@ -181,7 +181,7 @@
         .hue-thumb {
             width: 18px; height: 18px;
             background: white;
-            border-radius: 50%;
+            border-radius: 0;
             position: absolute;
             top: 50%;
             transform: translate(-50%, -50%);
@@ -234,7 +234,7 @@
         .saved-swatch {
             flex: 0 0 60px;
             height: 30px;
-            border-radius: 6px;
+            border-radius: 0;
             cursor: pointer;
             position: relative;
             display: flex;
@@ -255,7 +255,7 @@
         .swipe-btn {
             width: 34px;
             height: 34px;
-            border-radius: 8px;
+            border-radius: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -276,7 +276,7 @@
             right: 6px;
             width: 20px;
             height: 20px;
-            border-radius: 6px;
+            border-radius: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
@@ -299,7 +299,7 @@
             color: var(--text-main);
             border: 1px solid var(--border);
             padding: 0.75rem;
-            border-radius: 12px;
+            border-radius: 0;
             width: 160px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
             display: none;
@@ -332,7 +332,7 @@
             background: var(--accent);
             color: white;
             padding: 0.25rem 0.5rem;
-            border-radius: 6px;
+            border-radius: 0;
             border: none;
             cursor: pointer;
             font-size: 0.8rem;
@@ -342,7 +342,7 @@
             border: 1px solid var(--border);
             color: var(--text-muted);
             padding: 0.25rem 0.5rem;
-            border-radius: 6px;
+            border-radius: 0;
             cursor: pointer;
             font-size: 0.8rem;
         }
@@ -379,7 +379,7 @@
         .card {
             background: var(--bg-surface);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 0;
             padding: 1.5rem;
             transition: all 0.3s var(--ease-out);
             display: flex;
@@ -437,7 +437,7 @@
         }
 
         .contrast-box {
-            border-radius: 8px;
+            border-radius: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -455,7 +455,7 @@
 
         .badge {
             padding: 4px 8px;
-            border-radius: 4px;
+            border-radius: 0;
             font-size: 0.7rem;
             font-weight: bold;
             text-transform: uppercase;
@@ -478,7 +478,7 @@
             background: var(--text-main);
             color: var(--bg-deep);
             padding: 1rem 2rem;
-            border-radius: 8px;
+            border-radius: 0;
             font-weight: bold;
             transform: translateY(100px);
             opacity: 0;
@@ -497,7 +497,7 @@
         }
         .glow-blob {
             position: absolute;
-            border-radius: 50%;
+            border-radius: 0;
             filter: blur(100px);
             opacity: 0.15;
             animation: float 20s infinite ease-in-out;
@@ -528,7 +528,7 @@
         .modal-content {
             background: var(--bg-surface);
             border: 1px solid var(--border);
-            border-radius: 24px;
+            border-radius: 0;
             padding: 2rem;
             width: 90%;
             max-width: 1000px;
@@ -570,7 +570,7 @@
         }
         .shade-item {
             height: 60px;
-            border-radius: 8px;
+            border-radius: 0;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -591,7 +591,7 @@
         .code-input-container {
             background: var(--bg-surface);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 0;
             padding: 1.5rem;
             margin-bottom: 1.5rem;
         }
@@ -601,7 +601,7 @@
             min-height: 200px;
             background: rgba(0,0,0,0.4);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: 0;
             padding: 1rem;
             font-family: var(--font-mono);
             font-size: 0.85rem;
@@ -633,7 +633,7 @@
             background: var(--accent);
             color: white;
             padding: 0.75rem 1.5rem;
-            border-radius: 8px;
+            border-radius: 0;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s var(--ease-out);
@@ -671,7 +671,7 @@
             background: var(--accent);
             color: white;
             padding: 0.25rem 0.75rem;
-            border-radius: 20px;
+            border-radius: 0;
             font-weight: bold;
         }
 
@@ -690,14 +690,14 @@
             margin-bottom: 1.5rem;
             background: var(--bg-surface);
             padding: 0.5rem;
-            border-radius: 12px;
+            border-radius: 0;
             width: fit-content;
             border: 1px solid var(--border);
         }
 
         .mode-toggle {
             padding: 0.5rem 1.25rem;
-            border-radius: 8px;
+            border-radius: 0;
             cursor: pointer;
             transition: all 0.2s var(--ease-out);
             font-size: 0.85rem;
@@ -725,7 +725,7 @@
         .extracted-color-card {
             background: var(--bg-surface);
             border: 1px solid var(--border);
-            border-radius: 16px;
+            border-radius: 0;
             overflow: hidden;
             transition: all 0.3s var(--ease-out);
         }
@@ -768,7 +768,7 @@
         .preview-swatch {
             width: 50px;
             height: 50px;
-            border-radius: 12px;
+            border-radius: 0;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             transition: transform 0.2s var(--ease-out);
         }
@@ -821,7 +821,7 @@
             padding: 0.35rem 0.75rem;
             background: rgba(79, 70, 229, 0.2);
             color: var(--accent);
-            border-radius: 6px;
+            border-radius: 0;
             cursor: pointer;
             transition: all 0.2s;
             border: none;
@@ -843,7 +843,7 @@
             font-size: 0.7rem;
             padding: 0.35rem 0.6rem;
             background: rgba(0,0,0,0.3);
-            border-radius: 6px;
+            border-radius: 0;
             cursor: pointer;
             transition: all 0.2s;
             color: var(--text-muted);
@@ -871,7 +871,7 @@
         .contrast-dot {
             width: 8px;
             height: 8px;
-            border-radius: 50%;
+            border-radius: 0;
         }
 
         .contrast-dot.pass { background: #4ade80; }
@@ -900,7 +900,7 @@
         }
 
         .palette-preview-card {
-            border-radius: 16px;
+            border-radius: 0;
             border: 1px solid var(--border);
             position: relative;
         }
@@ -944,7 +944,7 @@
 
         .mock-button {
             padding: 0.75rem 1.5rem;
-            border-radius: 8px;
+            border-radius: 0;
             font-weight: bold;
             text-align: center;
             font-size: 0.85rem;
@@ -958,7 +958,7 @@
 
         .mock-card {
             padding: 1rem;
-            border-radius: 12px;
+            border-radius: 0;
             display: flex;
             flex-direction: column;
             gap: 0.5rem;
@@ -992,7 +992,7 @@
 
         .mock-chip {
             padding: 0.35rem 0.75rem;
-            border-radius: 20px;
+            border-radius: 0;
             font-size: 0.7rem;
         }
 
@@ -1084,7 +1084,7 @@
         .mobile-warning-content {
             background-color: var(--bg-surface);
             border: 1px solid var(--border);
-            border-radius: 1rem;
+            border-radius: 0;
             padding: 2rem;
             text-align: center;
             max-width: 400px;
@@ -1114,7 +1114,7 @@
             color: white;
             padding: 0.75rem 1.5rem;
             border: none;
-            border-radius: 0.5rem;
+            border-radius: 0;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -1127,7 +1127,7 @@
             border: 1px solid var(--border);
             color: var(--text-muted);
             padding: 0.75rem 1.5rem;
-            border-radius: 0.5rem;
+            border-radius: 0;
             margin-left: 0.5rem;
         }
 
@@ -1278,15 +1278,15 @@
                             </div>
                             <div class="input-group">
                                 <span class="label">CSS VARIABLE</span>
-                                <code style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="copyToClipboard(this.innerText)" id="cssVarOutput">--color: #4f46e5;</code>
+                                <code style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 0; font-size: 0.8rem; cursor: pointer;" onclick="copyToClipboard(this.innerText)" id="cssVarOutput">--color: #4f46e5;</code>
                             </div>
                             <div class="input-group">
                                 <span class="label">CMYK</span>
-                                <code style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="copyToClipboard(this.innerText)" id="cmykOutput">c: 0, m: 0, y: 0, k: 0</code>
+                                <code style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 0; font-size: 0.8rem; cursor: pointer;" onclick="copyToClipboard(this.innerText)" id="cmykOutput">c: 0, m: 0, y: 0, k: 0</code>
                             </div>
                             <div class="input-group">
                                 <span class="label">LAB</span>
-                                <code style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; cursor: pointer;" onclick="copyToClipboard(this.innerText)" id="labOutput">l: 0, a: 0, b: 0</code>
+                                <code style="background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 0; font-size: 0.8rem; cursor: pointer;" onclick="copyToClipboard(this.innerText)" id="labOutput">l: 0, a: 0, b: 0</code>
                             </div>
                         </div>
                     </div>
